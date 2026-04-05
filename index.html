@@ -1,92 +1,155 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Proativa Capital — Inteligência de BPO, Força Operacional e Segurança Jurídica</title>
   <meta name="description" content="A Proativa Capital é o cérebro de um ecossistema de serviços que une gestão avançada de BPO, mais de 30 anos de lastro operacional e blindagem jurídica. Junte-se ao nosso time.">
-  <meta name="robots" content="index, follow">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <meta name="author" content="Proativa Capital">
+  <meta name="theme-color" content="#0a1628">
   <link rel="canonical" href="https://www.proativacapital.com.br/">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Proativa Capital — Inteligência de BPO">
+  <meta property="og:site_name" content="Proativa Capital">
+  <meta property="og:title" content="Proativa Capital — Inteligência de BPO, Força Operacional e Segurança Jurídica">
   <meta property="og:description" content="Junte-se ao ecossistema de serviços que une gestão avançada a mais de 30 anos de lastro operacional real.">
   <meta property="og:url" content="https://www.proativacapital.com.br/">
   <meta property="og:locale" content="pt_BR">
+  <meta property="og:image" content="https://www.proativacapital.com.br/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Proativa Capital — Ecossistema de serviços com inteligência de BPO">
 
-  <!-- Preload critical font weights -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Proativa Capital — Inteligência de BPO">
+  <meta name="twitter:description" content="Junte-se ao ecossistema de serviços que une gestão avançada a mais de 30 anos de lastro operacional real.">
+  <meta name="twitter:image" content="https://www.proativacapital.com.br/og-image.jpg">
 
-  <!-- Critical CSS inlined for LCP -->
+  <!-- Geo Tags (SEO Local) -->
+  <meta name="geo.region" content="BR">
+  <meta name="geo.placename" content="Brasil">
+
+  <!-- Preload critical fonts — distinctive typography (Satoshi + General Sans) -->
+  <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+  <link rel="preload" href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=general-sans@400,500,600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=general-sans@400,500,600&display=swap"></noscript>
+
+  <!-- Critical CSS inlined for LCP optimization -->
   <style>
     :root {
       --color-navy: #0a1628;
-      --color-navy-light: #122240;
-      --color-blue: #1a3a6b;
-      --color-blue-accent: #2563eb;
-      --color-charcoal: #374151;
-      --color-gray: #6b7280;
-      --color-gray-light: #f3f4f6;
+      --color-navy-light: #0f1d32;
+      --color-blue-deep: #132847;
+      --color-accent: #3b7dff;
+      --color-accent-glow: rgba(59,125,255,0.25);
+      --color-charcoal: #2d3748;
+      --color-gray: #64748b;
+      --color-gray-light: #f1f5f9;
       --color-white: #ffffff;
-      --color-border: #e5e7eb;
-      --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --color-border: #e2e8f0;
+      --color-gold: #d4a853;
+      --font-display: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-body: 'General Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       --header-height: 72px;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; scroll-padding-top: var(--header-height); }
     body {
-      font-family: var(--font-family);
+      font-family: var(--font-body);
       color: var(--color-charcoal);
       background: var(--color-white);
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
     }
     .site-header {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       height: var(--header-height);
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 clamp(1rem, 4vw, 3rem);
-      background: rgba(255,255,255,0.85);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      padding: 0 clamp(1.25rem, 5vw, 3rem);
+      background: rgba(255,255,255,0.8);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
       border-bottom: 1px solid transparent;
       transition: border-color 0.3s, background 0.3s;
     }
-    .site-header.scrolled { border-bottom-color: var(--color-border); background: rgba(255,255,255,0.95); }
+    .site-header.scrolled { border-bottom-color: var(--color-border); background: rgba(255,255,255,0.92); }
     .hero {
       min-height: 100vh; min-height: 100dvh;
       display: flex; align-items: center; justify-content: center;
-      padding: calc(var(--header-height) + 2rem) clamp(1rem, 4vw, 3rem) 4rem;
-      background: linear-gradient(160deg, var(--color-navy) 0%, var(--color-navy-light) 50%, var(--color-blue) 100%);
+      padding: calc(var(--header-height) + 3rem) clamp(1.25rem, 5vw, 3rem) 5rem;
+      background: var(--color-navy);
       color: var(--color-white); text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 0%, var(--color-blue-deep) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 80% at 80% 100%, rgba(59,125,255,0.08) 0%, transparent 60%);
+      pointer-events: none;
     }
     .hero h1 {
-      font-size: clamp(1.75rem, 5vw, 3.5rem);
-      font-weight: 800; line-height: 1.15;
-      letter-spacing: -0.02em;
-      max-width: 800px;
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5.5vw, 4rem);
+      font-weight: 900; line-height: 1.1;
+      letter-spacing: -0.03em;
+      max-width: 820px;
     }
   </style>
 
-  <!-- Deferred full stylesheet -->
+  <!-- Deferred full stylesheet — preloaded for performance -->
   <link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link rel="stylesheet" href="styles.css"></noscript>
 
-  <!-- Structured Data -->
+  <!-- Structured Data — Organization -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "Proativa Capital",
     "url": "https://www.proativacapital.com.br",
-    "description": "Inteligência de BPO, gestão avançada e tecnologia com mais de 30 anos de lastro operacional.",
+    "description": "Inteligência de BPO, gestão avançada e tecnologia com mais de 30 anos de lastro operacional. O cérebro de um ecossistema de serviços integrado.",
     "foundingDate": "2020",
+    "areaServed": {
+      "@type": "Country",
+      "name": "Brasil"
+    },
+    "numberOfEmployees": {
+      "@type": "QuantitativeValue",
+      "minValue": 50
+    },
     "sameAs": []
+  }
+  </script>
+
+  <!-- Structured Data — WebSite (ajuda busca) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Proativa Capital",
+    "url": "https://www.proativacapital.com.br"
+  }
+  </script>
+
+  <!-- Structured Data — BreadcrumbList -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Início",
+        "item": "https://www.proativacapital.com.br/"
+      }
+    ]
   }
   </script>
 </head>
@@ -95,95 +158,118 @@
   <!-- ============ HEADER ============ -->
   <header class="site-header" role="banner">
     <a href="#" class="logo" aria-label="Proativa Capital — página inicial">
+      <span class="logo-mark" aria-hidden="true">P</span>
       <span class="logo-text">Proativa<strong>Capital</strong></span>
     </a>
 
     <nav class="main-nav" aria-label="Navegação principal">
-      <ul class="nav-list" id="navList">
-        <li><a href="#ecossistema" class="nav-link">Ecossistema</a></li>
-        <li><a href="#forca" class="nav-link">Nossa Força</a></li>
-        <li><a href="#carreiras" class="nav-link">Carreiras</a></li>
-        <li><a href="#vagas" class="nav-link btn btn--primary btn--sm">Vagas Abertas</a></li>
+      <ul class="nav-list" id="navList" role="menubar">
+        <li role="none"><a href="#ecossistema" class="nav-link" role="menuitem">Ecossistema</a></li>
+        <li role="none"><a href="#forca" class="nav-link" role="menuitem">Nossa Força</a></li>
+        <li role="none"><a href="#carreiras" class="nav-link" role="menuitem">Carreiras</a></li>
+        <li role="none"><a href="#vagas" class="nav-link btn btn--primary btn--sm" role="menuitem">Vagas Abertas</a></li>
       </ul>
     </nav>
 
-    <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="navList">
+    <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="navList">
       <span class="menu-toggle__bar"></span>
       <span class="menu-toggle__bar"></span>
       <span class="menu-toggle__bar"></span>
     </button>
   </header>
 
-  <main>
+  <main id="main-content">
     <!-- ============ HERO ============ -->
     <section class="hero" id="hero">
       <div class="hero__content">
-        <h1>Inteligência de BPO. Força Operacional. Segurança Jurídica.</h1>
+        <div class="hero__eyebrow">Ecossistema de Serviços Integrado</div>
+        <h1>Inteligência de BPO.<br>Força Operacional.<br>Segurança Jurídica.</h1>
         <p class="hero__subtitle">Junte-se ao ecossistema de serviços que une gestão avançada a mais de 30 anos de lastro operacional real.</p>
-        <a href="#vagas" class="btn btn--accent btn--lg">Faça parte do nosso time</a>
+        <div class="hero__actions">
+          <a href="#vagas" class="btn btn--accent btn--lg">Faça parte do nosso time</a>
+          <a href="#ecossistema" class="btn btn--ghost btn--lg">Conheça a estrutura</a>
+        </div>
+        <div class="hero__scroll-hint" aria-hidden="true">
+          <svg width="20" height="32" viewBox="0 0 20 32" fill="none"><rect x="1" y="1" width="18" height="30" rx="9" stroke="rgba(255,255,255,0.3)" stroke-width="2"/><circle class="hero__scroll-dot" cx="10" cy="10" r="3" fill="rgba(255,255,255,0.6)"/></svg>
+        </div>
       </div>
+
+      <!-- Decorative grid overlay -->
+      <div class="hero__grid" aria-hidden="true"></div>
     </section>
 
     <!-- ============ ECOSSISTEMA ============ -->
     <section class="section ecosystem" id="ecossistema" aria-labelledby="ecosystem-title">
       <div class="container">
-        <span class="section__tag">Nosso Ecossistema</span>
-        <h2 class="section__title" id="ecosystem-title">Três pilares. Uma estrutura integrada.</h2>
-        <p class="section__lead">Cada empresa do grupo entrega uma competência essencial. Juntas, formam uma operação sem pontos cegos.</p>
+        <div class="section__header">
+          <span class="section__tag">Nosso Ecossistema</span>
+          <h2 class="section__title" id="ecosystem-title">Três pilares.<br>Uma estrutura integrada.</h2>
+          <p class="section__lead">Cada empresa do grupo entrega uma competência essencial. Juntas, formam uma operação sem pontos cegos.</p>
+        </div>
 
         <div class="cards-grid">
           <!-- Card 1 -->
-          <article class="card">
+          <article class="card card--proativa">
+            <div class="card__number" aria-hidden="true">01</div>
             <div class="card__icon" aria-hidden="true">
-              <svg width="40" height="40" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="8" fill="#EEF2FF"/><path d="M20 12v16M12 20h16" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"/></svg>
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none"><rect width="44" height="44" rx="12" fill="var(--color-accent)" fill-opacity="0.08"/><path d="M22 14v16M14 22h16" stroke="var(--color-accent)" stroke-width="2.5" stroke-linecap="round"/></svg>
             </div>
             <h3 class="card__title">Proativa Capital</h3>
             <p class="card__label">Inteligência e BPO</p>
             <p class="card__desc">Gestão avançada, tecnologia, backoffice estruturado e inteligência de dados. O cérebro do ecossistema que transforma operações em resultados mensuráveis.</p>
+            <div class="card__line" aria-hidden="true"></div>
           </article>
 
           <!-- Card 2 -->
-          <article class="card">
+          <article class="card card--glp">
+            <div class="card__number" aria-hidden="true">02</div>
             <div class="card__icon" aria-hidden="true">
-              <svg width="40" height="40" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="8" fill="#FEF3C7"/><path d="M14 26l6-12 6 12" stroke="#D97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 22h8" stroke="#D97706" stroke-width="2.5" stroke-linecap="round"/></svg>
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none"><rect width="44" height="44" rx="12" fill="#D97706" fill-opacity="0.08"/><path d="M16 28l6-12 6 12" stroke="#D97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 24h8" stroke="#D97706" stroke-width="2.5" stroke-linecap="round"/></svg>
             </div>
             <h3 class="card__title">GLP Gás</h3>
             <p class="card__label">Operação Real e Logística</p>
             <p class="card__desc">Mais de 30 anos de atuação. A força operacional, logística e o lastro de mercado que dão peso e credibilidade a cada entrega do grupo.</p>
+            <div class="card__line" aria-hidden="true"></div>
           </article>
 
           <!-- Card 3 -->
-          <article class="card">
+          <article class="card card--simeao">
+            <div class="card__number" aria-hidden="true">03</div>
             <div class="card__icon" aria-hidden="true">
-              <svg width="40" height="40" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="8" fill="#F0FDF4"/><path d="M20 14v6l4 4" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20" cy="20" r="8" stroke="#16A34A" stroke-width="2.5"/></svg>
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none"><rect width="44" height="44" rx="12" fill="#16A34A" fill-opacity="0.08"/><path d="M22 16v6l4 4" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="22" cy="22" r="8" stroke="#16A34A" stroke-width="2.5"/></svg>
             </div>
             <h3 class="card__title">Simeão Advogados</h3>
             <p class="card__label">Blindagem Jurídica</p>
             <p class="card__desc">O braço técnico e jurídico que garante segurança, compliance e blindagem legal para todas as operações do ecossistema.</p>
+            <div class="card__line" aria-hidden="true"></div>
           </article>
         </div>
       </div>
     </section>
 
-    <!-- ============ PROVA SOCIAL ============ -->
+    <!-- ============ PROVA SOCIAL / NOSSA FORÇA ============ -->
     <section class="section stats" id="forca" aria-labelledby="stats-title">
       <div class="container">
-        <h2 class="sr-only" id="stats-title">Nossos números</h2>
+        <h2 class="sr-only" id="stats-title">Nossa força em números</h2>
         <div class="stats-grid">
-          <div class="stat" data-target="30" data-prefix="+" data-suffix=" Anos">
-            <span class="stat__number">+30 Anos</span>
+          <div class="stat" data-target="30" data-prefix="+" data-suffix="">
+            <span class="stat__number" aria-live="polite">+30</span>
+            <span class="stat__unit">Anos</span>
             <span class="stat__label">de Mercado</span>
           </div>
-          <div class="stat" data-target="3" data-suffix=" Empresas">
-            <span class="stat__number">3 Empresas</span>
+          <div class="stat" data-target="3" data-prefix="" data-suffix="">
+            <span class="stat__number" aria-live="polite">3</span>
+            <span class="stat__unit">Empresas</span>
             <span class="stat__label">Integradas</span>
           </div>
-          <div class="stat" data-target="100" data-suffix="%">
-            <span class="stat__number">100%</span>
+          <div class="stat" data-target="100" data-prefix="" data-suffix="%">
+            <span class="stat__number" aria-live="polite">100%</span>
+            <span class="stat__unit">&nbsp;</span>
             <span class="stat__label">Operação Nacional</span>
           </div>
-          <div class="stat" data-target="500" data-prefix="+" data-suffix=" Clientes">
-            <span class="stat__number">+500 Clientes</span>
+          <div class="stat" data-target="500" data-prefix="+" data-suffix="">
+            <span class="stat__number" aria-live="polite">+500</span>
+            <span class="stat__unit">Clientes</span>
             <span class="stat__label">Atendidos</span>
           </div>
         </div>
@@ -202,7 +288,7 @@
             <ul class="values-list">
               <li class="values-list__item">
                 <div class="values-list__icon" aria-hidden="true">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="#2563EB" stroke-width="2"/></svg>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="var(--color-accent)" stroke-width="2"/></svg>
                 </div>
                 <div>
                   <h3>Governança Corporativa</h3>
@@ -211,7 +297,7 @@
               </li>
               <li class="values-list__item">
                 <div class="values-list__icon" aria-hidden="true">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
                 <div>
                   <h3>Impacto Real</h3>
@@ -220,7 +306,7 @@
               </li>
               <li class="values-list__item">
                 <div class="values-list__icon" aria-hidden="true">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="#2563EB" stroke-width="2" stroke-linecap="round"/></svg>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round"/></svg>
                 </div>
                 <div>
                   <h3>Desenvolvimento Contínuo</h3>
@@ -273,7 +359,10 @@
     <div class="container">
       <div class="footer-grid">
         <div class="footer-brand">
-          <span class="logo-text logo-text--light">Proativa<strong>Capital</strong></span>
+          <div class="footer-logo">
+            <span class="logo-mark logo-mark--light" aria-hidden="true">P</span>
+            <span class="logo-text logo-text--light">Proativa<strong>Capital</strong></span>
+          </div>
           <p class="footer-brand__desc">Inteligência de BPO e gestão avançada a serviço de resultados reais.</p>
         </div>
         <nav class="footer-nav" aria-label="Links institucionais">
@@ -294,7 +383,7 @@
         </nav>
       </div>
       <div class="footer-bottom">
-        <p>&copy; 2026 Proativa Capital. Todos os direitos reservados.</p>
+        <p>&copy; 2026 Proativa Capital. Todos os direitos reservados. CNPJ: 00.000.000/0001-00</p>
       </div>
     </div>
   </footer>

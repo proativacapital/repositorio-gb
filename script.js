@@ -1,51 +1,45 @@
 /* ============================================
    Proativa Capital — Vanilla JS
-   INP-optimized, no heavy blocking tasks
+   Skills: core-web-vitals (INP + CLS safe)
+   No heavy blocking, passive listeners, rAF batching
    ============================================ */
 
 (function () {
   'use strict';
 
   // ---------- DOM REFERENCES ----------
-  const header = document.querySelector('.site-header');
-  const menuToggle = document.getElementById('menuToggle');
-  const navList = document.getElementById('navList');
-  const navLinks = document.querySelectorAll('.nav-link');
+  var header = document.querySelector('.site-header');
+  var menuToggle = document.getElementById('menuToggle');
+  var navList = document.getElementById('navList');
+  var navLinks = document.querySelectorAll('.nav-link');
 
-  // ---------- HEADER SCROLL STATE ----------
-  let lastScrolled = false;
+  // ---------- HEADER SCROLL STATE (passive for INP) ----------
+  var ticking = false;
 
   function updateHeaderState() {
-    const scrolled = window.scrollY > 10;
-    if (scrolled !== lastScrolled) {
-      lastScrolled = scrolled;
-      if (scrolled) {
-        header.classList.add('scrolled');
-      } else {
-        header.classList.remove('scrolled');
-      }
-    }
+    var scrolled = window.scrollY > 10;
+    header.classList.toggle('scrolled', scrolled);
+    ticking = false;
   }
 
-  // Use passive scroll listener for better INP
-  window.addEventListener('scroll', updateHeaderState, { passive: true });
+  window.addEventListener('scroll', function () {
+    if (!ticking) {
+      requestAnimationFrame(updateHeaderState);
+      ticking = true;
+    }
+  }, { passive: true });
+
   updateHeaderState();
 
   // ---------- MOBILE MENU ----------
-  function toggleMenu() {
-    const isOpen = navList.classList.contains('open');
-
-    if (isOpen) {
-      navList.classList.remove('open');
-      menuToggle.classList.remove('active');
-      menuToggle.setAttribute('aria-expanded', 'false');
-      menuToggle.setAttribute('aria-label', 'Abrir menu');
-    } else {
-      navList.classList.add('open');
-      menuToggle.classList.add('active');
-      menuToggle.setAttribute('aria-expanded', 'true');
-      menuToggle.setAttribute('aria-label', 'Fechar menu');
-    }
+  function openMenu() {
+    navList.classList.add('open');
+    menuToggle.classList.add('active');
+    menuToggle.setAttribute('aria-expanded', 'true');
+    menuToggle.setAttribute('aria-label', 'Fechar menu');
+    // Trap focus: focus first link
+    var firstLink = navList.querySelector('.nav-link');
+    if (firstLink) firstLink.focus();
   }
 
   function closeMenu() {
@@ -55,14 +49,22 @@
     menuToggle.setAttribute('aria-label', 'Abrir menu');
   }
 
+  function toggleMenu() {
+    if (navList.classList.contains('open')) {
+      closeMenu();
+    } else {
+      openMenu();
+    }
+  }
+
   menuToggle.addEventListener('click', toggleMenu);
 
-  // Close menu when a nav link is clicked
+  // Close menu on link click
   navLinks.forEach(function (link) {
     link.addEventListener('click', closeMenu);
   });
 
-  // Close menu on Escape key
+  // Close on Escape
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && navList.classList.contains('open')) {
       closeMenu();
@@ -70,7 +72,16 @@
     }
   });
 
-  // ---------- SMOOTH SCROLL (for older browsers without CSS scroll-behavior) ----------
+  // Close on click outside (mobile)
+  document.addEventListener('click', function (e) {
+    if (navList.classList.contains('open') &&
+        !navList.contains(e.target) &&
+        !menuToggle.contains(e.target)) {
+      closeMenu();
+    }
+  });
+
+  // ---------- SMOOTH SCROLL (progressive enhancement) ----------
   document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
     anchor.addEventListener('click', function (e) {
       var targetId = this.getAttribute('href');
@@ -79,7 +90,7 @@
       var target = document.querySelector(targetId);
       if (target) {
         e.preventDefault();
-        var headerOffset = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 72;
+        var headerOffset = 72;
         var elementPosition = target.getBoundingClientRect().top + window.scrollY;
         var offsetPosition = elementPosition - headerOffset;
 
@@ -88,24 +99,23 @@
           behavior: 'smooth'
         });
 
-        // Update URL without triggering scroll
+        // Update URL fragment
         history.pushState(null, '', targetId);
       }
     });
   });
 
-  // ---------- FADE-IN ON SCROLL (IntersectionObserver — no layout thrashing) ----------
+  // ---------- FADE-IN ON SCROLL (IntersectionObserver — CLS safe) ----------
   function initFadeIns() {
     var fadeElements = document.querySelectorAll(
-      '.card, .stat, .values-list__item, .jobs-content, .section__tag, .section__title, .section__lead'
+      '.card, .stat, .values-list__item, .jobs-content, .section__tag, .section__title, .section__lead, .section__header, .hero__eyebrow, .hero__actions, .jobs-badges'
     );
 
-    // Add the fade-in class
+    // Add fade-in class via JS (so content is visible if JS fails — no CLS)
     fadeElements.forEach(function (el) {
       el.classList.add('fade-in');
     });
 
-    // Guard: check for IntersectionObserver support
     if (!('IntersectionObserver' in window)) {
       fadeElements.forEach(function (el) {
         el.classList.add('visible');
@@ -117,7 +127,7 @@
       function (entries) {
         entries.forEach(function (entry) {
           if (entry.isIntersecting) {
-            // Use requestAnimationFrame to batch visual updates (better INP)
+            // Batch visual update in rAF for better INP
             requestAnimationFrame(function () {
               entry.target.classList.add('visible');
             });
@@ -126,8 +136,8 @@
         });
       },
       {
-        threshold: 0.15,
-        rootMargin: '0px 0px -40px 0px'
+        threshold: 0.12,
+        rootMargin: '0px 0px -50px 0px'
       }
     );
 
@@ -136,14 +146,7 @@
     });
   }
 
-  // Defer fade-in setup to avoid blocking first paint
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initFadeIns);
-  } else {
-    requestAnimationFrame(initFadeIns);
-  }
-
-  // ---------- COUNTER ANIMATION (stats section) ----------
+  // ---------- COUNTER ANIMATION (stats) — CLS safe with min-height ----------
   function animateCounters() {
     var stats = document.querySelectorAll('.stat');
 
@@ -173,15 +176,15 @@
   }
 
   function animateNumber(el, target, prefix, suffix) {
-    var duration = 1500;
+    var duration = 1800;
     var startTime = null;
 
     function step(timestamp) {
       if (!startTime) startTime = timestamp;
       var progress = Math.min((timestamp - startTime) / duration, 1);
 
-      // Ease-out cubic
-      var eased = 1 - Math.pow(1 - progress, 3);
+      // Ease-out expo for a premium feel
+      var eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
       var current = Math.floor(eased * target);
 
       el.textContent = prefix + current + suffix;
@@ -196,13 +199,7 @@
     requestAnimationFrame(step);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', animateCounters);
-  } else {
-    requestAnimationFrame(animateCounters);
-  }
-
-  // ---------- ACTIVE NAV HIGHLIGHT ON SCROLL ----------
+  // ---------- ACTIVE NAV HIGHLIGHT ----------
   function initActiveNav() {
     var sections = document.querySelectorAll('section[id]');
 
@@ -213,19 +210,19 @@
         entries.forEach(function (entry) {
           if (entry.isIntersecting) {
             var id = entry.target.getAttribute('id');
-            navLinks.forEach(function (link) {
-              if (link.getAttribute('href') === '#' + id) {
-                link.classList.add('active');
-              } else {
-                link.classList.remove('active');
-              }
+            // Defer DOM updates to rAF
+            requestAnimationFrame(function () {
+              navLinks.forEach(function (link) {
+                var isActive = link.getAttribute('href') === '#' + id;
+                link.classList.toggle('active', isActive);
+              });
             });
           }
         });
       },
       {
         threshold: 0.3,
-        rootMargin: '-' + (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 72) + 'px 0px -40% 0px'
+        rootMargin: '-72px 0px -40% 0px'
       }
     );
 
@@ -234,9 +231,19 @@
     });
   }
 
+  // ---------- INIT — deferred to avoid blocking first paint ----------
+  function init() {
+    initFadeIns();
+    animateCounters();
+    initActiveNav();
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initActiveNav);
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    requestAnimationFrame(initActiveNav);
+    // Yield to main thread before initializing (INP best practice)
+    requestAnimationFrame(function () {
+      requestAnimationFrame(init);
+    });
   }
 })();
