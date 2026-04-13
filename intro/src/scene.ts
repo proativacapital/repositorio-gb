@@ -27,6 +27,11 @@ export function createScene(container: HTMLElement) {
   directional.position.set(5, 5, 5);
   scene.add(directional);
 
+  // Flash point light (off by default, used during fusion)
+  const flashLight = new THREE.PointLight(0xffffff, 0, 20);
+  flashLight.position.set(0, 0, 0);
+  scene.add(flashLight);
+
   // Handle resize
   const onResize = () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -35,5 +40,5 @@ export function createScene(container: HTMLElement) {
   };
   window.addEventListener('resize', onResize);
 
-  return { renderer, scene, camera };
+  return { renderer, scene, camera, flashLight };
 }

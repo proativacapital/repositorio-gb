@@ -2,11 +2,12 @@ import './style.css';
 import * as THREE from 'three';
 import { createScene } from './scene';
 import { createUI, prefersReducedMotion } from './ui';
+import gsap from 'gsap';
 import { createObjects } from './objects';
-import { buildEntryTimeline, spinObjects } from './animation';
+import { buildEntryTimeline, buildConvergenceTimeline, spinObjects } from './animation';
 
 const app = document.getElementById('app')!;
-const { renderer, scene, camera } = createScene(app);
+const { renderer, scene, camera, flashLight } = createScene(app);
 
 // Dust particles so the fog is visible
 const dustCount = 120;
@@ -30,12 +31,20 @@ scene.add(dust);
 // 3D brand objects
 const objects = createObjects(scene);
 
-// GSAP entry timeline (Phase 3: 0s–2s)
-const entryTL = buildEntryTimeline(objects);
+// Master GSAP timeline
+const masterTL = gsap.timeline();
 
-// Skip handler — jumps timeline to end
+// Phase 3: entry (0s–2s)
+const entryTL = buildEntryTimeline(objects);
+masterTL.add(entryTL, 0);
+
+// Phase 4: convergence + flash (2s–3.5s)
+const convergeTL = buildConvergenceTimeline(objects, flashLight, scene);
+masterTL.add(convergeTL, 2);
+
+// Skip handler — jumps entire timeline to end
 function handleSkip() {
-  entryTL.progress(1);
+  masterTL.progress(1);
 }
 
 // Reduced motion: skip intro immediately
