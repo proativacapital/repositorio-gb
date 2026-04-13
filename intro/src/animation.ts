@@ -140,6 +140,52 @@ export function buildConvergenceTimeline(
   return tl;
 }
 
+/**
+ * Phase 5 timeline: logo reveal letter-by-letter + tagline fade-in.
+ * Duration: 3.5s – 5s (1.5s window)
+ */
+export function buildRevealTimeline(): gsap.core.Timeline {
+  const tl = gsap.timeline();
+
+  // Populate #logo-text with one <span> per character
+  const logoEl = document.getElementById('logo-text')!;
+  const text = 'PROATIVA CAPITAL';
+  logoEl.innerHTML = '';
+  for (const char of text) {
+    const span = document.createElement('span');
+    if (char === ' ') {
+      span.innerHTML = '&nbsp;';
+    } else {
+      span.textContent = char;
+    }
+    logoEl.appendChild(span);
+  }
+
+  const letters = logoEl.querySelectorAll('span');
+  const tagline = document.getElementById('tagline')!;
+
+  // Letters stagger in: opacity 0→1, y 20→0
+  tl.to(letters, {
+    opacity: 1,
+    y: 0,
+    duration: 0.4,
+    stagger: 0.04,
+    ease: 'power2.out',
+  }, 0);
+
+  // Set initial y offset for each letter
+  gsap.set(letters, { y: 20, opacity: 0 });
+
+  // Tagline fades in after logo is mostly visible
+  tl.to(tagline, {
+    opacity: 1,
+    duration: 0.5,
+    ease: 'power1.out',
+  }, 0.9);
+
+  return tl;
+}
+
 /** Rotate each object on its own axes — called every frame */
 export function spinObjects(objects: IntroObject[]) {
   for (const obj of objects) {

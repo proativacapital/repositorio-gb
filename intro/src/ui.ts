@@ -32,7 +32,11 @@ export function createUI(onSkip: () => void) {
     }
   });
 
-  // -- Logo overlay (hidden for now, used in Phase 5) --
+  return { skipBtn: btn };
+}
+
+/** Creates the logo overlay DOM (needed before animation setup) */
+export function createLogoOverlay() {
   const overlay = document.createElement('div');
   overlay.id = 'logo-overlay';
   overlay.innerHTML = `
@@ -40,8 +44,6 @@ export function createUI(onSkip: () => void) {
     <div id="tagline">Três forças. Um ecossistema.</div>
   `;
   document.body.appendChild(overlay);
-
-  return { skipBtn: btn, overlay };
 }
 
 /** Returns true if user prefers reduced motion */

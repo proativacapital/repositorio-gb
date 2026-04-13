@@ -1,10 +1,10 @@
 import './style.css';
 import * as THREE from 'three';
 import { createScene } from './scene';
-import { createUI, prefersReducedMotion } from './ui';
+import { createUI, createLogoOverlay, prefersReducedMotion } from './ui';
 import gsap from 'gsap';
 import { createObjects } from './objects';
-import { buildEntryTimeline, buildConvergenceTimeline, spinObjects } from './animation';
+import { buildEntryTimeline, buildConvergenceTimeline, buildRevealTimeline, spinObjects } from './animation';
 
 const app = document.getElementById('app')!;
 const { renderer, scene, camera, flashLight } = createScene(app);
@@ -28,6 +28,9 @@ const dustMat = new THREE.PointsMaterial({
 const dust = new THREE.Points(dustGeo, dustMat);
 scene.add(dust);
 
+// Logo overlay DOM (must exist before buildRevealTimeline)
+createLogoOverlay();
+
 // 3D brand objects
 const objects = createObjects(scene);
 
@@ -41,6 +44,15 @@ masterTL.add(entryTL, 0);
 // Phase 4: convergence + flash (2s–3.5s)
 const convergeTL = buildConvergenceTimeline(objects, flashLight, scene);
 masterTL.add(convergeTL, 2);
+
+// Phase 5: logo reveal + tagline (3.5s–5s)
+const revealTL = buildRevealTimeline();
+masterTL.add(revealTL, 3.5);
+
+// Fire custom event when intro finishes
+masterTL.eventCallback('onComplete', () => {
+  window.dispatchEvent(new CustomEvent('introComplete'));
+});
 
 // Skip handler — jumps entire timeline to end
 function handleSkip() {
