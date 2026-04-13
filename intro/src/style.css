@@ -1,0 +1,94 @@
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #050b1a;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+canvas {
+  display: block;
+}
+
+/* Skip button */
+#skip-btn {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  padding: 0.6rem 1.4rem;
+  background: rgba(208, 208, 216, 0.1);
+  border: 1px solid rgba(208, 208, 216, 0.3);
+  color: #d0d0d8;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: background 0.2s;
+  z-index: 10;
+  border-radius: 4px;
+}
+
+#skip-btn.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#skip-btn:hover,
+#skip-btn:focus-visible {
+  background: rgba(208, 208, 216, 0.25);
+  outline: none;
+}
+
+/* Logo overlay */
+#logo-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+#logo-text {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.8rem, 5vw, 4rem);
+  color: #d0d0d8;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  overflow: hidden;
+}
+
+#logo-text span {
+  display: inline-block;
+  opacity: 0;
+}
+
+#tagline {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: clamp(0.9rem, 2vw, 1.4rem);
+  color: rgba(208, 208, 216, 0.7);
+  margin-top: 0.6rem;
+  opacity: 0;
+}
