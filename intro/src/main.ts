@@ -2,6 +2,8 @@ import './style.css';
 import * as THREE from 'three';
 import { createScene } from './scene';
 import { createUI, prefersReducedMotion } from './ui';
+import { createObjects } from './objects';
+import { buildEntryTimeline, spinObjects } from './animation';
 
 const app = document.getElementById('app')!;
 const { renderer, scene, camera } = createScene(app);
@@ -25,9 +27,15 @@ const dustMat = new THREE.PointsMaterial({
 const dust = new THREE.Points(dustGeo, dustMat);
 scene.add(dust);
 
-// Skip handler — for now just logs; will jump to final state in later phases
+// 3D brand objects
+const objects = createObjects(scene);
+
+// GSAP entry timeline (Phase 3: 0s–2s)
+const entryTL = buildEntryTimeline(objects);
+
+// Skip handler — jumps timeline to end
 function handleSkip() {
-  console.log('[intro] skipped');
+  entryTL.progress(1);
 }
 
 // Reduced motion: skip intro immediately
@@ -40,6 +48,7 @@ if (prefersReducedMotion()) {
 // Render loop
 function tick() {
   dust.rotation.y += 0.0003;
+  spinObjects(objects);
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }
