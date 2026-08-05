@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Proativa Capital — BPO de Serviços que integra construção, energia (GLP Gás, +30 anos) e advocacia. Trabalhe conosco.">
+<meta name="description" content="Proativa Capital — BPO de Serviços que integra gestão de processos, energia (GLP Gás, +30 anos) e advocacia. Trabalhe conosco.">
 <meta name="theme-color" content="#050B1A">
 <meta name="robots" content="index, follow">
 <meta property="og:title" content="Proativa Capital — BPO de Serviços">
-<meta property="og:description" content="BPO de Serviços que integra três verticais: construção, energia (com a tradicional GLP Gás) e advocacia.">
+<meta property="og:description" content="BPO de Serviços que integra três verticais: gestão de processos, energia (com a tradicional GLP Gás) e advocacia.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://proativacapital.com.br">
 <link rel="canonical" href="https://proativacapital.com.br">
@@ -26,7 +26,7 @@
   "alternateName": "Grupo Proativa Capital",
   "url": "https://proativacapital.com.br",
   "logo": "https://proativacapital.com.br/logo.png",
-  "description": "BPO de Serviços que integra três verticais empresariais: construção, energia (GLP Gás, +30 anos) e advocacia (Simeão Advogados).",
+  "description": "BPO de Serviços que integra três verticais empresariais: gestão de processos, energia (GLP Gás, +30 anos) e advocacia (Simeão Advogados).",
 
   "ceo": {
     "@type": "Person",
@@ -157,6 +157,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
 /* ═══ BODY TEXT ═══ */
 .body-text{font-size:.92rem;color:var(--chrome-500);line-height:1.75;max-width:500px}
 .body-text+.body-text{margin-top:1rem}
+.body-text strong{color:var(--chrome-200);font-weight:600}
 
 /* ═══ BUTTONS ═══ */
 .btn{
@@ -880,6 +881,64 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
   background:linear-gradient(90deg,transparent,rgba(90,140,248,.4),transparent);
 }
 
+/* ── Linha do tempo do CEO ── */
+.tl{list-style:none;display:flex;flex-direction:column;gap:0;margin:1.75rem 0 0}
+.tl__item{
+  position:relative;display:grid;
+  grid-template-columns:auto 1fr;gap:1.1rem;
+  padding:0 0 1.5rem 0;
+}
+.tl__item:last-child{padding-bottom:0}
+.tl__marker{position:relative;display:flex;justify-content:center;width:12px}
+.tl__dot{
+  width:9px;height:9px;border-radius:50%;
+  background:var(--chrome-400);margin-top:.45rem;flex-shrink:0;
+  box-shadow:0 0 0 4px rgba(168,168,176,.08);
+  transition:background .4s,box-shadow .4s;
+}
+.tl__item:last-child .tl__dot{background:var(--chrome-100);box-shadow:0 0 0 5px rgba(224,224,232,.12)}
+.tl__line{
+  position:absolute;top:1.2rem;bottom:-.35rem;left:50%;
+  width:1px;transform:translateX(-50%);
+  background:linear-gradient(to bottom,rgba(168,168,176,.35),rgba(168,168,176,.08));
+}
+.tl__item:last-child .tl__line{display:none}
+.tl__when{
+  font-family:var(--f-display);font-weight:700;
+  font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--chrome-400);display:block;margin-bottom:.3rem;
+}
+.tl__what{
+  font-family:var(--f-body);font-size:.88rem;font-weight:400;
+  color:var(--chrome-400);line-height:1.6;
+}
+.tl__what strong{color:white;font-weight:600}
+
+/* ── Bloco "ler mais" reutilizável ── */
+.more{margin-top:1.6rem}
+.more__btn{
+  display:inline-flex;align-items:center;gap:.6rem;
+  padding:.6rem 1.2rem;
+  font-family:var(--f-display);font-size:.58rem;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:var(--chrome-300);background:transparent;
+  border:1px solid rgba(168,168,176,.18);border-radius:100px;
+  cursor:pointer;transition:border-color .3s,color .3s,background .3s;
+}
+.more__btn:hover{border-color:var(--chrome-300);color:white;background:rgba(168,168,176,.05)}
+.more__btn::after{
+  content:'+';font-size:.95rem;line-height:1;font-weight:400;
+  transition:transform .4s cubic-bezier(.16,1,.3,1);
+}
+.more.open .more__btn::after{transform:rotate(45deg)}
+.more__panel{
+  display:grid;grid-template-rows:0fr;
+  transition:grid-template-rows .55s cubic-bezier(.16,1,.3,1);
+}
+.more.open .more__panel{grid-template-rows:1fr}
+.more__inner{overflow:hidden;min-height:0}
+.more__inner>*:first-child{padding-top:1.5rem}
+
 @media(max-width:900px){
   .ceo__grid{grid-template-columns:1fr;gap:3.5rem}
   .ceo__photo-col{position:static;max-width:340px;margin:0 auto}
@@ -1323,7 +1382,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
   <div class="ticker__track">
     <span class="ticker__item">BPO de Serviços</span>
     <span class="ticker__item">Terceirização de Processos</span>
-    <span class="ticker__item">Construção</span>
+    <span class="ticker__item">Gestão de Processos</span>
     <span class="ticker__item">Energia</span>
     <span class="ticker__item">Advocacia</span>
     <span class="ticker__item">Gestão Integrada</span>
@@ -1332,7 +1391,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
     <span class="ticker__item">Operação 24/7</span>
     <span class="ticker__item">BPO de Serviços</span>
     <span class="ticker__item">Terceirização de Processos</span>
-    <span class="ticker__item">Construção</span>
+    <span class="ticker__item">Gestão de Processos</span>
     <span class="ticker__item">Energia</span>
     <span class="ticker__item">Advocacia</span>
     <span class="ticker__item">Gestão Integrada</span>
@@ -1354,7 +1413,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
           NÃO SOMOS UMA<br>HOLDING.<br><span class="ed">Somos um BPO de serviços.</span>
         </h2>
         <p class="body-text rv d3">
-          A Proativa Capital é um BPO — Business Process Outsourcing — que integra e terceiriza processos de gestão, operação e estratégia de negócio. Reunimos sob um mesmo ecossistema três verticais consolidadas: a GLP Gás (negócio familiar com tradição em distribuição de energia), a Simeão Advogados (jurídico) e a área de gestão de processos da própria Proativa.
+          <strong>BPO</strong> é Business Process Outsourcing: a empresa nos entrega um processo inteiro — gestão, operação ou estratégia — e nós devolvemos resultado, com governança e indicadores próprios.
         </p>
 
         <div class="about__quote rv d4">
@@ -1363,7 +1422,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
         </div>
 
         <p class="body-text rv d5">
-          Cada profissional que entra no nosso BPO acessa um ambiente multissetorial — onde você pode atuar em processos de gestão, energia ou jurídico — com a agilidade de quem inova e a solidez de quem opera no mundo real.
+          Para quem trabalha aqui, isso vira acesso a <strong>três frentes de negócio numa só carreira</strong>.
         </p>
 
         <a href="javascript:void(0)" onclick="goTo('servicos')" class="btn btn--g rv d6" style="margin-top:1.5rem">
@@ -1371,7 +1430,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
         </a>
       </div>
       <div class="about__media rv-r d3">
-        <span class="about__media-label">[Escritório executivo / Equipe]</span>
+        <span class="about__media-label">[Foto: prédio O2 Corporate &amp; Offices]</span>
       </div>
     </div>
   </div>
@@ -1448,30 +1507,73 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
           <span class="ed">Uma história de continuidade.</span>
         </h2>
 
-        <p class="rv d3">
-          Tudo começou com um acidente. No início dos anos 1990, o <strong>pai de Natalino Simeão</strong> sofreu um acidente e, em seguida, foi desligado da distribuidora de gás onde trabalhava. Sem emprego e com uma família para sustentar, fez a única aposta possível: usar tudo o que sabia sobre o mercado para abrir o próprio negócio. Nascia ali a <strong>GLP Gás</strong> — uma empresa familiar criada da necessidade, construída do zero e movida pela coragem de quem não tinha plano B.
-        </p>
+        <ol class="tl rv d3">
+          <li class="tl__item">
+            <div class="tl__marker"><span class="tl__dot"></span><span class="tl__line"></span></div>
+            <div>
+              <span class="tl__when">1990</span>
+              <p class="tl__what">Um acidente custa ao pai de Natalino o emprego na distribuidora de gás. Sem plano B, ele abre a <strong>GLP Gás</strong> do zero.</p>
+            </div>
+          </li>
+          <li class="tl__item">
+            <div class="tl__marker"><span class="tl__dot"></span><span class="tl__line"></span></div>
+            <div>
+              <span class="tl__when">Aos 11 anos</span>
+              <p class="tl__what">Natalino já está no caminhão de entrega com o pai. Aprende o ofício <strong>no chão da operação</strong>, não na teoria.</p>
+            </div>
+          </li>
+          <li class="tl__item">
+            <div class="tl__marker"><span class="tl__dot"></span><span class="tl__line"></span></div>
+            <div>
+              <span class="tl__when">Simeão Advogados</span>
+              <p class="tl__what">Os clientes pediam mais que gás: contrato, segurança jurídica. Ele funda o <strong>braço jurídico</strong>.</p>
+            </div>
+          </li>
+          <li class="tl__item">
+            <div class="tl__marker"><span class="tl__dot"></span><span class="tl__line"></span></div>
+            <div>
+              <span class="tl__when">Proativa Capital</span>
+              <p class="tl__what">Faltava gestão ponta a ponta. Nasce o <strong>BPO</strong> que orquestra todas as verticais.</p>
+            </div>
+          </li>
+          <li class="tl__item">
+            <div class="tl__marker"><span class="tl__dot"></span><span class="tl__line"></span></div>
+            <div>
+              <span class="tl__when">Hoje</span>
+              <p class="tl__what">CEO das três empresas, com os <strong>dois irmãos na diretoria</strong> da GLP. Mais de <strong>3.000 vidas impactadas</strong>.</p>
+            </div>
+          </li>
+        </ol>
 
-        <p class="rv d4">
-          Natalino entrou no negócio aos <strong>11 anos de idade</strong>, ao lado do pai. Dirigia o caminhão de entrega, fazia instalações, ajudava em tudo o que aparecia. Não foi um estágio formal — foi a vida ensinando o ofício na prática, desde criança. E foi exatamente nessa vivência de chão que ele construiu a filosofia que carrega até hoje: <span class="slogan-hl">"seu sucesso é a nossa energia"</span>. Para Natalino, o que move a GLP nunca foi o gás — sempre foi o cliente do outro lado da entrega. Hoje, depois de mais de três décadas dentro da operação, ele é o <strong>CEO da GLP Gás</strong>, comandando a empresa familiar com os <strong>dois irmãos na diretoria</strong> — dando continuidade à aposta que o pai fez no início dos anos 1990 e levando o negócio para um novo patamar.
-        </p>
-
-        <p class="rv d5">
-          Mas Natalino enxergava algo além da operação familiar. Cada cliente da GLP revelava demandas que iam muito além do gás: contratos, segurança jurídica, processos administrativos, gestão integrada. Foi essa visão que deu origem, anos depois, à <strong>Simeão Advogados</strong> — o braço jurídico fundado por Natalino para blindar não só os clientes da GLP, mas qualquer empresa que precisasse de excelência técnica em direito empresarial, trabalhista e do consumidor.
-        </p>
-
-        <div class="ceo__story-pull rv d6">
+        <div class="ceo__story-pull rv d4">
           <p>"Aos 11, eu já estava no caminhão com meu pai. Hoje, lidero um ecossistema. Mas nunca esqueci de onde a gente veio."</p>
           <cite>— Natalino Simeão</cite>
         </div>
 
-        <p class="rv d7">
-          E quando ficou claro que cada operação demandava muito mais do que execução isolada — quando o cliente queria gestão completa, terceirização inteligente, processos integrados ponta a ponta — Natalino fundou a <strong>Proativa Capital</strong>. Não como uma holding clássica, mas como um BPO de serviços. Um centro de inteligência que orquestra, gerencia e escala três verticais críticas: a tradição familiar da GLP Gás, o rigor técnico da Simeão Advogados, e a gestão integrada de processos da própria Proativa.
-        </p>
-
-        <p class="rv d8">
-          Hoje, Natalino senta em <strong>três cadeiras diferentes</strong> — todas como CEO. É CEO da <strong>GLP Gás</strong>, ao lado dos irmãos que atuam na diretoria. É CEO da <strong>Simeão Advogados</strong>, comandando a vertical jurídica que ele mesmo fundou. E é CEO da <strong>Proativa Capital</strong>, o BPO que orquestra todo o ecossistema. Três marcas, três operações, um único comando — unindo a tradição da empresa familiar com a visão estratégica de quem construiu cada nova vertical do zero. Mais de 3.000 vidas impactadas e um compromisso intransigente: <strong>excelência é o mínimo</strong>.
-        </p>
+        <div class="more rv d5" id="ceoMore">
+          <button class="more__btn" type="button" aria-expanded="false" aria-controls="ceoMorePanel" data-label-open="Fechar história" onclick="toggleMore(this)">
+            Ler a história completa
+          </button>
+          <div class="more__panel" id="ceoMorePanel">
+            <div class="more__inner">
+              <p>
+                Tudo começou com um acidente. No início dos anos 1990, o <strong>pai de Natalino Simeão</strong> sofreu um acidente e, em seguida, foi desligado da distribuidora de gás onde trabalhava. Sem emprego e com uma família para sustentar, fez a única aposta possível: usar tudo o que sabia sobre o mercado para abrir o próprio negócio. Nascia ali a <strong>GLP Gás</strong> — uma empresa familiar criada da necessidade, construída do zero e movida pela coragem de quem não tinha plano B.
+              </p>
+              <p>
+                Natalino entrou no negócio aos <strong>11 anos de idade</strong>, ao lado do pai. Dirigia o caminhão de entrega, fazia instalações, ajudava em tudo o que aparecia. Não foi um estágio formal — foi a vida ensinando o ofício na prática, desde criança. E foi exatamente nessa vivência de chão que ele construiu a filosofia que carrega até hoje: <span class="slogan-hl">"seu sucesso é a nossa energia"</span>. Para Natalino, o que move a GLP nunca foi o gás — sempre foi o cliente do outro lado da entrega. Hoje, depois de mais de três décadas dentro da operação, ele é o <strong>CEO da GLP Gás</strong>, comandando a empresa familiar com os <strong>dois irmãos na diretoria</strong> — dando continuidade à aposta que o pai fez no início dos anos 1990 e levando o negócio para um novo patamar.
+              </p>
+              <p>
+                Mas Natalino enxergava algo além da operação familiar. Cada cliente da GLP revelava demandas que iam muito além do gás: contratos, segurança jurídica, processos administrativos, gestão integrada. Foi essa visão que deu origem, anos depois, à <strong>Simeão Advogados</strong> — o braço jurídico fundado por Natalino para blindar não só os clientes da GLP, mas qualquer empresa que precisasse de excelência técnica em direito empresarial, trabalhista e do consumidor.
+              </p>
+              <p>
+                E quando ficou claro que cada operação demandava muito mais do que execução isolada — quando o cliente queria gestão completa, terceirização inteligente, processos integrados ponta a ponta — Natalino fundou a <strong>Proativa Capital</strong>. Não como uma holding clássica, mas como um BPO de serviços. Um centro de inteligência que orquestra, gerencia e escala as verticais críticas do grupo: a tradição familiar da GLP Gás, o rigor técnico da Simeão Advogados, e a gestão integrada de processos da própria Proativa.
+              </p>
+              <p>
+                Hoje, Natalino senta em <strong>três cadeiras diferentes</strong> — todas como CEO. É CEO da <strong>GLP Gás</strong>, ao lado dos irmãos que atuam na diretoria. É CEO da <strong>Simeão Advogados</strong>, comandando a vertical jurídica que ele mesmo fundou. E é CEO da <strong>Proativa Capital</strong>, o BPO que orquestra todo o ecossistema. Três marcas, três operações, um único comando — unindo a tradição da empresa familiar com a visão estratégica de quem construiu cada nova vertical do zero. Mais de 3.000 vidas impactadas e um compromisso intransigente: <strong>excelência é o mínimo</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -1511,7 +1613,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
             <div class="ec__over">BPO &amp; Gestão de Processos</div>
             <h3 class="ec__title">Proativa Capital</h3>
             <p class="ec__sub">O BPO que integra tudo</p>
-            <p class="ec__desc">Terceirização e gestão completa de processos empresariais. Da estratégia à operação, com tecnologia e inteligência ponta a ponta.</p>
+            <p class="ec__desc">Terceirização e gestão de processos, da estratégia à operação.</p>
             <div class="ec__tags">
               <span class="ec__tag">BPO</span><span class="ec__tag">Outsourcing</span>
               <span class="ec__tag">Processos</span><span class="ec__tag">Gestão Integrada</span>
@@ -1560,7 +1662,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
             <div class="ec__over">Energia &amp; Operação</div>
             <h3 class="ec__title">GLP Gás</h3>
             <p class="ec__sub">Empresa familiar com mais de 30 anos de história</p>
-            <p class="ec__desc">A força operacional do ecossistema. Distribuição de GLP com tradição, segurança e agilidade — construída lado a lado com famílias, empresas e comunidades. #ISSOÉGLP</p>
+            <p class="ec__desc">A força operacional do grupo. Distribuição de GLP com tradição e segurança. #ISSOÉGLP</p>
             <div class="ec__tags">
               <span class="ec__tag">Distribuição</span><span class="ec__tag">Logística</span>
               <span class="ec__tag">Energia</span><span class="ec__tag">B2B / B2C</span>
@@ -1598,7 +1700,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
             <div class="ec__over">Segurança Jurídica</div>
             <h3 class="ec__title">Simeão Advogados</h3>
             <p class="ec__sub">Vertical jurídica do BPO</p>
-            <p class="ec__desc">Excelência técnica, ética e resultado em previdenciário, cível, consumidor e trabalhista.</p>
+            <p class="ec__desc">Excelência técnica e resultado em direito empresarial.</p>
             <div class="ec__tags">
               <span class="ec__tag">Previdenciário</span><span class="ec__tag">Trabalhista</span>
               <span class="ec__tag">Cível</span><span class="ec__tag">Consumidor</span>
@@ -1645,43 +1747,51 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
       <div class="value rv-s d1">
         <div class="value__num">01</div>
         <h4 class="value__title">É o <em>resultado</em> que convence.</h4>
-        <p class="value__desc">Falar é fácil. Aqui, o que sustenta cada decisão é a entrega real, mensurável e que resolve o problema do cliente.</p>
+        <p class="value__desc">Falar é fácil. O que sustenta decisão aqui é entrega mensurável.</p>
       </div>
 
       <div class="value rv-s d2">
         <div class="value__num">02</div>
         <h4 class="value__title"><em>Transparência</em> é inegociável.</h4>
-        <p class="value__desc">Sem rodeios, sem panos quentes. Problemas se enfrentam de frente — porque verdade dita cedo custa menos que erro escondido.</p>
+        <p class="value__desc">Verdade dita cedo custa menos que erro escondido.</p>
       </div>
 
       <div class="value rv-s d3">
         <div class="value__num">03</div>
         <h4 class="value__title">Somos <em>inconformados</em> com o conforto mediano.</h4>
-        <p class="value__desc">Mediano não nos serve. A inquietação por mais é o que move o time, o negócio e a próxima entrega.</p>
+        <p class="value__desc">Mediano não nos serve. A inquietação move a próxima entrega.</p>
       </div>
 
       <div class="value rv-s d4">
         <div class="value__num">04</div>
         <h4 class="value__title">Nosso sucesso é <em>compartilhado</em>.</h4>
-        <p class="value__desc">Crescemos juntos — pessoas, negócios e oportunidades. Prosperidade aqui não é prêmio individual, é construção coletiva.</p>
+        <p class="value__desc">Prosperidade aqui não é prêmio individual. É construção coletiva.</p>
       </div>
 
       <div class="value rv-s d5">
         <div class="value__num">05</div>
         <h4 class="value__title">O <em>cliente</em> é a nossa energia.</h4>
-        <p class="value__desc">Cada solução nasce de um problema real do cliente. Sem ele, não existe proposta — sem proposta, não existe Proativa.</p>
+        <p class="value__desc">Toda solução nasce de um problema real do cliente.</p>
       </div>
     </div>
 
     <div class="beliefs rv">
-      <div class="beliefs__label">No que acreditamos</div>
+      <div class="more" id="beliefsMore" style="margin-top:0">
+        <button class="more__btn" type="button" aria-expanded="false" aria-controls="beliefsPanel" data-label-open="Fechar" onclick="toggleMore(this)">
+          No que acreditamos
+        </button>
+        <div class="more__panel" id="beliefsPanel">
+          <div class="more__inner">
       <ul class="beliefs__list">
         <li class="beliefs__item"><strong>Resultado sustenta o negócio.</strong> Nada se constrói sem entrega.</li>
         <li class="beliefs__item"><strong>A prosperidade precisa existir para os três:</strong> negócio, time e cliente.</li>
         <li class="beliefs__item"><strong>Quem assume responsabilidade cresce.</strong> Aqui, ownership não é palavra bonita — é caminho.</li>
         <li class="beliefs__item"><strong>Problemas precisam ser enfrentados de frente.</strong> Evitar é multiplicar.</li>
         <li class="beliefs__item"><strong>Empresas grandes nascem de visões grandes.</strong> E é assim que pensamos cada vertical.</li>
-      </ul>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -1697,10 +1807,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
         <div class="overline rv d1">Carreiras</div>
         <h2 class="h-xl rv d2">CONSTRUA SEU<br><span class="ed">legado</span> CONOSCO</h2>
         <p class="body-text rv d3">
-          Na Proativa Capital, cada profissional é um agente de transformação. Você entra em um BPO que orquestra verticais consolidadas, terceirizando e gerenciando processos de ponta a ponta em múltiplos setores.
-        </p>
-        <p class="body-text rv d4">
-          Buscamos pessoas que enxergam além do cargo. Que querem impactar, crescer e deixar marca.
+          Buscamos gente que enxerga além do cargo — e que queira <strong>escopo real desde o primeiro dia</strong>.
         </p>
         <div class="careers__perks rv d5">
           <div class="careers__perk">
@@ -1709,7 +1816,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
           </div>
           <div class="careers__perk">
             <div class="careers__perk-icon">◇</div>
-            <span class="careers__perk-text">3 verticais: construção, energia, jurídico</span>
+            <span class="careers__perk-text">3 verticais: gestão, energia e jurídico</span>
           </div>
           <div class="careers__perk">
             <div class="careers__perk-icon">▲</div>
@@ -1742,19 +1849,19 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
           <ul class="manifesto__values">
             <li class="manifesto__value">
               <span class="manifesto__value-num">01</span>
-              <span class="manifesto__value-text"><strong>Mentoria real.</strong> Aprendizado direto com líderes que constroem três verticais simultâneas.</span>
+              <span class="manifesto__value-text"><strong>Mentoria real.</strong> Aprendizado direto com quem toca as três verticais.</span>
             </li>
             <li class="manifesto__value">
               <span class="manifesto__value-num">02</span>
-              <span class="manifesto__value-text"><strong>Plano de carreira individual.</strong> Sem fórmula pronta. Sua trilha é desenhada com você.</span>
+              <span class="manifesto__value-text"><strong>Carreira individual.</strong> Sem fórmula pronta — sua trilha é desenhada com você.</span>
             </li>
             <li class="manifesto__value">
               <span class="manifesto__value-num">03</span>
-              <span class="manifesto__value-text"><strong>Autonomia desde o primeiro dia.</strong> Aqui se confia em quem entrega — escopo real, ownership real.</span>
+              <span class="manifesto__value-text"><strong>Autonomia de verdade.</strong> Aqui se confia em quem entrega.</span>
             </li>
             <li class="manifesto__value">
               <span class="manifesto__value-num">04</span>
-              <span class="manifesto__value-text"><strong>Multissetorial.</strong> Construção, energia e jurídico em uma única jornada profissional.</span>
+              <span class="manifesto__value-text"><strong>Multissetorial.</strong> Gestão, energia e jurídico numa só jornada.</span>
             </li>
           </ul>
 
@@ -1817,7 +1924,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
         </button>
         <div class="faq__a">
           <div class="faq__a-inner">
-            BPO (Business Process Outsourcing) é a terceirização inteligente de processos empresariais. Em vez de o cliente gerenciar internamente operações complexas — como construção, distribuição de energia ou demandas jurídicas — a Proativa Capital assume a operação ponta a ponta, com governança própria, indicadores transparentes e melhoria contínua.
+            BPO (Business Process Outsourcing) é a terceirização inteligente de processos empresariais. Em vez de o cliente gerenciar internamente operações complexas — como gestão administrativa, distribuição de energia ou demandas jurídicas — a Proativa Capital assume a operação ponta a ponta, com governança própria, indicadores transparentes e melhoria contínua.
           </div>
         </div>
       </div>
@@ -1910,7 +2017,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
     <div class="ft__grid rv">
       <div>
         <div class="ft__brand">PROATIVA CAPITAL</div>
-        <p class="ft__desc">BPO de Serviços integrados. Gestão de processos em Construção • Energia • Advocacia.</p>
+        <p class="ft__desc">BPO de Serviços integrados. Gestão • Energia • Advocacia.</p>
         <address class="ft__addr">O2 Corporate &amp; Offices<br>Av. José Silva de Azevedo Neto, 200<br>Barra da Tijuca · Rio de Janeiro/RJ<br>CEP 22775-056<br><a href="mailto:contato@proativacapital.com.br">contato@proativacapital.com.br</a></address>
       </div>
       <div>
@@ -2091,6 +2198,15 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
     }
     if(typeof closeMob === 'function') closeMob();
     return false;
+  };
+
+  window.toggleMore = function(btn){
+    var box = btn.closest('.more');
+    var open = box.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if(!btn.dataset.labelClosed) btn.dataset.labelClosed = btn.textContent.trim();
+    var openLabel = btn.dataset.labelOpen || 'Fechar';
+    btn.textContent = open ? openLabel : btn.dataset.labelClosed;
   };
 
   window.toggleFaq = function(btn){
