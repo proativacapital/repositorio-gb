@@ -432,6 +432,19 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
 .ec--glp:hover .ec__in{border-color:var(--glp-400)}
 .ec--sim:hover .ec__in{border-color:var(--wine-400)}
 
+
+/* ── Logos reais das marcas ──
+   Se o arquivo existir, ele cobre o desenho em CSS. Se não existir, o
+   onerror remove a imagem e a versão desenhada continua aparecendo. */
+.ec__logo{
+  position:absolute;inset:0;margin:auto;
+  max-width:72%;max-height:58%;
+  width:auto;height:auto;
+  object-fit:contain;
+  z-index:2;display:block;
+}
+.ec__vis.has-logo .ec__vis-anim{display:none}
+
 /* ═══════════════════════════════════════════════════════════════
    ANIMATED LOGO VISUALS
    ═══════════════════════════════════════════════════════════════ */
@@ -1699,6 +1712,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
       <div class="ec ec--pc rv-s d1">
         <div class="ec__in">
           <div class="ec__vis">
+            <img class="ec__logo" src="assets/logo-proativa.png" alt="Logo Proativa Capital" loading="lazy" decoding="async" onload="this.closest('.ec__vis').classList.add('has-logo')" onerror="this.remove()">
             <div class="ec__vis-anim">
               <div class="lg-pc__ring"></div>
               <div class="lg-pc__main">
@@ -1738,6 +1752,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
       <div class="ec ec--glp rv-s d3">
         <div class="ec__in">
           <div class="ec__vis">
+            <img class="ec__logo" src="assets/logo-glp.png" alt="Logo GLP Gás" loading="lazy" decoding="async" onload="this.closest('.ec__vis').classList.add('has-logo')" onerror="this.remove()">
             <div class="ec__vis-anim">
               <div class="lg-glp__glow"></div>
               <svg class="lg-glp__flame" viewBox="0 0 46 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -1787,6 +1802,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
       <div class="ec ec--sim rv-s d5">
         <div class="ec__in">
           <div class="ec__vis">
+            <img class="ec__logo" src="assets/logo-simeao.png" alt="Logo Simeão Advogados" loading="lazy" decoding="async" onload="this.closest('.ec__vis').classList.add('has-logo')" onerror="this.remove()">
             <div class="ec__vis-anim">
               <div class="lg-sim__ornament">§</div>
               <div class="lg-sim__row">
