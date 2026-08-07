@@ -171,7 +171,12 @@
   --navy-400:#2E5599;--navy-300:#4070B8;
   --chrome-700:#686870;--chrome-600:#808088;--chrome-500:#9898A0;--chrome-400:#A8A8B0;
   --chrome-300:#B8B8C0;--chrome-200:#D0D0D8;--chrome-100:#E0E0E8;--chrome-50:#F0F0F5;
-  --glp-500:#0050F0;--glp-400:#2E6EF5;--glp-300:#5A8CF8;
+  /* GLP Gás — paleta oficial do manual de marca v1.0 */
+  --glp-navy:#1F2E5A;   /* Azul Institucional (principal) */
+  --glp-500:#4F7FB3;    /* Azul Energia (secundário) */
+  --glp-400:#6E9AC9;    /* Azul Energia clareado, p/ hover em fundo escuro */
+  --glp-300:#9BBEDD;    /* tom claro p/ texto sobre fundo escuro */
+  --glp-green:#9EC541;  /* Verde Energia (destaque) */
   --wine-600:#8B1A2B;--wine-500:#A02535;--wine-400:#B83545;
   --cream-100:#F8EDE2;--gold-400:#C49A50;
   --f-display:'Syne',sans-serif;--f-body:'Outfit',sans-serif;--f-editorial:'Playfair Display',serif;
@@ -495,7 +500,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
 
 
 /* ─── GLP GÁS ─── */
-.ec--glp .ec__vis{background:linear-gradient(155deg,#000A33 0%,#001A66 50%,#0030CC 100%)}
+.ec--glp .ec__vis{background:linear-gradient(155deg,#101B36 0%,#1F2E5A 55%,#33507F 100%)}
 .ec--glp .ec__vis::after{background:linear-gradient(to top,var(--navy-800),transparent 70%)}
 
 .lg-glp__glow{
@@ -634,7 +639,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
 .ec__desc{font-family:var(--f-body);font-size:.78rem;color:var(--chrome-600);line-height:1.6;margin-bottom:1rem}
 .ec__tags{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.8rem}
 .ec__tag{font-family:var(--f-body);font-size:.55rem;font-weight:600;padding:.2rem .5rem;border-radius:100px;border:1px solid rgba(168,168,176,.08);color:var(--chrome-600)}
-.ec--glp .ec__tag{border-color:rgba(0,80,240,.15);color:var(--glp-300)}
+.ec--glp .ec__tag{border-color:rgba(158,197,65,.28);color:var(--glp-300)}
 .ec--sim .ec__tag{border-color:rgba(139,26,43,.15);color:var(--wine-400)}
 .ec__link{
   display:inline-flex;align-items:center;justify-content:space-between;
@@ -665,7 +670,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
 }
 .ec--glp .ec__link:hover{
   background:var(--glp-400);
-  box-shadow:0 8px 24px rgba(0,80,240,.25);
+  box-shadow:0 8px 24px rgba(79,127,179,.35);
   transform:translateY(-2px);
 }
 
