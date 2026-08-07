@@ -443,7 +443,9 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;o
    onerror remove a imagem e a versão desenhada continua aparecendo. */
 .ec__logo{
   position:absolute;inset:0;margin:auto;
-  max-width:72%;max-height:58%;
+  /* Dimensionado para respeitar o tamanho mínimo de reprodução de cada
+     manual de marca — a GLP exige 80px de altura nesta versão. */
+  max-width:62%;max-height:66%;
   width:auto;height:auto;
   object-fit:contain;
   z-index:2;display:block;
