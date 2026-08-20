@@ -4,7 +4,27 @@ Site de página única para `proativacapital.com.br`, em português, servindo do
 públicos: candidatos a vaga e quem quer entender o que o grupo faz.
 
 **Branch com a versão atual: `claude/proativa-capital-homepage-Qfuqr`**
-(o repositório não tem branch `main`; esta é a branch de trabalho.)
+Pull request aberto: [#1](https://github.com/proativacapital/repositorio-gb/pull/1)
+
+### Atenção ao estado dos branches
+
+O repositório **não tem branch `main`**. O branch padrão hoje é
+`claude/add-frontend-design-skill-ZnP4C` — um branch de trabalho antigo que
+acabou virando padrão por acidente. É para ele que o PR #1 está mirando.
+
+Antes de publicar, vale arrumar isso, porque o GitHub Pages publica a partir do
+branch padrão:
+
+```bash
+# depois de aprovar o PR #1, promova o resultado a main
+git checkout claude/proativa-capital-homepage-Qfuqr
+git checkout -b main
+git push -u origin main
+# em seguida: Settings → Branches → Default branch → main
+```
+
+Se preferir não mexer, é possível publicar direto do branch de trabalho —
+basta escolhê-lo na configuração do Pages.
 
 ---
 
@@ -17,7 +37,7 @@ servi-los. `index.html` é a raiz.
 
 1. Settings → Pages
 2. Source: **Deploy from a branch**
-3. Branch: `claude/proativa-capital-homepage-Qfuqr`, pasta `/ (root)`
+3. Branch: `main` (ou `claude/proativa-capital-homepage-Qfuqr`), pasta `/ (root)`
 4. Em Custom domain, informe `proativacapital.com.br`
 5. No DNS do domínio, crie os registros que o GitHub indicar
    (`A` para os IPs do Pages, ou `CNAME` para `proativacapital.github.io`)
