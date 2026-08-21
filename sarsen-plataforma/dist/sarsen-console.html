@@ -1,0 +1,1920 @@
+<title>Sarsen Console</title>
+<meta name="description" content="Console de performance da Sarsen — resultado, receita recorrente, retenção, aquisição, produto e plano estratégico. Números ilustrativos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   SARSEN CONSOLE — folha de estilo
+   Direção: monólito de pedra. Grafite quente, hairlines, arenito como
+   único acento. Serifa editorial para números, grotesca para interface,
+   monoespaçada para dado tabular.
+   ===================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* superfícies */
+  --bg:            #0a0a0c;
+  --surface-1:     #121316;   /* superfície de gráfico (validada) */
+  --surface-2:     #16181c;
+  --surface-3:     #1c1f24;
+  --hairline:      #24262c;
+  --hairline-soft: #1b1d22;
+
+  /* tinta */
+  --ink:           #f0ece4;
+  --ink-2:         #a3a7b0;
+  --ink-3:         #6d727c;
+  --ink-4:         #4a4e57;
+
+  /* marca — arenito */
+  --sand:          #d9a05b;
+  --sand-deep:     #a9743a;
+  --sand-glow:     rgba(217, 160, 91, .14);
+
+  /* séries categóricas — ordem fixa, validada em superfície #121316 */
+  --s1: #c98500;  /* âmbar   */
+  --s2: #3987e5;  /* azul    */
+  --s3: #199e70;  /* aqua    */
+  --s4: #9085e9;  /* violeta */
+  --s5: #d55181;  /* magenta */
+
+  /* estado */
+  --good:     #0ca30c;
+  --warning:  #fab219;
+  --serious:  #ec835a;
+  --critical: #d03b3b;
+
+  /* rampa sequencial (azul) para heatmap */
+  --seq-1: #0d366b; --seq-2: #184f95; --seq-3: #256abf;
+  --seq-4: #3987e5; --seq-5: #6da7ec; --seq-6: #9ec5f4; --seq-7: #cde2fb;
+
+  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --font-ui: 'Archivo', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --rail: 252px;
+  --topbar: 68px;
+  --ease: cubic-bezier(.2, .7, .3, 1);
+}
+
+* , *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+/* grão de pedra sobre tudo */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+  opacity: .35; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+}
+
+::selection { background: var(--sand); color: #14100a; }
+
+/* ============================ ESTRUTURA ============================ */
+
+.shell { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); min-height: 100vh; }
+
+/* ---- trilho lateral ---- */
+.rail {
+  position: sticky; top: 0; height: 100vh; min-width: 0;
+  display: flex; flex-direction: column;
+  background: linear-gradient(180deg, #0e0f12 0%, #0a0a0c 100%);
+  border-right: 1px solid var(--hairline);
+  z-index: 40;
+}
+
+.rail__brand {
+  padding: 22px 22px 20px;
+  border-bottom: 1px solid var(--hairline);
+  display: flex; align-items: center; gap: 12px;
+}
+.rail__mark { flex: none; }
+.rail__word { font-family: var(--font-display); font-size: 21px; font-weight: 600; letter-spacing: .01em; line-height: 1; }
+.rail__sub { display: block; font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); margin-top: 5px; }
+
+.rail__nav { flex: 1; overflow-y: auto; padding: 16px 12px 24px; }
+.rail__group { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-4); padding: 14px 10px 8px; }
+
+.navlink {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 3px;
+  color: var(--ink-2); text-decoration: none; font-size: 13.5px; font-weight: 500;
+  border-left: 2px solid transparent;
+  transition: background .18s var(--ease), color .18s var(--ease), border-color .18s var(--ease);
+}
+.navlink:hover { background: var(--surface-2); color: var(--ink); }
+.navlink[aria-current='page'] { background: var(--surface-3); color: var(--ink); border-left-color: var(--sand); }
+.navlink svg { flex: none; opacity: .75; }
+.navlink[aria-current='page'] svg { opacity: 1; color: var(--sand); }
+
+.rail__foot { padding: 14px 18px 18px; border-top: 1px solid var(--hairline); font-family: var(--font-mono); font-size: 9.5px; line-height: 1.7; color: var(--ink-4); letter-spacing: .02em; }
+
+/* ---- barra superior ---- */
+.topbar {
+  position: sticky; top: 0; z-index: 30;
+  height: var(--topbar);
+  display: flex; align-items: center; gap: 20px;
+  padding: 0 clamp(18px, 3vw, 34px);
+  background: rgba(10, 10, 12, .82);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border-bottom: 1px solid var(--hairline);
+}
+.topbar__title { font-family: var(--font-display); font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
+.topbar__crumb { font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-4); display: block; margin-bottom: 2px; }
+.topbar__spacer { flex: 1; }
+
+.select, .btn {
+  font-family: var(--font-ui); font-size: 12.5px; color: var(--ink-2);
+  background: var(--surface-2); border: 1px solid var(--hairline);
+  border-radius: 3px; padding: 7px 11px; cursor: pointer;
+  transition: border-color .18s var(--ease), color .18s var(--ease);
+}
+.select:hover, .btn:hover { border-color: var(--sand-deep); color: var(--ink); }
+.btn--ghost { background: transparent; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  padding: 5px 9px; border-radius: 2px;
+  border: 1px solid var(--sand-deep); color: var(--sand); background: var(--sand-glow);
+}
+.pill__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--sand); }
+
+/* ---- área de conteúdo ---- */
+.main { min-width: 0; }
+.view { padding: clamp(20px, 2.4vw, 30px) clamp(18px, 3vw, 34px) 72px; max-width: 1560px; }
+.view[hidden] { display: none; }
+
+.view__intro { max-width: 76ch; margin-bottom: 24px; }
+.view__intro h2 { font-family: var(--font-display); font-size: clamp(24px, 3vw, 34px); font-weight: 600; letter-spacing: -.02em; line-height: 1.12; }
+.view__intro p { color: var(--ink-2); margin-top: 9px; font-size: 14.5px; }
+
+/* ============================ GRADE ============================ */
+.grid { display: grid; gap: 14px; align-items: start; }
+.grid--kpi { grid-template-columns: repeat(auto-fit, minmax(214px, 1fr)); }
+.grid--2 { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); }
+.grid--3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.grid--4 { grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); }
+.span-2 { grid-column: span 2; }
+@media (max-width: 1180px) { .span-2 { grid-column: span 1; } }
+.stack { display: grid; gap: 14px; }
+.mt { margin-top: 22px; }
+
+/* ============================ PAINÉIS ============================ */
+.panel {
+  position: relative;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  padding: 18px 18px 16px;
+  min-width: 0;
+}
+.panel::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(240,236,228,.07) 22%, rgba(240,236,228,.07) 78%, transparent);
+}
+.panel__head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 4px; }
+.panel__title { font-size: 14px; font-weight: 600; letter-spacing: -.005em; }
+.panel__note { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); }
+.panel__sub { color: var(--ink-3); font-size: 12.5px; margin-bottom: 14px; }
+
+/* ---- cartão de KPI ---- */
+.kpi { position: relative; overflow: hidden; }
+.kpi__label { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+.kpi__value { font-family: var(--font-display); font-size: clamp(25px, 2.4vw, 33px); font-weight: 600; letter-spacing: -.025em; line-height: 1.06; margin: 9px 0 3px; font-variant-numeric: tabular-nums; }
+.kpi__value small { font-size: .52em; font-weight: 500; color: var(--ink-2); letter-spacing: 0; margin-left: 3px; }
+.kpi__foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 7px; }
+.kpi__ctx { font-size: 11.5px; color: var(--ink-3); }
+.kpi__spark { margin-top: 12px; height: 34px; }
+.kpi--hero { background: linear-gradient(155deg, #191510 0%, var(--surface-1) 62%); border-color: #33291b; }
+.kpi--hero .kpi__value { color: var(--sand); }
+
+.delta { font-family: var(--font-mono); font-size: 11px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; letter-spacing: .02em; }
+.delta--up { color: #35c47b; }
+.delta--down { color: #ef7a7a; }
+.delta--flat { color: var(--ink-3); }
+
+/* ---- tabelas ---- */
+.tbl-wrap { overflow-x: auto; margin: 0 -18px; padding: 0 18px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-4); text-align: right; font-weight: 500; padding: 9px 10px; white-space: nowrap;
+  border-bottom: 1px solid var(--hairline);
+}
+thead th:first-child { text-align: left; }
+tbody td { padding: 10px; text-align: right; border-bottom: 1px solid var(--hairline-soft); color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+tbody td:first-child { text-align: left; color: var(--ink); white-space: normal; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: rgba(255,255,255,.018); }
+.num { font-family: var(--font-mono); font-size: 12.5px; }
+.row--total td { border-top: 1px solid var(--hairline); border-bottom: 0; color: var(--ink); font-weight: 600; padding-top: 12px; }
+.row--total td:first-child { color: var(--ink); }
+.row--grand td { background: linear-gradient(90deg, rgba(217,160,91,.08), transparent); color: var(--sand); font-weight: 600; border-top: 1px solid var(--sand-deep); }
+.row--grand td:first-child { color: var(--sand); }
+.row--sub td:first-child { padding-left: 24px; color: var(--ink-2); font-weight: 400; }
+.cell-neg { color: #e08b8b; }
+
+/* ---- legendas de gráfico ---- */
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; }
+.legend__item { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
+.legend__swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.legend__swatch--line { height: 3px; width: 14px; border-radius: 2px; }
+
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart__hit { cursor: crosshair; }
+
+.tip {
+  position: fixed; z-index: 999; pointer-events: none; opacity: 0;
+  background: #0d0e11; border: 1px solid var(--hairline); border-radius: 4px;
+  padding: 9px 11px; font-size: 12px; min-width: 148px;
+  box-shadow: 0 14px 34px rgba(0,0,0,.6);
+  transition: opacity .1s linear;
+}
+.tip[data-show='1'] { opacity: 1; }
+.tip__title { font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+.tip__row { display: flex; align-items: center; gap: 8px; justify-content: space-between; padding: 2px 0; }
+.tip__key { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.tip__val { font-family: var(--font-mono); font-size: 12px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tip__note { color: var(--ink-3); font-size: 11px; margin-top: 6px; max-width: 230px; white-space: normal; }
+
+/* ---- barras de progresso / medidores ---- */
+.meter { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.meter__fill { height: 100%; border-radius: 3px; background: var(--sand); }
+.meter__fill--good { background: var(--good); }
+.meter__fill--warn { background: var(--warning); }
+
+.stat-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--hairline-soft); }
+.stat-row:last-child { border-bottom: 0; }
+.stat-row__k { color: var(--ink-2); font-size: 13px; flex: 1 1 auto; }
+.stat-row__v { flex: 0 0 auto; }
+.stat-row__v { font-family: var(--font-mono); font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* ---- cartões de estratégia ---- */
+.strat { display: grid; gap: 12px; }
+.strat__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.strat__name { font-family: var(--font-display); font-size: 18px; font-weight: 600; letter-spacing: -.015em; }
+.strat__tese { color: var(--ink-2); font-size: 13px; }
+.strat__meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12px; color: var(--ink-3); }
+.strat__impact { text-align: right; flex: none; }
+.strat__impact b { display: block; font-family: var(--font-display); font-size: 21px; color: var(--sand); font-weight: 600; letter-spacing: -.02em; }
+.strat__impact span { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-4); }
+
+.tag {
+  display: inline-block; font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .12em;
+  text-transform: uppercase; padding: 3px 7px; border-radius: 2px;
+  border: 1px solid var(--hairline); color: var(--ink-2); background: var(--surface-2);
+}
+.tag--exec { border-color: #1c5a3c; color: #4ec48d; background: rgba(12,163,12,.08); }
+.tag--pilot { border-color: #6b5416; color: var(--warning); background: rgba(250,178,25,.08); }
+.tag--plan { border-color: var(--hairline); color: var(--ink-3); }
+.tag--alto { border-color: #6b2020; color: #e58a8a; background: rgba(208,59,59,.08); }
+.tag--medio { border-color: #6b5416; color: var(--warning); background: rgba(250,178,25,.08); }
+.tag--baixo { border-color: #1c5a3c; color: #4ec48d; background: rgba(12,163,12,.08); }
+
+/* ---- módulos do produto ---- */
+.mod { display: grid; gap: 10px; }
+.mod__name { font-size: 14.5px; font-weight: 600; display: flex; align-items: center; gap: 9px; }
+.mod__idx { font-family: var(--font-mono); font-size: 10px; color: var(--sand); border: 1px solid var(--sand-deep); border-radius: 2px; padding: 1px 5px; }
+.mod__desc { color: var(--ink-2); font-size: 12.5px; }
+.mod__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+
+/* ---- nota / rodapé ---- */
+.note {
+  border-left: 2px solid var(--sand-deep); background: var(--surface-2);
+  padding: 12px 16px; border-radius: 0 3px 3px 0; color: var(--ink-2); font-size: 13px;
+}
+.note strong { color: var(--ink); font-weight: 600; }
+
+.def { display: grid; grid-template-columns: 210px minmax(0,1fr); gap: 10px 24px; padding: 14px 0; border-bottom: 1px solid var(--hairline-soft); }
+.def:last-child { border-bottom: 0; }
+.def dt { font-weight: 600; font-size: 13.5px; }
+.def dd { color: var(--ink-2); font-size: 13px; }
+@media (max-width: 720px) { .def { grid-template-columns: 1fr; gap: 4px; } }
+
+/* ============================ RESPONSIVO ============================ */
+@media (max-width: 1000px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .rail { position: static; height: auto; min-width: 0; border-right: 0; border-bottom: 1px solid var(--hairline); }
+  .rail__nav { display: flex; gap: 6px; overflow-x: auto; padding: 10px 12px; -webkit-overflow-scrolling: touch; }
+  .rail__group, .rail__foot { display: none; }
+  .navlink { white-space: nowrap; border-left: 0; border-bottom: 2px solid transparent; border-radius: 3px 3px 0 0; }
+  .navlink[aria-current='page'] { border-left: 0; border-bottom-color: var(--sand); }
+  .topbar { height: auto; padding: 12px clamp(14px, 3vw, 20px); flex-wrap: wrap; gap: 10px; }
+}
+@media (max-width: 560px) {
+  .grid--kpi { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .kpi__value { font-size: 23px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+/* entrada escalonada dos painéis */
+@keyframes rise { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+.view:not([hidden]) .panel { animation: rise .5s var(--ease) both; }
+.view:not([hidden]) .panel:nth-child(1) { animation-delay: .02s; }
+.view:not([hidden]) .panel:nth-child(2) { animation-delay: .05s; }
+.view:not([hidden]) .panel:nth-child(3) { animation-delay: .08s; }
+.view:not([hidden]) .panel:nth-child(4) { animation-delay: .11s; }
+.view:not([hidden]) .panel:nth-child(5) { animation-delay: .14s; }
+.view:not([hidden]) .panel:nth-child(6) { animation-delay: .17s; }
+.view:not([hidden]) .panel:nth-child(n+7) { animation-delay: .2s; }
+
+@media print {
+  .rail, .topbar__spacer, .btn { display: none; }
+  .view[hidden] { display: block !important; }
+  body { background: #fff; color: #111; }
+}
+
+</style>
+<div class="shell">
+
+  <!-- ============================ TRILHO ============================ -->
+  <aside class="rail">
+    <div class="rail__brand">
+      <svg class="rail__mark" width="26" height="32" viewBox="0 0 26 32" aria-hidden="true">
+        <path d="M3 31V9.5L13 4l10 5.5V31" fill="none" stroke="#d9a05b" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M3 20h20M13 4v27" stroke="#d9a05b" stroke-width="1" opacity=".38"/>
+      </svg>
+      <div>
+        <span class="rail__word">Sarsen</span>
+        <span class="rail__sub">Console de performance</span>
+      </div>
+    </div>
+
+    <nav class="rail__nav" aria-label="Navegação principal">
+      <div class="rail__group">Painel</div>
+      <a class="navlink" href="#/visao-geral">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="5.5" height="6.5" rx="1"/><rect x="9" y="1.5" width="5.5" height="4" rx="1"/><rect x="9" y="7" width="5.5" height="7.5" rx="1"/><rect x="1.5" y="9.5" width="5.5" height="5" rx="1"/></svg>
+        Visão geral</a>
+
+      <div class="rail__group">Finanças</div>
+      <a class="navlink" href="#/resultado">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1.5h7l3 3v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1z"/><path d="M9.5 1.8V5h3.2M5 8.5h6M5 11.5h4"/></svg>
+        Resultado (DRE)</a>
+      <a class="navlink" href="#/receita">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 12.5 5.5 7l3 3 5.5-7"/><path d="M11 3.5h3.5V7"/></svg>
+        Receita recorrente</a>
+
+      <div class="rail__group">Carteira</div>
+      <a class="navlink" href="#/clientes">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="2.6"/><path d="M1.6 14c0-2.5 2-4.2 4.4-4.2s4.4 1.7 4.4 4.2"/><path d="M10.6 3a2.6 2.6 0 0 1 0 5M11.4 9.9c1.8.3 3 1.9 3 4.1"/></svg>
+        Clientes e retenção</a>
+      <a class="navlink" href="#/vendas">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 2.5h13l-5 6v5.5l-3-1.6V8.5z"/></svg>
+        Vendas e aquisição</a>
+
+      <div class="rail__group">Operação</div>
+      <a class="navlink" href="#/produto">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4.5" width="12" height="9" rx="1.5"/><path d="M5.5 4.5V2.8h5v1.7M5.5 8.5h5M6.5 11h3"/></svg>
+        Produto e uso</a>
+      <a class="navlink" href="#/time">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14V9M6 14V4M10 14V6.5M14 14V2"/></svg>
+        Time e eficiência</a>
+
+      <div class="rail__group">Plano</div>
+      <a class="navlink" href="#/estrategias">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="2.6"/><path d="M8 1.7v3.7M8 10.6v3.7M1.7 8h3.7M10.6 8h3.7"/></svg>
+        Estratégias</a>
+      <a class="navlink" href="#/premissas">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.3"/><path d="M8 7.2v4M8 4.9v.1"/></svg>
+        Modelo e premissas</a>
+    </nav>
+
+    <div class="rail__foot">
+      Dados ilustrativos<br>
+      Atualizado <span id="atualizado"></span>
+    </div>
+  </aside>
+
+  <!-- ============================ PRINCIPAL ============================ -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <span class="topbar__crumb" id="topbar-crumb">Sarsen · Painel executivo</span>
+        <h1 class="topbar__title" id="topbar-title">Visão geral</h1>
+      </div>
+      <div class="topbar__spacer"></div>
+      <span class="pill"><span class="pill__dot"></span><span id="periodo">Agosto / 2026</span></span>
+      <select class="select" aria-label="Entidade">
+        <option>Consolidado</option>
+        <option>Sarsen Brasil</option>
+        <option>Sarsen Inc. (US)</option>
+      </select>
+      <button class="btn btn--ghost" onclick="window.print()">Exportar</button>
+    </header>
+
+    <main class="view" id="view"></main>
+  </div>
+</div>
+<script>
+/* =====================================================================
+   SARSEN — Plataforma de Inteligência de Negócio
+   Fonte única de dados. TODOS os números são ILUSTRATIVOS e foram
+   construídos para fechar aritmeticamente entre si.
+   Âncoras definidas pelo negócio:
+     · Faturamento bruto do mês ....... R$ 8.565.000
+     · Lucro bruto .................... R$ 7.000.000
+     · Lucro líquido .................. R$ 5.900.000  (68,9%)
+   ===================================================================== */
+
+const SARSEN = {
+  meta: {
+    empresa: 'Sarsen',
+    tese: 'Plataforma de implementação de IA para empresas',
+    periodo: 'Agosto / 2026',
+    periodoCurto: 'ago/26',
+    atualizado: '21 ago 2026 · 06:40 BRT',
+    entidades: ['Consolidado', 'Sarsen Brasil', 'Sarsen Inc. (US)'],
+  },
+
+  /* ---------- 1. DRE do mês (fecha linha a linha) ---------- */
+  dre: {
+    receitaBruta: 8565000,
+    deducoes: [
+      { label: 'Impostos sobre vendas e resultado', valor: -856500, nota: 'Alíquota efetiva combinada de 10,0% — mix de software padronizado (Lucro Presumido 8%/12%) e serviços' },
+      { label: 'Reembolsos, cancelamentos e chargebacks', valor: -68500, nota: '0,8% do faturamento bruto' },
+    ],
+    receitaLiquida: 7640000,
+    cpv: [
+      { label: 'Infraestrutura cloud e inferência de LLM', valor: -243000 },
+      { label: 'Implantação, onboarding e suporte técnico', valor: -198000 },
+      { label: 'Gateway, adquirência e antifraude', valor: -121000 },
+      { label: 'Licenças e APIs de terceiros', valor: -78000 },
+    ],
+    cpvTotal: -640000,
+    lucroBruto: 7000000,
+    opex: [
+      { label: 'Pessoal e encargos (46 FTEs)', valor: -598000 },
+      { label: 'Marketing e aquisição', valor: -245000 },
+      { label: 'Comissões comerciais', valor: -118000 },
+      { label: 'Tecnologia e software interno', valor: -63000 },
+      { label: 'G&A (jurídico, contábil, seguros, facilities)', valor: -86000 },
+    ],
+    opexTotal: -1110000,
+    ebitda: 5890000,
+    da: -54000,
+    ebit: 5836000,
+    receitaFinanceira: 92000,
+    despesaFinanceira: -28000,
+    lucroLiquido: 5900000,
+  },
+
+  margens: {
+    bruta: 0.817,          // sobre faturamento bruto
+    brutaSobreLiquida: 0.916,
+    ebitda: 0.688,
+    liquida: 0.689,
+    contribuicao: 0.916,
+  },
+
+  /* ---------- 2. Série histórica (13 meses) ---------- */
+  meses: ['ago/25','set/25','out/25','nov/25','dez/25','jan/26','fev/26','mar/26','abr/26','mai/26','jun/26','jul/26','ago/26'],
+  serie: {
+    receita:     [5150000,5280000,5545000,5910000,6120000,6395000,6640000,7010000,7185000,7520000,7910000,8215000,8565000],
+    lucroBruto:  [4068000,4184000,4408000,4712000,4890000,5123000,5332000,5643000,5798000,6084000,6415000,6685000,7000000],
+    lucroLiquido:[3100000,3210000,3410000,3690000,3860000,4085000,4290000,4585000,4750000,5025000,5340000,5600000,5900000],
+    mrr:         [4712000,4840000,5096000,5437000,5630000,5884000,6112000,6452000,6614000,6921000,7281000,7554000,7869400],
+    clientes:    [1362,1401,1449,1508,1556,1611,1668,1731,1785,1846,1901,1957,1988],
+    margemLiquida:[0.602,0.608,0.615,0.624,0.631,0.639,0.646,0.654,0.661,0.668,0.675,0.682,0.689],
+    margemBruta: [0.790,0.792,0.795,0.797,0.799,0.801,0.803,0.805,0.807,0.809,0.811,0.814,0.817],
+    margemEbitda:[0.601,0.607,0.614,0.622,0.629,0.637,0.644,0.652,0.659,0.666,0.673,0.681,0.688],
+  },
+
+  /* ---------- 3. Receita recorrente ---------- */
+  receita: {
+    mrr: 7869400,
+    servicos: 695600,
+    total: 8565000,
+    arr: 94432800,           // MRR x 12
+    runRate: 102780000,      // faturamento x 12
+    arpa: 3958,
+    contratoAnualMedio: 47501,
+    receitaBR: 6680700,      // 78%
+    receitaIntl: 1884300,    // 22%
+    prePagoAnual: 0.68,
+  },
+
+  mrrMovement: [
+    { label: 'MRR jul/26',        valor: 7554000, tipo: 'base' },
+    { label: 'Novos contratos',   valor: 210500,  tipo: 'up',   nota: '58 novos clientes · ticket de entrada R$ 3.629' },
+    { label: 'Expansão / upsell', valor: 152700,  tipo: 'up',   nota: 'Upgrade de plano, assentos e add-ons' },
+    { label: 'Reativação',        valor: 18200,   tipo: 'up',   nota: '6 contas recuperadas' },
+    { label: 'Contração',         valor: -27200,  tipo: 'down', nota: 'Downgrades e redução de assentos' },
+    { label: 'Churn',             valor: -38800,  tipo: 'down', nota: '27 cancelamentos — 81% no plano Core' },
+    { label: 'MRR ago/26',        valor: 7869400, tipo: 'total' },
+  ],
+
+  planos: [
+    { nome: 'Core',       preco: 1890,  clientes: 1180, mrr: 2230200, alvo: 'PMEs de 10 a 80 pessoas',   inclui: 'Builder, biblioteca de soluções, trilhas, comunidade' },
+    { nome: 'Pro',        preco: 4900,  clientes: 640,  mrr: 3136000, alvo: 'Scale-ups de 80 a 400',     inclui: 'Core + squad de implantação, mentorias, SLA 8h' },
+    { nome: 'Enterprise', preco: 14900, clientes: 168,  mrr: 2503200, alvo: 'Corporações 400+',          inclui: 'Pro + ambiente dedicado, SSO, governança, SLA 2h' },
+  ],
+
+  verticais: [
+    { nome: 'Varejo e E-commerce',  receita: 2056000, clientes: 512, churn: 0.012 },
+    { nome: 'Serviços financeiros', receita: 1542000, clientes: 288, churn: 0.008 },
+    { nome: 'Saúde',                receita: 1285000, clientes: 301, churn: 0.011 },
+    { nome: 'Indústria',            receita: 1199000, clientes: 246, churn: 0.009 },
+    { nome: 'Jurídico',             receita: 942000,  clientes: 268, churn: 0.016 },
+    { nome: 'Educação',             receita: 771000,  clientes: 214, churn: 0.019 },
+    { nome: 'Outros',               receita: 770000,  clientes: 159, churn: 0.021 },
+  ],
+
+  /* ---------- 4. Clientes e retenção ---------- */
+  retencao: {
+    clientesAtivos: 1988,
+    novosMes: 58,
+    cancelamentosMes: 27,
+    netAdds: 31,
+    churnLogo: 0.014,
+    churnReceita: 0.0051,
+    nrr: 1.183,
+    grr: 0.900,
+    vidaMediaMeses: 71,
+    nps: 74,
+    csat: 4.8,
+    tempoPrimeiraResposta: '7 min',
+    timeToValue: '11 dias',
+  },
+
+  healthScore: [
+    { faixa: 'Saudável (80-100)', clientes: 1272, mrr: 5470000 },
+    { faixa: 'Estável (60-79)',   clientes: 481,  mrr: 1782000 },
+    { faixa: 'Atenção (40-59)',   clientes: 174,  mrr: 496400 },
+    { faixa: 'Risco (0-39)',      clientes: 61,   mrr: 121000 },
+  ],
+
+  cohorts: [
+    { nome: 'jan/26', valores: [100,102,105,108,112,115,118,121] },
+    { nome: 'fev/26', valores: [100,101,104,107,110,114,117] },
+    { nome: 'mar/26', valores: [100,103,106,109,113,116] },
+    { nome: 'abr/26', valores: [100,102,104,108,111] },
+    { nome: 'mai/26', valores: [100,103,107,110] },
+    { nome: 'jun/26', valores: [100,101,105] },
+    { nome: 'jul/26', valores: [100,104] },
+    { nome: 'ago/26', valores: [100] },
+  ],
+
+  topContas: [
+    { conta: 'Grupo Ateneu',        vertical: 'Varejo',      plano: 'Enterprise', mrr: 68400, health: 94, desde: 'mar/24', expansao: 2.4 },
+    { conta: 'Meridiano Bank',      vertical: 'Financeiro',  plano: 'Enterprise', mrr: 59800, health: 91, desde: 'jul/24', expansao: 2.1 },
+    { conta: 'Vertiva Saúde',       vertical: 'Saúde',       plano: 'Enterprise', mrr: 47200, health: 88, desde: 'jan/25', expansao: 1.9 },
+    { conta: 'Norvix Indústria',    vertical: 'Indústria',   plano: 'Enterprise', mrr: 41600, health: 82, desde: 'set/24', expansao: 1.6 },
+    { conta: 'Caravela Log',        vertical: 'Logística',   plano: 'Enterprise', mrr: 38900, health: 90, desde: 'abr/25', expansao: 2.2 },
+    { conta: 'Orbitum Educação',    vertical: 'Educação',    plano: 'Enterprise', mrr: 32500, health: 71, desde: 'nov/24', expansao: 1.3 },
+    { conta: 'Pátria Jurídico',     vertical: 'Jurídico',    plano: 'Enterprise', mrr: 29800, health: 86, desde: 'fev/25', expansao: 1.8 },
+    { conta: 'Solaris Energia',     vertical: 'Energia',     plano: 'Enterprise', mrr: 27400, health: 79, desde: 'mai/25', expansao: 1.4 },
+  ],
+
+  /* ---------- 5. Vendas e aquisição ---------- */
+  funil: [
+    { etapa: 'Visitantes únicos',   valor: 214000 },
+    { etapa: 'Leads capturados',    valor: 13600 },
+    { etapa: 'MQLs qualificados',   valor: 3240 },
+    { etapa: 'Reuniões agendadas',  valor: 810 },
+    { etapa: 'Reuniões realizadas', valor: 604 },
+    { etapa: 'Propostas enviadas',  valor: 196 },
+    { etapa: 'Contratos fechados',  valor: 58 },
+  ],
+
+  canais: [
+    { canal: 'Comunidade e indicação', novos: 20, investimento: 64000,  cac: 3200 },
+    { canal: 'Conteúdo orgânico',      novos: 16, investimento: 102400, cac: 6400 },
+    { canal: 'Tráfego pago',           novos: 11, investimento: 272800, cac: 24800 },
+    { canal: 'Outbound / SDR',         novos: 7,  investimento: 137200, cac: 19600 },
+    { canal: 'Parcerias e afiliados',  novos: 4,  investimento: 49200,  cac: 12300 },
+  ],
+
+  unit: {
+    cac: 10790,
+    investimentoAquisicao: 625600,
+    margemContribuicaoMes: 3626,
+    payback: 3.0,
+    ltv: 130500,
+    ltvCac: 12.1,
+    cicloDias: 21,
+    winRateProposta: 0.296,
+    pipelineAberto: 4740000,
+    coberturaPipeline: 3.2,
+    ticketEntrada: 3629,
+  },
+
+  /* ---------- 6. Produto ---------- */
+  produto: {
+    agentesProducao: 12480,
+    agentesNovosMes: 1870,
+    execucoesMes: 4210000,
+    custoPorExecucao: 0.058,
+    solucoes: 184,
+    cases: 610,
+    horasEconomizadas: 186400,
+    roiMedio: 7.4,
+    adocao: 0.784,
+    wauMau: 0.62,
+    uptime: 0.9997,
+    latenciaP95: '1,8 s',
+  },
+
+  modulos: [
+    { nome: 'Sarsen Builder',        desc: 'Construtor no-code de agentes de IA com versionamento, testes e deploy em 1 clique.', adocao: 0.78, sinal: '1.870 agentes novos no mês' },
+    { nome: 'Biblioteca de Soluções',desc: '184 soluções plug & play prontas para instalar por área e por vertical.',            adocao: 0.91, sinal: '6.240 instalações no mês' },
+    { nome: 'Trilhas e Formações',   desc: 'Currículo prático de IA aplicada — do fundamento à operação em produção.',           adocao: 0.64, sinal: '11.400 aulas concluídas' },
+    { nome: 'Casos e Playbooks',     desc: '610 casos reais documentados com número de antes e depois.',                          adocao: 0.57, sinal: '38 novos casos publicados' },
+    { nome: 'Mentorias ao vivo',     desc: '24 encontros por mês de implementação assistida por especialista.',                   adocao: 0.42, sinal: '812 participações' },
+    { nome: 'Comunidade Sarsen',     desc: 'Rede de operadores de IA — 2.940 membros ativos por semana.',                         adocao: 0.69, sinal: '2.940 MAU na comunidade' },
+    { nome: 'Sarsen Score',          desc: 'Diagnóstico de maturidade em IA com plano de ação priorizado por ROI.',               adocao: 0.83, sinal: '1.104 diagnósticos ativos' },
+    { nome: 'Marketplace',           desc: 'Especialistas certificados publicam e vendem agentes com revenue share.',             adocao: 0.21, sinal: 'Piloto com 34 parceiros' },
+    { nome: 'Sarsen Copilot',        desc: 'Copiloto interno de suporte — resolve 71% dos tickets sem humano.',                   adocao: 0.74, sinal: '71% de deflexão de tickets' },
+  ],
+
+  usoSerie: {
+    execucoes: [1180000,1340000,1520000,1780000,1960000,2240000,2510000,2860000,3080000,3410000,3720000,3960000,4210000],
+    agentes:   [3980,4620,5310,6140,6820,7610,8390,9280,10010,10840,11520,11980,12480],
+  },
+
+  /* ---------- 7. Time e eficiência ---------- */
+  time: {
+    headcount: 46,
+    custoMedioFte: 13000,
+    receitaPorFte: 2234348,
+    lucroPorFte: 1539130,
+    ruleOf40: 135.1,
+    crescimentoYoY: 0.663,
+    magicNumber: 6.0,
+    areas: [
+      { area: 'Engenharia e Produto', pessoas: 14, custo: 224000 },
+      { area: 'CS e Implantação',     pessoas: 11, custo: 132000 },
+      { area: 'Vendas',               pessoas: 8,  custo: 118000 },
+      { area: 'Marketing',            pessoas: 6,  custo: 68000 },
+      { area: 'Conteúdo e Educação',  pessoas: 4,  custo: 34000 },
+      { area: 'G&A',                  pessoas: 3,  custo: 22000 },
+    ],
+  },
+
+  /* ---------- 8. Caixa e balanço ---------- */
+  caixa: {
+    caixaAplicacoes: 21400000,
+    geracaoOperacional: 6420000,
+    capex: 310000,
+    fcf: 6110000,
+    fcfMargin: 0.713,
+    contasReceber: 9800000,
+    dso: 38,
+    receitaDiferida: 28600000,
+    dividaFinanceira: 0,
+    capitalCaptado: 0,
+  },
+
+  /* ---------- 9. Metas 2026 ---------- */
+  metas: [
+    { meta: 'ARR (run-rate)',   atual: 102780000, alvo: 118000000, formato: 'moeda' },
+    { meta: 'Clientes ativos',  atual: 1988,      alvo: 2400,      formato: 'num' },
+    { meta: 'Margem líquida',   atual: 0.689,     alvo: 0.70,      formato: 'pct' },
+    { meta: 'NRR',              atual: 1.183,     alvo: 1.25,      formato: 'pct' },
+    { meta: 'Churn logo mensal',atual: 0.014,     alvo: 0.009,     formato: 'pct', inverso: true },
+  ],
+
+  /* ---------- 10. Estratégias ---------- */
+  estrategias: [
+    { nome: 'Land & Expand Enterprise', curto: 'Enterprise', tipo: 'MRR', dono: 'Head de Enterprise', horizonte: '6 meses', status: 'Em execução', progresso: 0.62, impacto: 1200000,
+      tese: 'Squad dedicado às 168 contas Enterprise com plano de expansão por departamento. Cada conta entra por uma área e abre outras três.',
+      alavanca: 'NRR Enterprise de 118% para 142%' },
+    { nome: 'Marketplace do Builder', curto: 'Marketplace', tipo: 'Receita', dono: 'Head de Produto', horizonte: '9 meses', status: 'Piloto', progresso: 0.35, impacto: 480000,
+      tese: 'Especialistas certificados publicam agentes na plataforma com revenue share de 30%. A oferta cresce sem custo marginal de engenharia.',
+      alavanca: '34 parceiros no piloto → 260 em 9 meses' },
+    { nome: 'Programa Embaixadores', curto: 'Embaixadores', tipo: 'CAC', dono: 'Head de Growth', horizonte: '4 meses', status: 'Em execução', progresso: 0.48, impacto: 110000,
+      tese: 'Indicação já é o canal mais barato (CAC R$ 3.200) e responde por 34,5% dos novos. Formalizar o incentivo empurra para 45%.',
+      alavanca: 'CAC blended de R$ 10.790 para R$ 8.900' },
+    { nome: 'Pricing híbrido (assinatura + consumo)', curto: 'Pricing híbrido', tipo: 'MRR', dono: 'Head de Monetização', horizonte: '9 meses', status: 'Design', progresso: 0.25, impacto: 320000,
+      tese: 'Franquia de execuções incluída no plano e cobrança por excedente. A receita passa a acompanhar o uso real do cliente.',
+      alavanca: '+6 p.p. de NRR' },
+    { nome: 'Vertical Packs', curto: 'Vertical Packs', tipo: 'Vendas', dono: 'Head de Soluções', horizonte: '6 meses', status: 'Em execução', progresso: 0.55, impacto: 210000,
+      tese: 'Pacotes fechados por vertical (Saúde, Jurídico, Indústria, Varejo) encurtam a prova de valor e sobem a taxa de fechamento.',
+      alavanca: 'Win rate de 29,6% para 36%' },
+    { nome: 'Onboarding em 7 dias', curto: 'Onboarding 7d', tipo: 'Retenção', dono: 'Head de CS', horizonte: '5 meses', status: 'Em execução', progresso: 0.71, impacto: 165000,
+      tese: 'O churn se concentra em contas que não colocaram um agente em produção nos primeiros 30 dias. Encurtar o time-to-value ataca a causa.',
+      alavanca: 'Churn logo de 1,4% para 0,9% ao mês' },
+    { nome: 'Expansão LATAM em USD', curto: 'LATAM USD', tipo: 'Receita', dono: 'Diretoria', horizonte: '12 meses', status: 'Planejado', progresso: 0.18, impacto: 640000,
+      tese: 'México e Colômbia com o mesmo produto e contrato em dólar — receita internacional de 22% para 32% e hedge natural de câmbio.',
+      alavanca: 'Receita internacional de R$ 1,88M para R$ 2,74M/mês' },
+    { nome: 'AI Cost Engineering', curto: 'AI Cost Eng.', tipo: 'Margem', dono: 'Head de Engenharia', horizonte: '4 meses', status: 'Em execução', progresso: 0.44, impacto: 111000,
+      tese: 'Roteamento multi-modelo, cache semântico e batelada noturna derrubam o custo de inferência sem perda de qualidade.',
+      alavanca: 'CPV de 7,5% para 6,2% do faturamento' },
+  ],
+
+  riscos: [
+    { risco: 'Concentração no canal orgânico', nivel: 'Médio', mitigacao: '62% dos novos vêm de comunidade e conteúdo. Parcerias e outbound sobem para 30% do mix até dez/26.' },
+    { risco: 'Dependência de modelos de terceiros', nivel: 'Alto', mitigacao: 'Roteador multi-modelo com três provedores ativos e fallback automático; nenhum provedor acima de 55% das execuções.' },
+    { risco: 'Churn concentrado no plano Core', nivel: 'Médio', mitigacao: '81% dos cancelamentos estão no Core. Onboarding em 7 dias e ativação assistida atacam a faixa.' },
+    { risco: 'Exposição cambial (22% em USD)', nivel: 'Baixo', mitigacao: 'Custo de inferência também em USD — hedge natural de aproximadamente 40% da exposição.' },
+  ],
+
+  premissas: [
+    ['Regime tributário', 'Lucro Presumido com presunção de 8% (IRPJ) e 12% (CSLL) sobre a parcela de software padronizado, e 32% sobre serviços de implantação. PIS/COFINS cumulativo 3,65% e ISS 2%. Alíquota efetiva combinada de 10,0% do faturamento.'],
+    ['Reconhecimento de receita', 'Contratos anuais pré-pagos (68% da base) reconhecidos pro rata ao longo de 12 meses. O caixa recebido antecipadamente aparece em receita diferida no balanço, não no resultado.'],
+    ['Margem bruta', '91,6% sobre a receita líquida. O CPV inclui inferência de LLM, cloud, implantação, adquirência e licenças de terceiros — não inclui pessoal de produto e engenharia, que está em despesa operacional.'],
+    ['LTV', 'Calculado como margem de contribuição mensal (R$ 3.626) multiplicada por um teto conservador de 36 meses, embora o churn de 1,4% ao mês implique vida média de 71 meses.'],
+    ['CAC', 'Inclui mídia, comissões e a folha das áreas de vendas e marketing (R$ 625.600 no mês), dividida pelos 58 contratos fechados.'],
+    ['Estrutura enxuta', 'Receita por colaborador de R$ 2,23 milhões ao ano. A premissa é de uma operação nativa de IA, com 62% da aquisição vinda de canais orgânicos e de comunidade, o que sustenta um S&M de 7,3% do faturamento.'],
+    ['Natureza dos dados', 'Todos os números desta plataforma são ilustrativos e foram construídos para fechar aritmeticamente entre si. Não representam demonstrações financeiras auditadas.'],
+  ],
+};
+
+if (typeof window !== 'undefined') window.SARSEN = SARSEN;
+
+/* =====================================================================
+   SARSEN — camada de visualização
+   SVG puro, sem dependências. Paleta categórica de ordem fixa,
+   validada para a superfície escura #121316.
+   ===================================================================== */
+
+const NS = 'http://www.w3.org/2000/svg';
+
+const PALETTE = ['#c98500', '#3987e5', '#199e70', '#9085e9', '#d55181'];
+const SEQ = ['#0d366b', '#184f95', '#256abf', '#3987e5', '#6da7ec', '#9ec5f4', '#cde2fb'];
+const UP = '#199e70', DOWN = '#d03b3b', BASE = '#d9a05b';
+const GRID = '#1e2026', AXIS = '#6d727c', INK = '#f0ece4';
+
+/* ------------------------------ formato ------------------------------ */
+const F = {
+  brl: (v) => 'R$ ' + Math.round(v).toLocaleString('pt-BR'),
+  brl2: (v) => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+  compact(v) {
+    const a = Math.abs(v), s = v < 0 ? '−' : '';
+    if (a >= 1e9) return s + 'R$ ' + (a / 1e9).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' bi';
+    if (a >= 1e6) return s + 'R$ ' + (a / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' mi';
+    if (a >= 1e3) return s + 'R$ ' + (a / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + ' mil';
+    return s + 'R$ ' + a.toLocaleString('pt-BR');
+  },
+  axisBRL(v) {
+    const a = Math.abs(v), s = v < 0 ? '−' : '';
+    if (a >= 1e6) return s + (a / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'M';
+    if (a >= 1e3) return s + (a / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + 'k';
+    return s + a;
+  },
+  int: (v) => Math.round(v).toLocaleString('pt-BR'),
+  pct: (v, d = 1) => (v * 100).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) + '%',
+  pp: (v, d = 1) => (v >= 0 ? '+' : '−') + Math.abs(v * 100).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) + ' p.p.',
+  mult: (v) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'x',
+};
+
+/* ------------------------------ util svg ------------------------------ */
+function n(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) if (attrs[k] !== undefined && attrs[k] !== null) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function txt(parent, x, y, s, o = {}) {
+  const t = n('text', {
+    x, y, fill: o.fill || AXIS, 'font-size': o.size || 10.5,
+    'font-family': o.mono === false ? "'Archivo', system-ui, sans-serif" : "'JetBrains Mono', monospace",
+    'text-anchor': o.anchor || 'start', 'font-weight': o.weight || 400,
+    'letter-spacing': o.ls || 0, opacity: o.opacity,
+  }, parent);
+  t.textContent = s;
+  return t;
+}
+function roundedTop(x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h));
+  return `M${x},${y + h} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h} Z`;
+}
+function roundedRight(x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w, h / 2));
+  return `M${x},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} L${x},${y + h} Z`;
+}
+const _mc = typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
+function fit(str, max, font = "12px 'Archivo', system-ui, sans-serif") {
+  if (!_mc || max <= 0) return str;
+  _mc.font = font;
+  if (_mc.measureText(str).width <= max) return str;
+  let lo = 0, hi = str.length;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (_mc.measureText(str.slice(0, mid) + '…').width <= max) lo = mid; else hi = mid - 1; }
+  return str.slice(0, Math.max(1, lo)).trimEnd() + '…';
+}
+
+function niceTicks(min, max, count = 4) {
+  const span = (max - min) || 1;
+  const raw = span / count;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const step = (norm >= 7.5 ? 10 : norm >= 3.5 ? 5 : norm >= 1.5 ? 2 : 1) * mag;
+  const lo = Math.floor(min / step) * step, hi = Math.ceil(max / step) * step;
+  const out = [];
+  for (let v = lo; v <= hi + step / 2; v += step) out.push(+v.toFixed(6));
+  return out;
+}
+
+/* ------------------------------ tooltip ------------------------------ */
+let tipEl;
+function tip() {
+  if (!tipEl) { tipEl = document.createElement('div'); tipEl.className = 'tip'; document.body.appendChild(tipEl); }
+  return tipEl;
+}
+function showTip(html, ev) {
+  const t = tip();
+  t.innerHTML = html;
+  t.dataset.show = '1';
+  const r = t.getBoundingClientRect();
+  let x = ev.clientX + 16, y = ev.clientY - r.height / 2;
+  if (x + r.width > innerWidth - 10) x = ev.clientX - r.width - 16;
+  y = Math.max(10, Math.min(y, innerHeight - r.height - 10));
+  t.style.left = x + 'px'; t.style.top = y + 'px';
+}
+function hideTip() { if (tipEl) tipEl.dataset.show = '0'; }
+function tipRows(title, rows, note) {
+  return `<div class="tip__title">${title}</div>` +
+    rows.map(r => `<div class="tip__row"><span class="tip__key">${r.color ? `<span class="legend__swatch" style="background:${r.color}"></span>` : ''}${r.k}</span><span class="tip__val">${r.v}</span></div>`).join('') +
+    (note ? `<div class="tip__note">${note}</div>` : '');
+}
+addEventListener('scroll', hideTip, true);
+
+/* ------------------------- montagem responsiva ------------------------- */
+const mounted = [];
+function mount(node, draw, ratio) {
+  const render = () => {
+    if (!node.isConnected) return;
+    const w = node.clientWidth || node.parentElement.clientWidth || 600;
+    if (!w) return;
+    node.innerHTML = '';
+    const h = typeof ratio === 'function' ? ratio(w) : ratio;
+    const svg = n('svg', { viewBox: `0 0 ${w} ${h}`, width: w, height: h, role: 'img' }, node);
+    draw(svg, w, h);
+  };
+  render();
+  mounted.push({ node, render });
+}
+function liveCharts() {
+  for (let i = mounted.length - 1; i >= 0; i--) if (!mounted[i].node.isConnected) mounted.splice(i, 1);
+  return mounted;
+}
+let rTimer;
+addEventListener('resize', () => { clearTimeout(rTimer); rTimer = setTimeout(() => liveCharts().forEach(m => m.render()), 140); });
+function redrawAll() { liveCharts().forEach(m => m.render()); }
+
+/* ============================== SPARKLINE ============================== */
+function sparkline(node, values, color = BASE) {
+  mount(node, (svg, w, h) => {
+    const min = Math.min(...values), max = Math.max(...values), pad = 3;
+    const X = i => (i / (values.length - 1)) * w;
+    const Y = v => h - pad - ((v - min) / ((max - min) || 1)) * (h - pad * 2);
+    const line = values.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    const gid = 'sg' + Math.random().toString(36).slice(2, 8);
+    const g = n('linearGradient', { id: gid, x1: 0, y1: 0, x2: 0, y2: 1 }, n('defs', {}, svg));
+    n('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': .28 }, g);
+    n('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': 0 }, g);
+    n('path', { d: `${line} L${w},${h} L0,${h} Z`, fill: `url(#${gid})` }, svg);
+    n('path', { d: line, fill: 'none', stroke: color, 'stroke-width': 1.75, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
+    n('circle', { cx: X(values.length - 1), cy: Y(values.at(-1)), r: 2.6, fill: color, stroke: '#121316', 'stroke-width': 2 }, svg);
+  }, 34);
+}
+
+/* ========================= LINHA / ÁREA + CROSSHAIR ========================= */
+function lineChart(node, cfg) {
+  const { labels, series, fmt = F.compact, height = 260 } = cfg;
+  mount(node, (svg, w) => {
+    const h = height, P = { l: 52, r: 14, t: 16, b: 26 };
+    const iw = w - P.l - P.r, ih = h - P.t - P.b;
+    const all = series.flatMap(s => s.values);
+    const ticks = niceTicks(cfg.min !== undefined ? cfg.min : Math.min(...all) * .92, Math.max(...all), 4);
+    const lo = ticks[0], hi = ticks.at(-1);
+    const X = i => P.l + (labels.length === 1 ? iw / 2 : (i / (labels.length - 1)) * iw);
+    const Y = v => P.t + ih - ((v - lo) / ((hi - lo) || 1)) * ih;
+
+    ticks.forEach(t => {
+      n('line', { x1: P.l, x2: w - P.r, y1: Y(t), y2: Y(t), stroke: GRID, 'stroke-width': 1 }, svg);
+      txt(svg, P.l - 9, Y(t) + 3.5, cfg.yFmt ? cfg.yFmt(t) : F.axisBRL(t), { anchor: 'end', size: 9.5, fill: '#5c616b' });
+    });
+
+    const defs = n('defs', {}, svg);
+    series.forEach((s, si) => {
+      const color = s.color || PALETTE[si];
+      const d = s.values.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+      if (s.area !== false) {
+        const gid = 'lg' + si + Math.random().toString(36).slice(2, 7);
+        const g = n('linearGradient', { id: gid, x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+        n('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': s.fill ?? .2 }, g);
+        n('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': 0 }, g);
+        n('path', { d: `${d} L${X(labels.length - 1)},${P.t + ih} L${P.l},${P.t + ih} Z`, fill: `url(#${gid})` }, svg);
+      }
+      n('path', { d, fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'stroke-dasharray': s.dashed ? '5 4' : null }, svg);
+      n('circle', { cx: X(s.values.length - 1), cy: Y(s.values.at(-1)), r: 4, fill: color, stroke: '#121316', 'stroke-width': 2 }, svg);
+    });
+
+    const every = Math.max(1, Math.ceil(labels.length / Math.max(3, Math.floor(iw / 58))));
+    labels.forEach((l, i) => {
+      if (i % every && i !== labels.length - 1) return;
+      txt(svg, X(i), h - 7, l, { anchor: 'middle', size: 9.5, fill: '#5c616b' });
+    });
+
+    /* crosshair */
+    const cross = n('g', { opacity: 0 }, svg);
+    const cline = n('line', { y1: P.t, y2: P.t + ih, stroke: '#4a4e57', 'stroke-width': 1, 'stroke-dasharray': '3 3' }, cross);
+    const dots = series.map((s, si) => n('circle', { r: 4.5, fill: s.color || PALETTE[si], stroke: '#0a0a0c', 'stroke-width': 2 }, cross));
+    const hit = n('rect', { x: P.l, y: P.t, width: iw, height: ih, fill: 'transparent', class: 'chart__hit' }, svg);
+    hit.addEventListener('pointermove', ev => {
+      const box = svg.getBoundingClientRect();
+      const rel = (ev.clientX - box.left) * (w / box.width);
+      const i = Math.max(0, Math.min(labels.length - 1, Math.round(((rel - P.l) / iw) * (labels.length - 1))));
+      cross.setAttribute('opacity', 1);
+      cline.setAttribute('x1', X(i)); cline.setAttribute('x2', X(i));
+      series.forEach((s, si) => { dots[si].setAttribute('cx', X(i)); dots[si].setAttribute('cy', Y(s.values[i])); });
+      showTip(tipRows(labels[i], series.map((s, si) => ({ k: s.name, v: (s.fmt || fmt)(s.values[i]), color: s.color || PALETTE[si] }))), ev);
+    });
+    hit.addEventListener('pointerleave', () => { cross.setAttribute('opacity', 0); hideTip(); });
+  }, height);
+}
+
+/* =============================== BARRAS =============================== */
+function barChart(node, cfg) {
+  const { labels, series, stacked = false, fmt = F.compact, height = 260 } = cfg;
+  mount(node, (svg, w) => {
+    const h = height, P = { l: 52, r: 14, t: 16, b: 26 };
+    const iw = w - P.l - P.r, ih = h - P.t - P.b;
+    const totals = labels.map((_, i) => stacked ? series.reduce((s, x) => s + x.values[i], 0) : Math.max(...series.map(x => x.values[i])));
+    const ticks = niceTicks(0, Math.max(...totals), 4);
+    const hi = ticks.at(-1);
+    const Y = v => P.t + ih - (v / hi) * ih;
+    const slot = iw / labels.length;
+    const bw = Math.min(stacked ? 34 : 46, slot * .68);
+
+    ticks.forEach(t => {
+      n('line', { x1: P.l, x2: w - P.r, y1: Y(t), y2: Y(t), stroke: GRID }, svg);
+      txt(svg, P.l - 9, Y(t) + 3.5, cfg.yFmt ? cfg.yFmt(t) : F.axisBRL(t), { anchor: 'end', size: 9.5, fill: '#5c616b' });
+    });
+
+    labels.forEach((lab, i) => {
+      const cx = P.l + slot * i + slot / 2;
+      if (stacked) {
+        let acc = 0;
+        series.forEach((s, si) => {
+          const v = s.values[i], y0 = Y(acc + v), y1 = Y(acc);
+          const hgt = Math.max(0, y1 - y0 - (si ? 2 : 0));       /* espaçador de 2px entre segmentos */
+          const top = si === series.length - 1;
+          const x = cx - bw / 2;
+          const p = n('path', { d: top ? roundedTop(x, y0, bw, hgt, 4) : `M${x},${y0} h${bw} v${hgt} h${-bw} Z`, fill: s.color || PALETTE[si] }, svg);
+          p.style.cursor = 'pointer';
+          p.addEventListener('pointermove', ev => showTip(tipRows(lab, series.map((ss, k) => ({ k: ss.name, v: (ss.fmt || fmt)(ss.values[i]), color: ss.color || PALETTE[k] }))), ev));
+          p.addEventListener('pointerleave', hideTip);
+          acc += v;
+        });
+      } else {
+        const gw = bw / series.length;
+        series.forEach((s, si) => {
+          const v = s.values[i], y = Y(v);
+          const x = cx - bw / 2 + gw * si + (si ? 1 : 0);
+          const p = n('path', { d: roundedTop(x, y, gw - (series.length > 1 ? 2 : 0), P.t + ih - y, 4), fill: s.color || PALETTE[si] }, svg);
+          p.style.cursor = 'pointer';
+          p.addEventListener('pointermove', ev => showTip(tipRows(lab, series.map((ss, k) => ({ k: ss.name, v: (ss.fmt || fmt)(ss.values[i]), color: ss.color || PALETTE[k] }))), ev));
+          p.addEventListener('pointerleave', hideTip);
+        });
+      }
+      const every = Math.max(1, Math.ceil(labels.length / Math.max(3, Math.floor(iw / 52))));
+      if (i % every === 0 || i === labels.length - 1) txt(svg, cx, h - 7, lab, { anchor: 'middle', size: 9.5, fill: '#5c616b' });
+    });
+    n('line', { x1: P.l, x2: w - P.r, y1: P.t + ih, y2: P.t + ih, stroke: '#2c313a' }, svg);
+  }, height);
+}
+
+/* ========================= BARRAS HORIZONTAIS ========================= */
+function hBars(node, cfg) {
+  const { items, fmt = F.compact, color, rowH = 34, ramp, ref } = cfg;
+  mount(node, (svg, w) => {
+    const max = Math.max(...items.map(d => d.value), ref ? ref.value : 0);
+    const labelW = Math.min(cfg.labelW || 168, Math.round(w * 0.46));
+    const valW = Math.min(120, Math.max(...items.map(d => _mc ? (_mc.font = "12px 'JetBrains Mono', monospace", _mc.measureText(fmt(d.value)).width) : 70)) + 12);
+    const trackX = labelW, trackW = Math.max(40, w - labelW - valW);
+    items.forEach((d, i) => {
+      const y = i * rowH + 8, bh = 15;
+      const lab = txt(svg, 0, y + bh - 3, fit(d.label, labelW - 12), { size: 12, fill: '#a3a7b0', mono: false });
+      if (lab.textContent !== d.label) { const t = n('title', {}, lab); t.textContent = d.label; }
+      n('rect', { x: trackX, y, width: trackW, height: bh, rx: 2, fill: '#1a1c21' }, svg);
+      const bw = Math.max(3, (d.value / max) * trackW);
+      const fill = d.color || (ramp ? SEQ[Math.min(SEQ.length - 1, 6 - i)] : color || PALETTE[1]);
+      const p = n('path', { d: roundedRight(trackX, y, bw, bh, 4), fill }, svg);
+      p.style.cursor = 'pointer';
+      p.addEventListener('pointermove', ev => showTip(tipRows(d.label, [{ k: cfg.metric || 'Valor', v: fmt(d.value), color: fill }, ...(d.extra || [])], d.note), ev));
+      p.addEventListener('pointerleave', hideTip);
+      txt(svg, w, y + bh - 3, fmt(d.value), { anchor: 'end', size: 11.5, fill: INK });
+    });
+    if (ref) {
+      const rx = trackX + (ref.value / max) * trackW;
+      n('line', { x1: rx, x2: rx, y1: 2, y2: items.length * rowH + 2, stroke: '#a3a7b0', 'stroke-width': 1, 'stroke-dasharray': '3 3' }, svg);
+      txt(svg, rx, items.length * rowH + 14, ref.label, { anchor: rx > w * .6 ? 'end' : 'start', size: 10, fill: '#a3a7b0' });
+    }
+  }, () => items.length * rowH + 14 + (ref ? 14 : 0));
+}
+
+/* ============================== CASCATA ============================== */
+function waterfall(node, cfg) {
+  const { items, fmt = F.compact, height = 300 } = cfg;
+  mount(node, (svg, w) => {
+    const h = height, slotW = (w - 66) / items.length, rot = slotW < 88;
+    const P = { l: 52, r: 14, t: 22, b: rot ? 78 : 46 };
+    const iw = w - P.l - P.r, ih = h - P.t - P.b;
+    let acc = 0; const spans = [];
+    items.forEach(it => {
+      if (it.tipo === 'base' || it.tipo === 'total') { spans.push({ ...it, from: 0, to: it.valor }); acc = it.valor; }
+      else { spans.push({ ...it, from: acc, to: acc + it.valor }); acc += it.valor; }
+    });
+    const hi = niceTicks(0, Math.max(...spans.map(s => Math.max(s.from, s.to))), 4).at(-1);
+    const Y = v => P.t + ih - (v / hi) * ih;
+    niceTicks(0, hi, 4).forEach(t => {
+      n('line', { x1: P.l, x2: w - P.r, y1: Y(t), y2: Y(t), stroke: GRID }, svg);
+      txt(svg, P.l - 9, Y(t) + 3.5, F.axisBRL(t), { anchor: 'end', size: 9.5, fill: '#5c616b' });
+    });
+    const slot = iw / spans.length, bw = Math.min(46, slot * .62);
+    spans.forEach((s, i) => {
+      const x = P.l + slot * i + (slot - bw) / 2;
+      const y0 = Y(Math.max(s.from, s.to)), y1 = Y(Math.min(s.from, s.to));
+      const fill = s.tipo === 'base' ? '#4a4e57' : s.tipo === 'total' ? BASE : s.valor >= 0 ? UP : DOWN;
+      const p = n('path', { d: roundedTop(x, y0, bw, Math.max(2, y1 - y0), 4), fill }, svg);
+      p.style.cursor = 'pointer';
+      p.addEventListener('pointermove', ev => showTip(tipRows(s.label, [{ k: s.tipo === 'base' || s.tipo === 'total' ? 'Saldo' : 'Variação', v: (s.tipo === 'base' || s.tipo === 'total' ? '' : s.valor > 0 ? '+' : '') + fmt(s.valor), color: fill }], s.nota), ev));
+      p.addEventListener('pointerleave', hideTip);
+      if (i < spans.length - 1 && s.tipo !== 'total') {
+        const yEnd = Y(s.to);
+        n('line', { x1: x + bw, x2: P.l + slot * (i + 1) + (slot - bw) / 2, y1: yEnd, y2: yEnd, stroke: '#4a4e57', 'stroke-width': 1, 'stroke-dasharray': '3 3' }, svg);
+      }
+      txt(svg, x + bw / 2, y0 - 7, (s.tipo === 'base' || s.tipo === 'total' ? '' : s.valor > 0 ? '+' : '−') + F.axisBRL(Math.abs(s.tipo === 'base' || s.tipo === 'total' ? s.to : s.valor)),
+        { anchor: 'middle', size: 10, fill: s.tipo === 'total' ? BASE : INK, weight: 500 });
+      const nome = s.curto || s.label;
+      if (rot) {
+        const t = txt(svg, x + bw / 2, P.t + ih + 14, fit(nome, 92, "9.5px 'JetBrains Mono', monospace"), { anchor: 'end', size: 9.5, fill: '#5c616b' });
+        t.setAttribute('transform', `rotate(-34 ${x + bw / 2} ${P.t + ih + 14})`);
+        const ttl = n('title', {}, t); ttl.textContent = s.label;
+      } else {
+        const words = nome.split(' ');
+        const lines = words.length > 2 ? [words.slice(0, Math.ceil(words.length / 2)).join(' '), words.slice(Math.ceil(words.length / 2)).join(' ')] : [nome];
+        lines.forEach((ln, li) => txt(svg, x + bw / 2, P.t + ih + 16 + li * 11, fit(ln, slot - 4, "9.5px 'JetBrains Mono', monospace"), { anchor: 'middle', size: 9.5, fill: '#5c616b' }));
+      }
+    });
+    n('line', { x1: P.l, x2: w - P.r, y1: P.t + ih, y2: P.t + ih, stroke: '#2c313a' }, svg);
+  }, height);
+}
+
+/* =============================== FUNIL =============================== */
+function funnel(node, cfg) {
+  const { stages, rowH = 46 } = cfg;
+  mount(node, (svg, w) => {
+    const max = stages[0].valor, labelW = Math.min(156, Math.round(w * 0.4)), trackW = Math.max(60, w - labelW - 104);
+    stages.forEach((s, i) => {
+      const y = i * rowH + 6, bh = 22;
+      txt(svg, 0, y + 15, fit(s.etapa, labelW - 12), { size: 12, fill: '#a3a7b0', mono: false });
+      n('rect', { x: labelW, y, width: trackW, height: bh, rx: 2, fill: '#1a1c21' }, svg);
+      const bw = Math.max(4, (s.valor / max) * trackW);
+      const fill = SEQ[Math.max(1, 6 - i)];
+      const p = n('path', { d: roundedRight(labelW, y, bw, bh, 4), fill }, svg);
+      p.style.cursor = 'pointer';
+      const conv = i ? s.valor / stages[i - 1].valor : 1;
+      p.addEventListener('pointermove', ev => showTip(tipRows(s.etapa, [
+        { k: 'Volume', v: F.int(s.valor), color: fill },
+        ...(i ? [{ k: 'Conversão da etapa', v: F.pct(conv, 1) }] : []),
+        { k: 'Do topo', v: F.pct(s.valor / max, 2) },
+      ]), ev));
+      p.addEventListener('pointerleave', hideTip);
+      txt(svg, labelW + trackW + 10, y + 15, F.int(s.valor), { size: 12, fill: INK });
+      if (i) txt(svg, w, y + 15, F.pct(conv, 1), { anchor: 'end', size: 10.5, fill: conv > .5 ? '#4ec48d' : '#a3a7b0' });
+    });
+  }, () => stages.length * rowH + 8);
+}
+
+/* ============================== HEATMAP ============================== */
+function heatmap(node, cfg) {
+  const { rows, cols, cellH = 30, labelW = 62 } = cfg;
+  mount(node, (svg, w) => {
+    const gap = 3, cw = (w - labelW - gap * (cols.length - 1)) / cols.length;
+    const all = rows.flatMap(r => r.valores);
+    const lo = Math.min(...all), hi = Math.max(...all);
+    cols.forEach((c, j) => txt(svg, labelW + j * (cw + gap) + cw / 2, 12, c, { anchor: 'middle', size: 9.5, fill: '#5c616b' }));
+    rows.forEach((r, i) => {
+      const y = 22 + i * (cellH + gap);
+      txt(svg, 0, y + cellH / 2 + 4, r.nome, { size: 10.5, fill: '#a3a7b0' });
+      r.valores.forEach((v, j) => {
+        const t = (v - lo) / ((hi - lo) || 1);
+        const fill = SEQ[Math.min(SEQ.length - 1, Math.max(0, Math.round(t * 5) + 1))];
+        const rect = n('rect', { x: labelW + j * (cw + gap), y, width: cw, height: cellH, rx: 2, fill }, svg);
+        rect.style.cursor = 'pointer';
+        rect.addEventListener('pointermove', ev => showTip(tipRows(`Safra ${r.nome} · ${cols[j]}`, [{ k: 'Receita retida', v: v + '%', color: fill }], j ? `Variação sobre a safra original: ${v - 100 >= 0 ? '+' : '−'}${Math.abs(v - 100)} p.p.` : 'Mês de entrada da safra'), ev));
+        rect.addEventListener('pointerleave', hideTip);
+        txt(svg, labelW + j * (cw + gap) + cw / 2, y + cellH / 2 + 4, v, { anchor: 'middle', size: 10.5, fill: t > .55 ? '#0b1220' : '#dfe6f2', weight: 500 });
+      });
+    });
+  }, () => rows.length * 33 + 26);
+}
+
+/* =============================== ROSCA =============================== */
+function donut(node, cfg) {
+  const { items, fmt = F.compact, centro, centroLabel, height = 210 } = cfg;
+  mount(node, (svg, w) => {
+    const h = height, cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2 - 8, r = R * .62;
+    const total = items.reduce((s, d) => s + d.value, 0);
+    let a0 = -Math.PI / 2;
+    items.forEach((d, i) => {
+      const sweep = (d.value / total) * Math.PI * 2;
+      const a1 = a0 + sweep - .022;   /* espaçador de superfície entre fatias */
+      const P = (ang, rad) => [cx + Math.cos(ang) * rad, cy + Math.sin(ang) * rad];
+      const [x0, y0] = P(a0, R), [x1, y1] = P(a1, R), [x2, y2] = P(a1, r), [x3, y3] = P(a0, r);
+      const big = sweep > Math.PI ? 1 : 0;
+      const fill = d.color || PALETTE[i % PALETTE.length];
+      const p = n('path', { d: `M${x0},${y0} A${R},${R} 0 ${big} 1 ${x1},${y1} L${x2},${y2} A${r},${r} 0 ${big} 0 ${x3},${y3} Z`, fill }, svg);
+      p.style.cursor = 'pointer';
+      p.addEventListener('pointermove', ev => showTip(tipRows(d.label, [{ k: 'Valor', v: fmt(d.value), color: fill }, { k: 'Participação', v: F.pct(d.value / total, 1) }, ...(d.extra || [])]), ev));
+      p.addEventListener('pointerleave', hideTip);
+      a0 += sweep;
+    });
+    txt(svg, cx, cy - 2, centro, { anchor: 'middle', size: 19, fill: INK, weight: 600 });
+    txt(svg, cx, cy + 14, centroLabel, { anchor: 'middle', size: 9.5, fill: '#5c616b', ls: '.08em' });
+  }, height);
+}
+
+/* =========================== MEDIDOR DE META =========================== */
+function gaugeRow(atual, alvo, inverso) {
+  const p = inverso ? Math.min(1, alvo / atual) : Math.min(1, atual / alvo);
+  return { pct: p, cls: p >= .95 ? 'meter__fill--good' : p >= .8 ? '' : 'meter__fill--warn' };
+}
+
+if (typeof window !== 'undefined') Object.assign(window, { F, PALETTE, SEQ, sparkline, lineChart, barChart, hBars, waterfall, funnel, heatmap, donut, gaugeRow, redrawAll });
+
+/* =====================================================================
+   SARSEN — aplicação do console
+   Roteamento por hash, montagem de painéis e composição das vistas.
+   ===================================================================== */
+
+const S = window.SARSEN;
+const D = S.dre;
+const Q = [];                       /* fila de montagem de gráficos */
+const after = fn => { Q.push(fn); };
+const $ = sel => document.querySelector(sel);
+
+/* --------------------------- micro componentes --------------------------- */
+const delta = (v, { pp = false, inverso = false, sufixo = 'vs. jul/26' } = {}) => {
+  const pos = inverso ? v < 0 : v > 0;
+  const cls = v === 0 ? 'flat' : pos ? 'up' : 'down';
+  const arrow = v === 0 ? '→' : v > 0 ? '▲' : '▼';
+  const val = pp ? F.pp(v) : (v > 0 ? '+' : '−') + F.pct(Math.abs(v), 1);
+  return `<span class="delta delta--${cls}">${arrow} ${val}</span><span class="kpi__ctx">${sufixo}</span>`;
+};
+
+function kpi({ label, value, unit, foot, spark, sparkColor, hero, id }) {
+  const sid = id || 'k' + Math.random().toString(36).slice(2, 8);
+  if (spark) after(() => sparkline(document.getElementById(sid), spark, sparkColor || (hero ? '#d9a05b' : '#3987e5')));
+  return `<article class="panel kpi ${hero ? 'kpi--hero' : ''}">
+    <div class="kpi__label">${label}</div>
+    <div class="kpi__value">${value}${unit ? `<small>${unit}</small>` : ''}</div>
+    <div class="kpi__foot">${foot || ''}</div>
+    ${spark ? `<div class="kpi__spark chart" id="${sid}"></div>` : ''}
+  </article>`;
+}
+
+function panel(title, note, body, { sub = '', cls = '' } = {}) {
+  return `<section class="panel ${cls}">
+    <div class="panel__head"><h3 class="panel__title">${title}</h3>${note ? `<span class="panel__note">${note}</span>` : ''}</div>
+    ${sub ? `<p class="panel__sub">${sub}</p>` : ''}
+    ${body}
+  </section>`;
+}
+
+const chartBox = id => `<div class="chart" id="${id}"></div>`;
+const legend = items => `<div class="legend">${items.map(i => `<span class="legend__item"><span class="legend__swatch${i.line ? ' legend__swatch--line' : ''}" style="background:${i.color}"></span>${i.name}</span>`).join('')}</div>`;
+const statRows = rows => rows.map(r => `<div class="stat-row"><span class="stat-row__k">${r[0]}</span><span class="stat-row__v">${r[1]}</span></div>`).join('');
+
+const MoM = arr => arr.at(-1) / arr.at(-2) - 1;
+const YoY = arr => arr.at(-1) / arr[0] - 1;
+
+/* ============================== 1. VISÃO GERAL ============================== */
+function viewOverview() {
+  const s = S.serie;
+  const mixReceita = [
+    { label: 'Enterprise', value: S.planos[2].mrr },
+    { label: 'Pro', value: S.planos[1].mrr },
+    { label: 'Core', value: S.planos[0].mrr },
+    { label: 'Serviços de implantação', value: S.receita.servicos, color: '#6d727c' },
+  ];
+
+  after(() => {
+    lineChart(document.getElementById('c-resultado'), {
+      labels: S.meses, height: 300,
+      series: [
+        { name: 'Faturamento bruto', values: s.receita, color: PALETTE[0] },
+        { name: 'Lucro bruto', values: s.lucroBruto, color: PALETTE[1] },
+        { name: 'Lucro líquido', values: s.lucroLiquido, color: PALETTE[2] },
+      ],
+    });
+    lineChart(document.getElementById('c-margens'), {
+      labels: S.meses, height: 240, min: 0.5,
+      fmt: v => F.pct(v, 1), yFmt: v => F.pct(v, 0),
+      series: [
+        { name: 'Margem bruta', values: s.margemBruta, color: PALETTE[0], area: false },
+        { name: 'Margem EBITDA', values: s.margemEbitda, color: PALETTE[1], area: false },
+        { name: 'Margem líquida', values: s.margemLiquida, color: PALETTE[2], area: false },
+      ],
+    });
+    waterfall(document.getElementById('c-cascata'), {
+      height: 320,
+      items: [
+        { label: 'Faturamento bruto', curto: 'Faturamento', valor: D.receitaBruta, tipo: 'base' },
+        { label: 'Impostos', valor: D.deducoes[0].valor, nota: D.deducoes[0].nota },
+        { label: 'Reembolsos', valor: D.deducoes[1].valor, nota: D.deducoes[1].nota },
+        { label: 'CPV', valor: D.cpvTotal, nota: 'Cloud, inferência de LLM, implantação, adquirência e licenças' },
+        { label: 'Despesas operacionais', curto: 'Despesas', valor: D.opexTotal, nota: 'Pessoal, marketing, comissões, tecnologia e G&A' },
+        { label: 'D&A e resultado financeiro', curto: 'D&A e financ.', valor: D.da + D.receitaFinanceira + D.despesaFinanceira, nota: 'Depreciação, amortização e resultado financeiro líquido' },
+        { label: 'Lucro líquido', curto: 'Lucro líq.', valor: D.lucroLiquido, tipo: 'total' },
+      ],
+    });
+    donut(document.getElementById('c-mix'), {
+      items: mixReceita, height: 220,
+      centro: F.compact(D.receitaBruta), centroLabel: 'FATURAMENTO DO MÊS',
+    });
+  });
+
+  return `
+  <div class="view__intro">
+    <h2>O mês em uma tela</h2>
+    <p>Fechamento de <strong>${S.meta.periodo}</strong>. Faturamento bruto de ${F.brl(D.receitaBruta)}, lucro líquido de ${F.brl(D.lucroLiquido)} e margem líquida de ${F.pct(S.margens.liquida)} — o décimo terceiro mês consecutivo de expansão de margem.</p>
+  </div>
+
+  <div class="grid grid--kpi">
+    ${kpi({ label: 'Faturamento bruto', value: F.compact(D.receitaBruta), hero: true, spark: s.receita, foot: delta(MoM(s.receita)) })}
+    ${kpi({ label: 'Lucro bruto', value: F.compact(D.lucroBruto), spark: s.lucroBruto, sparkColor: PALETTE[1], foot: delta(MoM(s.lucroBruto)) })}
+    ${kpi({ label: 'Lucro líquido', value: F.compact(D.lucroLiquido), hero: true, spark: s.lucroLiquido, foot: delta(MoM(s.lucroLiquido)) })}
+    ${kpi({ label: 'Margem líquida', value: F.pct(S.margens.liquida), spark: s.margemLiquida, sparkColor: PALETTE[2], foot: delta(s.margemLiquida.at(-1) - s.margemLiquida.at(-2), { pp: true }) })}
+  </div>
+
+  <div class="grid grid--kpi mt">
+    ${kpi({ label: 'MRR', value: F.compact(S.receita.mrr), spark: s.mrr, foot: delta(MoM(s.mrr)) })}
+    ${kpi({ label: 'Run-rate anual', value: F.compact(S.receita.runRate), foot: `<span class="delta delta--up">▲ ${F.pct(YoY(s.receita))}</span><span class="kpi__ctx">vs. ago/25</span>` })}
+    ${kpi({ label: 'Clientes ativos', value: F.int(S.retencao.clientesAtivos), spark: s.clientes, sparkColor: PALETTE[3], foot: `<span class="delta delta--up">▲ ${S.retencao.netAdds} contas</span><span class="kpi__ctx">líquidas no mês</span>` })}
+    ${kpi({ label: 'NRR (12 meses)', value: F.pct(S.retencao.nrr), foot: `<span class="kpi__ctx">GRR ${F.pct(S.retencao.grr)} · churn ${F.pct(S.retencao.churnLogo)} a.m.</span>` })}
+  </div>
+
+  <div class="grid grid--2 mt">
+    ${panel('Faturamento, lucro bruto e lucro líquido', '13 MESES · R$', chartBox('c-resultado') + legend([
+      { name: 'Faturamento bruto', color: PALETTE[0], line: true },
+      { name: 'Lucro bruto', color: PALETTE[1], line: true },
+      { name: 'Lucro líquido', color: PALETTE[2], line: true },
+    ]), { cls: 'span-2', sub: 'As três linhas abrem ao longo do período: o faturamento cresceu ' + F.pct(YoY(s.receita)) + ' em doze meses enquanto o lucro líquido cresceu ' + F.pct(YoY(s.lucroLiquido)) + ', efeito da alavancagem operacional.' })}
+
+    ${panel('Do faturamento ao lucro líquido', 'AGO/26', chartBox('c-cascata'), { sub: 'Cada bloco é uma linha do resultado. De ' + F.brl(D.receitaBruta) + ' faturados, ' + F.brl(D.lucroLiquido) + ' chegam ao lucro.' })}
+
+    ${panel('Margens', '% SOBRE FATURAMENTO BRUTO', chartBox('c-margens') + legend([
+      { name: 'Margem bruta', color: PALETTE[0], line: true },
+      { name: 'Margem EBITDA', color: PALETTE[1], line: true },
+      { name: 'Margem líquida', color: PALETTE[2], line: true },
+    ]), { sub: 'Ganho de ' + F.pp(s.margemLiquida.at(-1) - s.margemLiquida[0]) + ' de margem líquida em doze meses. As linhas de EBITDA e de margem líquida praticamente se sobrepõem — a diferença é o resultado financeiro.' })}
+
+    ${panel('Composição do faturamento', 'AGO/26', chartBox('c-mix') + legend([
+      { name: 'Enterprise · ' + F.compact(S.planos[2].mrr), color: PALETTE[2] },
+      { name: 'Pro · ' + F.compact(S.planos[1].mrr), color: PALETTE[1] },
+      { name: 'Core · ' + F.compact(S.planos[0].mrr), color: PALETTE[0] },
+      { name: 'Serviços · ' + F.compact(S.receita.servicos), color: '#6d727c' },
+    ]), { sub: '91,9% da receita é recorrente. Serviços de implantação respondem por ' + F.pct(S.receita.servicos / D.receitaBruta) + '.' })}
+
+    ${panel('Destaques do mês', 'LEITURA RÁPIDA', statRows([
+      ['Lucro líquido por dia útil', F.brl(D.lucroLiquido / 21)],
+      ['Geração de caixa operacional', F.compact(S.caixa.geracaoOperacional)],
+      ['Novos contratos', F.int(S.retencao.novosMes) + ' · ticket de entrada ' + F.brl(S.unit.ticketEntrada)],
+      ['Net new MRR', '+' + F.brl(S.receita.mrr - S.serie.mrr.at(-2))],
+      ['Receita por colaborador (ano)', F.compact(S.time.receitaPorFte)],
+      ['Rule of 40', S.time.ruleOf40 + ' · cresc. ' + F.pct(S.time.crescimentoYoY, 0) + ' + EBITDA ' + F.pct(S.margens.ebitda, 0)],
+      ['Caixa e aplicações', F.compact(S.caixa.caixaAplicacoes) + ' · dívida zero'],
+    ]))}
+
+    ${panel('Metas 2026', 'FECHAMENTO EM DEZ/26', S.metas.map(m => {
+      const g = gaugeRow(m.atual, m.alvo, m.inverso);
+      const f = v => m.formato === 'moeda' ? F.compact(v) : m.formato === 'pct' ? F.pct(v) : F.int(v);
+      return `<div style="padding:11px 0;border-bottom:1px solid var(--hairline-soft)">
+        <div class="stat-row" style="padding:0 0 7px;border:0">
+          <span class="stat-row__k">${m.meta}</span>
+          <span class="stat-row__v">${f(m.atual)} <span style="color:var(--ink-4)">/ ${f(m.alvo)}</span></span>
+        </div>
+        <div class="meter"><div class="meter__fill ${g.cls}" style="width:${(g.pct * 100).toFixed(0)}%"></div></div>
+      </div>`;
+    }).join(''))}
+  </div>`;
+}
+
+/* ============================== 2. RESULTADO ============================== */
+function viewFinanceiro() {
+  const av = v => F.pct(Math.abs(v) / D.receitaBruta, 1);
+  const linha = (label, valor, cls = '') => `<tr class="${cls}"><td>${label}</td><td class="num ${valor < 0 ? 'cell-neg' : ''}">${valor < 0 ? '(' + F.brl(Math.abs(valor)) + ')' : F.brl(valor)}</td><td class="num">${av(valor)}</td></tr>`;
+  const sub = (label, valor) => `<tr class="row--sub"><td>${label}</td><td class="num cell-neg">(${F.brl(Math.abs(valor))})</td><td class="num">${av(valor)}</td></tr>`;
+
+  after(() => {
+    hBars(document.getElementById('c-custos'), {
+      items: [...D.cpv, ...D.opex].map((c, i) => ({
+        label: c.label.replace(/ \(.*\)/, ''), value: Math.abs(c.valor),
+        color: i < D.cpv.length ? PALETTE[1] : PALETTE[0],
+        extra: [{ k: 'Do faturamento', v: av(c.valor) }, { k: 'Natureza', v: i < D.cpv.length ? 'Custo do serviço (CPV)' : 'Despesa operacional' }],
+      })).sort((a, b) => b.value - a.value),
+      metric: 'Custo mensal', labelW: 210,
+    });
+    lineChart(document.getElementById('c-fin-serie'), {
+      labels: S.meses, height: 260,
+      series: [
+        { name: 'Lucro bruto', values: S.serie.lucroBruto, color: PALETTE[1] },
+        { name: 'Lucro líquido', values: S.serie.lucroLiquido, color: PALETTE[2] },
+      ],
+    });
+  });
+
+  return `
+  <div class="view__intro">
+    <h2>Resultado do exercício</h2>
+    <p>Demonstração gerencial de ${S.meta.periodo}, com análise vertical sobre o faturamento bruto. Todas as linhas fecham entre si.</p>
+  </div>
+
+  <div class="grid grid--kpi">
+    ${kpi({ label: 'Receita líquida', value: F.compact(D.receitaLiquida), foot: `<span class="kpi__ctx">${F.pct(D.receitaLiquida / D.receitaBruta)} do faturamento</span>` })}
+    ${kpi({ label: 'Lucro bruto', value: F.compact(D.lucroBruto), hero: true, foot: `<span class="kpi__ctx">margem ${F.pct(S.margens.brutaSobreLiquida)} sobre receita líquida</span>` })}
+    ${kpi({ label: 'EBITDA', value: F.compact(D.ebitda), foot: `<span class="kpi__ctx">margem ${F.pct(S.margens.ebitda)}</span>` })}
+    ${kpi({ label: 'Lucro líquido', value: F.compact(D.lucroLiquido), hero: true, foot: `<span class="kpi__ctx">margem ${F.pct(S.margens.liquida)}</span>` })}
+  </div>
+
+  <div class="grid grid--2 mt">
+    ${panel('Demonstração de resultado', 'GERENCIAL · AGO/26', `
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Linha</th><th>Valor</th><th>% do faturamento</th></tr></thead>
+        <tbody>
+          ${linha('Faturamento bruto', D.receitaBruta)}
+          ${D.deducoes.map(d => sub(d.label, d.valor)).join('')}
+          ${linha('Receita líquida', D.receitaLiquida, 'row--total')}
+          ${D.cpv.map(c => sub(c.label, c.valor)).join('')}
+          ${linha('Custo total do serviço (CPV)', D.cpvTotal)}
+          ${linha('Lucro bruto', D.lucroBruto, 'row--total')}
+          ${D.opex.map(o => sub(o.label, o.valor)).join('')}
+          ${linha('Despesas operacionais', D.opexTotal)}
+          ${linha('EBITDA', D.ebitda, 'row--total')}
+          ${sub('Depreciação e amortização', D.da)}
+          ${linha('EBIT', D.ebit)}
+          ${linha('Receita financeira', D.receitaFinanceira)}
+          ${sub('Despesas financeiras', D.despesaFinanceira)}
+          ${linha('Lucro líquido', D.lucroLiquido, 'row--grand')}
+        </tbody>
+      </table></div>`, { cls: 'span-2' })}
+
+    ${panel('Estrutura de custos e despesas', 'R$ / MÊS', chartBox('c-custos') + legend([
+      { name: 'Custo do serviço (CPV)', color: PALETTE[1] },
+      { name: 'Despesa operacional', color: PALETTE[0] },
+    ]), { sub: 'CPV de ' + F.brl(Math.abs(D.cpvTotal)) + ' e despesas de ' + F.brl(Math.abs(D.opexTotal)) + ' — juntos, ' + F.pct((Math.abs(D.cpvTotal) + Math.abs(D.opexTotal)) / D.receitaBruta) + ' do faturamento.' })}
+
+    ${panel('Lucro bruto e lucro líquido', '13 MESES', chartBox('c-fin-serie') + legend([
+      { name: 'Lucro bruto', color: PALETTE[1], line: true },
+      { name: 'Lucro líquido', color: PALETTE[2], line: true },
+    ]))}
+
+    ${panel('Caixa e balanço', 'POSIÇÃO EM 20/AGO', statRows([
+      ['Caixa e aplicações financeiras', F.compact(S.caixa.caixaAplicacoes)],
+      ['Geração de caixa operacional (mês)', F.compact(S.caixa.geracaoOperacional)],
+      ['Investimento (capex)', F.compact(S.caixa.capex)],
+      ['Fluxo de caixa livre', F.compact(S.caixa.fcf) + ' · ' + F.pct(S.caixa.fcfMargin)],
+      ['Contas a receber', F.compact(S.caixa.contasReceber) + ' · DSO ' + S.caixa.dso + ' dias'],
+      ['Receita diferida (anuais pré-pagos)', F.compact(S.caixa.receitaDiferida)],
+      ['Dívida financeira', 'R$ 0'],
+      ['Capital externo captado', 'R$ 0 · operação bootstrapped'],
+    ]))}
+
+    ${panel('Carga tributária', 'ALÍQUOTA EFETIVA 10,0%', `<div class="note">
+      <strong>Como a alíquota efetiva fecha em 10,0%.</strong> A receita de software padronizado é tributada no Lucro Presumido com presunção de 8% para IRPJ e 12% para CSLL; os serviços de implantação, com presunção de 32%. Somam-se PIS/COFINS cumulativo de 3,65% e ISS de 2%. O mix de 85% software e 15% serviços produz ${F.brl(Math.abs(D.deducoes[0].valor))} no mês.
+    </div>` + statRows([
+      ['Impostos sobre vendas e resultado', F.brl(Math.abs(D.deducoes[0].valor))],
+      ['Reembolsos e chargebacks', F.brl(Math.abs(D.deducoes[1].valor)) + ' · ' + F.pct(0.008)],
+      ['Receita em contratos internacionais', F.compact(S.receita.receitaIntl) + ' · ' + F.pct(S.receita.receitaIntl / D.receitaBruta, 0)],
+    ]))}
+  </div>`;
+}
+
+/* ============================ 3. RECEITA RECORRENTE ============================ */
+function viewReceita() {
+  after(() => {
+    waterfall(document.getElementById('c-mrr-mov'), { items: S.mrrMovement, height: 320 });
+    donut(document.getElementById('c-planos'), {
+      items: S.planos.map((p, i) => ({ label: p.nome, value: p.mrr, color: PALETTE[i], extra: [{ k: 'Clientes', v: F.int(p.clientes) }, { k: 'Preço/mês', v: F.brl(p.preco) }] })).reverse(),
+      centro: F.compact(S.receita.mrr), centroLabel: 'MRR TOTAL', height: 220,
+    });
+    hBars(document.getElementById('c-verticais'), {
+      items: S.verticais.map(v => ({
+        label: v.nome, value: v.receita,
+        extra: [{ k: 'Clientes', v: F.int(v.clientes) }, { k: 'Churn mensal', v: F.pct(v.churn) }],
+      })), metric: 'Receita no mês', labelW: 168,
+    });
+    lineChart(document.getElementById('c-mrr-serie'), {
+      labels: S.meses, height: 250,
+      series: [{ name: 'MRR', values: S.serie.mrr, color: PALETTE[0] }],
+    });
+  });
+
+  const netNew = S.receita.mrr - S.serie.mrr.at(-2);
+  return `
+  <div class="view__intro">
+    <h2>Receita recorrente</h2>
+    <p>Assinatura anual com faturamento mensal ou pré-pago. ${F.pct(S.receita.mrr / D.receitaBruta)} da receita é contratada e previsível; o restante vem de implantações pontuais.</p>
+  </div>
+
+  <div class="grid grid--kpi">
+    ${kpi({ label: 'MRR', value: F.compact(S.receita.mrr), hero: true, spark: S.serie.mrr, foot: delta(MoM(S.serie.mrr)) })}
+    ${kpi({ label: 'Net new MRR', value: '+' + F.compact(netNew), foot: `<span class="kpi__ctx">novos, expansão e reativação menos perdas</span>` })}
+    ${kpi({ label: 'ARPA', value: F.brl(S.receita.arpa), unit: '/mês', foot: `<span class="kpi__ctx">contrato anual médio de ${F.brl(S.receita.contratoAnualMedio)}</span>` })}
+    ${kpi({ label: 'ARR contratado', value: F.compact(S.receita.arr), foot: `<span class="kpi__ctx">run-rate total ${F.compact(S.receita.runRate)}</span>` })}
+  </div>
+
+  <div class="grid grid--2 mt">
+    ${panel('Movimentação do MRR', 'JUL/26 → AGO/26', chartBox('c-mrr-mov'), { cls: 'span-2', sub: 'Expansão e reativação somaram ' + F.brl(S.mrrMovement[2].valor + S.mrrMovement[3].valor) + ' contra ' + F.brl(Math.abs(S.mrrMovement[4].valor + S.mrrMovement[5].valor)) + ' de contração e churn — a base cresce mesmo antes de qualquer venda nova.' })}
+
+    ${panel('MRR por plano', 'AGO/26', chartBox('c-planos') + legend([
+      { name: 'Enterprise · ' + F.pct(S.planos[2].mrr / S.receita.mrr), color: PALETTE[2] },
+      { name: 'Pro · ' + F.pct(S.planos[1].mrr / S.receita.mrr), color: PALETTE[1] },
+      { name: 'Core · ' + F.pct(S.planos[0].mrr / S.receita.mrr), color: PALETTE[0] },
+    ]), { sub: 'O Enterprise é 8,5% das contas e ' + F.pct(S.planos[2].mrr / S.receita.mrr) + ' do MRR.' })}
+
+    ${panel('Planos e posicionamento', 'TABELA COMERCIAL', `
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Plano</th><th>Preço/mês</th><th>Clientes</th><th>MRR</th><th>% do MRR</th></tr></thead>
+        <tbody>${S.planos.map((p, i) => `<tr>
+          <td><span class="legend__swatch" style="display:inline-block;background:${PALETTE[i]};margin-right:8px"></span>${p.nome}<div style="color:var(--ink-3);font-size:11.5px;margin-top:2px">${p.alvo} · ${p.inclui}</div></td>
+          <td class="num">${F.brl(p.preco)}</td><td class="num">${F.int(p.clientes)}</td><td class="num">${F.compact(p.mrr)}</td><td class="num">${F.pct(p.mrr / S.receita.mrr)}</td></tr>`).join('')}
+          <tr class="row--total"><td>Total recorrente</td><td class="num">—</td><td class="num">${F.int(S.retencao.clientesAtivos)}</td><td class="num">${F.compact(S.receita.mrr)}</td><td class="num">100,0%</td></tr>
+        </tbody>
+      </table></div>`, { cls: 'span-2' })}
+
+    ${panel('Receita por vertical', 'R$ / MÊS', chartBox('c-verticais'), { sub: 'Nenhuma vertical passa de 24% da receita — a concentração fica dentro do limite de risco definido pela diretoria.' })}
+
+    ${panel('Evolução do MRR', '13 MESES', chartBox('c-mrr-serie'), { sub: 'Crescimento composto de 4,3% ao mês nos últimos doze meses.' })}
+
+    ${panel('Qualidade da receita', 'INDICADORES', statRows([
+      ['Receita recorrente', F.compact(S.receita.mrr) + ' · ' + F.pct(S.receita.mrr / D.receitaBruta)],
+      ['Serviços de implantação', F.compact(S.receita.servicos) + ' · ' + F.pct(S.receita.servicos / D.receitaBruta)],
+      ['Contratos anuais pré-pagos', F.pct(S.receita.prePagoAnual, 0) + ' da base'],
+      ['Receita Brasil', F.compact(S.receita.receitaBR) + ' · ' + F.pct(S.receita.receitaBR / D.receitaBruta, 0)],
+      ['Receita internacional (USD)', F.compact(S.receita.receitaIntl) + ' · ' + F.pct(S.receita.receitaIntl / D.receitaBruta, 0)],
+      ['Receita diferida em balanço', F.compact(S.caixa.receitaDiferida)],
+      ['NRR (12 meses)', F.pct(S.retencao.nrr)],
+    ]))}
+  </div>`;
+}
+
+/* ============================== 4. CLIENTES ============================== */
+function viewClientes() {
+  after(() => {
+    heatmap(document.getElementById('c-cohort'), {
+      rows: S.cohorts, cols: ['M0', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7'],
+    });
+    hBars(document.getElementById('c-health'), {
+      items: S.healthScore.map((h, i) => ({
+        label: h.faixa, value: h.clientes, color: PALETTE[1],
+        extra: [{ k: 'MRR na faixa', v: F.compact(h.mrr) }, { k: '% da base', v: F.pct(h.clientes / S.retencao.clientesAtivos) }],
+      })), metric: 'Clientes', fmt: F.int, labelW: 168,
+    });
+    barChart(document.getElementById('c-clientes-serie'), {
+      labels: S.meses, height: 250, yFmt: F.int, fmt: F.int,
+      series: [{ name: 'Clientes ativos', values: S.serie.clientes, color: PALETTE[3] }],
+    });
+  });
+
+  return `
+  <div class="view__intro">
+    <h2>Clientes e retenção</h2>
+    <p>${F.int(S.retencao.clientesAtivos)} empresas ativas. A retenção líquida de ${F.pct(S.retencao.nrr)} significa que a base de hoje valerá 18% a mais em doze meses mesmo sem nenhum cliente novo.</p>
+  </div>
+
+  <div class="grid grid--kpi">
+    ${kpi({ label: 'Clientes ativos', value: F.int(S.retencao.clientesAtivos), hero: true, spark: S.serie.clientes, foot: `<span class="delta delta--up">▲ ${S.retencao.netAdds}</span><span class="kpi__ctx">contas líquidas</span>` })}
+    ${kpi({ label: 'NRR · retenção líquida', value: F.pct(S.retencao.nrr), foot: `<span class="kpi__ctx">GRR de ${F.pct(S.retencao.grr)}</span>` })}
+    ${kpi({ label: 'Churn de contas', value: F.pct(S.retencao.churnLogo), unit: '/mês', foot: `<span class="kpi__ctx">${S.retencao.cancelamentosMes} cancelamentos · vida média ${S.retencao.vidaMediaMeses} meses</span>` })}
+    ${kpi({ label: 'NPS', value: S.retencao.nps, foot: `<span class="kpi__ctx">CSAT ${String(S.retencao.csat).replace('.', ',')}/5 · 1ª resposta em ${S.retencao.tempoPrimeiraResposta}</span>` })}
+  </div>
+
+  <div class="grid grid--2 mt">
+    ${panel('Retenção de receita por safra', '% DA RECEITA ORIGINAL DA SAFRA', chartBox('c-cohort'), { cls: 'span-2', sub: 'Cada linha é uma safra de clientes; cada coluna, um mês depois da entrada. Valores acima de 100 indicam que a safra passou a pagar mais do que no primeiro mês.' })}
+
+    ${panel('Base de clientes', '13 MESES', chartBox('c-clientes-serie'), { sub: 'De ' + F.int(S.serie.clientes[0]) + ' para ' + F.int(S.serie.clientes.at(-1)) + ' contas em doze meses.' })}
+
+    ${panel('Saúde da carteira', 'HEALTH SCORE', chartBox('c-health'), { sub: F.pct(S.healthScore[0].clientes / S.retencao.clientesAtivos) + ' da base está na faixa saudável, concentrando ' + F.pct(S.healthScore[0].mrr / S.receita.mrr) + ' do MRR.' })}
+
+    ${panel('Maiores contas', 'TOP 8 ENTERPRISE', `
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Conta</th><th>Vertical</th><th>MRR</th><th>Health</th><th>Expansão</th><th>Cliente desde</th></tr></thead>
+        <tbody>${S.topContas.map(c => `<tr>
+          <td>${c.conta}</td><td style="text-align:right;color:var(--ink-3)">${c.vertical}</td>
+          <td class="num">${F.brl(c.mrr)}</td>
+          <td class="num" style="color:${c.health >= 85 ? '#4ec48d' : c.health >= 70 ? '#fab219' : '#e08b8b'}">${c.health}</td>
+          <td class="num">${F.mult(c.expansao)}</td><td class="num" style="color:var(--ink-3)">${c.desde}</td></tr>`).join('')}
+          <tr class="row--total"><td>Soma do top 8</td><td></td><td class="num">${F.brl(S.topContas.reduce((s, c) => s + c.mrr, 0))}</td><td class="num">—</td><td class="num">—</td><td></td></tr>
+        </tbody>
+      </table></div>
+      <p class="panel__sub" style="margin:12px 0 0">O top 8 responde por ${F.pct(S.topContas.reduce((s, c) => s + c.mrr, 0) / S.receita.mrr)} do MRR. Expansão indica quantas vezes a conta multiplicou o contrato de entrada.</p>`, { cls: 'span-2' })}
+
+    ${panel('Churn por vertical', 'MENSAL', `
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Vertical</th><th>Clientes</th><th>Receita</th><th>Churn mensal</th></tr></thead>
+        <tbody>${[...S.verticais].sort((a, b) => b.churn - a.churn).map(v => `<tr>
+          <td>${v.nome}</td><td class="num">${F.int(v.clientes)}</td><td class="num">${F.compact(v.receita)}</td>
+          <td class="num" style="color:${v.churn <= 0.01 ? '#4ec48d' : v.churn <= 0.016 ? '#fab219' : '#e08b8b'}">${F.pct(v.churn)}</td></tr>`).join('')}</tbody>
+      </table></div>`)}
+
+    ${panel('Retenção em uma linha', 'DECOMPOSIÇÃO', statRows([
+      ['Novos clientes no mês', F.int(S.retencao.novosMes)],
+      ['Cancelamentos no mês', F.int(S.retencao.cancelamentosMes)],
+      ['Adições líquidas', '+' + F.int(S.retencao.netAdds)],
+      ['Churn de receita', F.pct(S.retencao.churnReceita, 2) + ' ao mês'],
+      ['ARPA dos cancelados', F.brl(Math.abs(S.mrrMovement[5].valor) / S.retencao.cancelamentosMes)],
+      ['Concentração do churn', '81% no plano Core'],
+      ['Time-to-value médio', S.retencao.timeToValue],
+    ]))}
+  </div>`;
+}
+
+/* ============================ 5. VENDAS E AQUISIÇÃO ============================ */
+function viewVendas() {
+  const topo = S.funil.slice(0, 4), comercial = S.funil.slice(3);
+  after(() => {
+    funnel(document.getElementById('c-funil-topo'), { stages: topo });
+    funnel(document.getElementById('c-funil-com'), { stages: comercial });
+    hBars(document.getElementById('c-canais'), {
+      items: S.canais.map(c => ({
+        label: c.canal, value: c.novos,
+        extra: [{ k: 'CAC do canal', v: F.brl(c.cac) }, { k: 'Investimento', v: F.brl(c.investimento) }],
+      })), metric: 'Novos clientes', fmt: F.int, labelW: 190,
+    });
+    hBars(document.getElementById('c-cac'), {
+      items: [...S.canais].sort((a, b) => a.cac - b.cac).map(c => ({
+        label: c.canal, value: c.cac, color: PALETTE[0],
+        extra: [{ k: 'Novos no mês', v: F.int(c.novos) }],
+        note: c.cac < S.unit.cac ? 'Abaixo do CAC médio' : 'Acima do CAC médio',
+      })), metric: 'CAC', fmt: F.brl, labelW: 190,
+      ref: { value: S.unit.cac, label: 'média ' + F.brl(S.unit.cac) },
+    });
+  });
+
+  return `
+  <div class="view__intro">
+    <h2>Vendas e aquisição</h2>
+    <p>${F.int(S.retencao.novosMes)} contratos fechados no mês a um custo médio de ${F.brl(S.unit.cac)} por cliente. O investimento em aquisição se paga em ${String(S.unit.payback).replace('.', ',')} meses.</p>
+  </div>
+
+  <div class="grid grid--kpi">
+    ${kpi({ label: 'Novos contratos', value: F.int(S.retencao.novosMes), hero: true, foot: `<span class="kpi__ctx">ticket de entrada ${F.brl(S.unit.ticketEntrada)}/mês</span>` })}
+    ${kpi({ label: 'CAC', value: F.brl(S.unit.cac), foot: `<span class="kpi__ctx">${F.brl(S.unit.investimentoAquisicao)} investidos no mês</span>` })}
+    ${kpi({ label: 'LTV / CAC', value: F.mult(S.unit.ltvCac), hero: true, foot: `<span class="kpi__ctx">LTV de ${F.compact(S.unit.ltv)} com teto de 36 meses</span>` })}
+    ${kpi({ label: 'Payback do CAC', value: String(S.unit.payback).replace('.', ',') + ' meses', foot: `<span class="kpi__ctx">margem de contribuição ${F.brl(S.unit.margemContribuicaoMes)}/mês</span>` })}
+  </div>
+
+  <div class="grid grid--2 mt">
+    ${panel('Topo de funil', 'AGO/26 · ESCALA PRÓPRIA', chartBox('c-funil-topo'), { sub: 'Volumes de audiência e captura. A coluna à direita traz a conversão de cada etapa.' })}
+    ${panel('Funil comercial', 'AGO/26 · ESCALA PRÓPRIA', chartBox('c-funil-com'), { sub: 'Da reunião agendada ao contrato assinado. Os dois painéis usam escalas separadas porque a ordem de grandeza é diferente.' })}
+
+    ${panel('Novos clientes por canal', 'AGO/26', chartBox('c-canais'), { sub: '62% dos novos contratos vêm de comunidade, indicação e conteúdo orgânico.' })}
+    ${panel('CAC por canal', 'R$ POR CLIENTE', chartBox('c-cac'), { sub: 'Indicação custa 7,8 vezes menos que tráfego pago — a tese por trás do programa de embaixadores.' })}
+
+    ${panel('Economia unitária', 'POR CLIENTE', statRows([
+      ['CAC médio (blended)', F.brl(S.unit.cac)],
+      ['Investimento em aquisição', F.brl(S.unit.investimentoAquisicao) + ' · ' + F.pct(S.unit.investimentoAquisicao / D.receitaBruta) + ' do faturamento'],
+      ['Margem de contribuição mensal', F.brl(S.unit.margemContribuicaoMes)],
+      ['Payback', String(S.unit.payback).replace('.', ',') + ' meses'],
+      ['LTV (teto de 36 meses)', F.brl(S.unit.ltv)],
+      ['LTV / CAC', F.mult(S.unit.ltvCac)],
+      ['Ciclo médio de vendas', S.unit.cicloDias + ' dias'],
+      ['Taxa de fechamento sobre proposta', F.pct(S.unit.winRateProposta)],
+    ]))}
+
+    ${panel('Pipeline', 'ACV EM ABERTO', statRows([
+      ['Pipeline aberto', F.compact(S.unit.pipelineAberto)],
+      ['Cobertura sobre a meta do mês', F.mult(S.unit.coberturaPipeline)],
+      ['Reuniões realizadas', F.int(S.funil[4].valor)],
+      ['Propostas enviadas', F.int(S.funil[5].valor)],
+      ['Contratos fechados', F.int(S.funil[6].valor)],
+      ['Conversão de lead a cliente', F.pct(S.funil[6].valor / S.funil[1].valor, 2)],
+      ['Comissionamento do mês', F.brl(Math.abs(D.opex[2].valor))],
+    ]) + `<div class="note" style="margin-top:14px">Regra de cobertura: o pipeline em aberto precisa valer ao menos 3 vezes a meta do mês. Hoje está em ${F.mult(S.unit.coberturaPipeline)}.</div>`)}
+  </div>`;
+}
+
+/* ============================== 6. PRODUTO ============================== */
+function viewProduto() {
+  const P = S.produto;
+  after(() => {
+    barChart(document.getElementById('c-execucoes'), {
+      labels: S.meses, height: 250,
+      yFmt: v => (v / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'M', fmt: F.int,
+      series: [{ name: 'Execuções de agentes', values: S.usoSerie.execucoes, color: PALETTE[1] }],
+    });
+    lineChart(document.getElementById('c-agentes'), {
+      labels: S.meses, height: 230, fmt: F.int, yFmt: F.int, min: 0,
+      series: [{ name: 'Agentes em produção', values: S.usoSerie.agentes, color: PALETTE[0] }],
+    });
+  });
+
+  return `
+  <div class="view__intro">
+    <h2>Produto e uso</h2>
+    <p>A plataforma entrega implementação, não conteúdo. O indicador que importa é agente em produção — ${F.int(P.agentesProducao)} rodando na base, ${F.int(P.execucoesMes)} execuções no mês.</p>
+  </div>
+
+  <div class="grid grid--kpi">
+    ${kpi({ label: 'Agentes em produção', value: F.int(P.agentesProducao), hero: true, spark: S.usoSerie.agentes, foot: `<span class="delta delta--up">▲ ${F.int(P.agentesNovosMes)}</span><span class="kpi__ctx">criados no mês</span>` })}
+    ${kpi({ label: 'Execuções no mês', value: (P.execucoesMes / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 2 }), unit: 'milhões', spark: S.usoSerie.execucoes, sparkColor: PALETTE[1], foot: delta(MoM(S.usoSerie.execucoes)) })}
+    ${kpi({ label: 'Custo por execução', value: F.brl2(P.custoPorExecucao), foot: `<span class="kpi__ctx">${F.brl(Math.abs(D.cpv[0].valor))} de infraestrutura no mês</span>` })}
+    ${kpi({ label: 'ROI médio declarado', value: F.mult(P.roiMedio), hero: true, foot: `<span class="kpi__ctx">${F.int(P.horasEconomizadas)} horas/mês economizadas na base</span>` })}
+  </div>
+
+  <div class="grid grid--2 mt">
+    ${panel('Execuções de agentes', '13 MESES', chartBox('c-execucoes'), { sub: 'O consumo cresce mais rápido que a receita — base da tese de preço híbrido por consumo.' })}
+    ${panel('Agentes em produção', '13 MESES', chartBox('c-agentes'), { sub: 'Cada agente é um processo que saiu do slide e entrou na operação do cliente.' })}
+  </div>
+
+  <div class="grid grid--3 mt">
+    ${S.modulos.map((m, i) => `<section class="panel">
+      <div class="mod">
+        <div class="mod__name"><span class="mod__idx">${String(i + 1).padStart(2, '0')}</span>${m.nome}</div>
+        <p class="mod__desc">${m.desc}</p>
+        <div class="meter"><div class="meter__fill ${m.adocao > .7 ? 'meter__fill--good' : m.adocao < .35 ? 'meter__fill--warn' : ''}" style="width:${(m.adocao * 100).toFixed(0)}%"></div></div>
+        <div class="mod__foot"><span>Adoção ${F.pct(m.adocao, 0)}</span><span>${m.sinal}</span></div>
+      </div>
+    </section>`).join('')}
+  </div>
+
+  <div class="grid grid--2 mt">
+    ${panel('Acervo da plataforma', 'BIBLIOTECA', statRows([
+      ['Soluções plug & play', F.int(P.solucoes)],
+      ['Casos documentados', F.int(P.cases)],
+      ['Agentes em produção na base', F.int(P.agentesProducao)],
+      ['Clientes com ao menos um agente em produção', F.pct(P.adocao)],
+      ['Uso semanal sobre mensal (WAU/MAU)', F.pct(P.wauMau, 0)],
+    ]))}
+    ${panel('Confiabilidade', 'SLA E QUALIDADE', statRows([
+      ['Disponibilidade', F.pct(P.uptime, 2)],
+      ['Latência p95', P.latenciaP95],
+      ['Deflexão de tickets pelo Copilot', '71%'],
+      ['Tempo de primeira resposta', S.retencao.tempoPrimeiraResposta],
+      ['NPS', S.retencao.nps],
+      ['CSAT', String(S.retencao.csat).replace('.', ',') + ' / 5'],
+    ]))}
+  </div>`;
+}
+
+/* ============================== 7. TIME ============================== */
+function viewTime() {
+  const T = S.time;
+  after(() => {
+    hBars(document.getElementById('c-areas'), {
+      items: T.areas.map(a => ({
+        label: a.area, value: a.pessoas,
+        extra: [{ k: 'Folha da área', v: F.brl(a.custo) }, { k: 'Custo médio', v: F.brl(a.custo / a.pessoas) }],
+      })), metric: 'Pessoas', fmt: F.int, labelW: 190,
+    });
+    hBars(document.getElementById('c-folha'), {
+      items: T.areas.map(a => ({ label: a.area, value: a.custo, color: PALETTE[1] })),
+      metric: 'Folha mensal', fmt: F.brl, labelW: 190,
+    });
+  });
+
+  return `
+  <div class="view__intro">
+    <h2>Time e eficiência</h2>
+    <p>${T.headcount} pessoas sustentando um run-rate de ${F.compact(S.receita.runRate)}. A premissa central da operação é uma estrutura nativa de IA: cada pessoa opera com automações que antes exigiriam um time.</p>
+  </div>
+
+  <div class="grid grid--kpi">
+    ${kpi({ label: 'Headcount', value: F.int(T.headcount), foot: `<span class="kpi__ctx">custo médio de ${F.brl(T.custoMedioFte)}/mês por pessoa</span>` })}
+    ${kpi({ label: 'Receita por colaborador', value: F.compact(T.receitaPorFte), unit: '/ano', hero: true, foot: `<span class="kpi__ctx">run-rate dividido pelo headcount</span>` })}
+    ${kpi({ label: 'Lucro por colaborador', value: F.compact(T.lucroPorFte), unit: '/ano', hero: true, foot: `<span class="kpi__ctx">lucro líquido anualizado</span>` })}
+    ${kpi({ label: 'Rule of 40', value: T.ruleOf40, foot: `<span class="kpi__ctx">crescimento ${F.pct(T.crescimentoYoY, 0)} + margem EBITDA ${F.pct(S.margens.ebitda, 0)}</span>` })}
+  </div>
+
+  <div class="grid grid--2 mt">
+    ${panel('Pessoas por área', 'AGO/26', chartBox('c-areas'), { sub: '54% do time está em produto, engenharia e implantação — as áreas que entregam valor direto ao cliente.' })}
+    ${panel('Folha por área', 'R$ / MÊS', chartBox('c-folha'), { sub: 'Folha total de ' + F.brl(Math.abs(D.opex[0].valor)) + ', equivalente a ' + F.pct(Math.abs(D.opex[0].valor) / D.receitaBruta) + ' do faturamento.' })}
+
+    ${panel('Indicadores de eficiência', 'BENCHMARK INTERNO', statRows([
+      ['Receita por colaborador (ano)', F.compact(T.receitaPorFte)],
+      ['Lucro líquido por colaborador (ano)', F.compact(T.lucroPorFte)],
+      ['Folha sobre faturamento', F.pct(Math.abs(D.opex[0].valor) / D.receitaBruta)],
+      ['S&M sobre faturamento', F.pct(S.unit.investimentoAquisicao / D.receitaBruta)],
+      ['CPV sobre faturamento', F.pct(Math.abs(D.cpvTotal) / D.receitaBruta)],
+      ['Magic number', F.mult(T.magicNumber)],
+      ['Rule of 40', T.ruleOf40],
+      ['Clientes por pessoa de CS', F.int(S.retencao.clientesAtivos / T.areas[1].pessoas)],
+    ]))}
+
+    ${panel('Como a margem se sustenta', 'LEITURA', `<div class="note">
+      <strong>Três alavancas explicam a margem de ${F.pct(S.margens.liquida)}.</strong>
+      <br><br>1. <strong>Custo marginal quase nulo.</strong> A mesma biblioteca de ${F.int(S.produto.solucoes)} soluções atende 20 ou 2.000 clientes; o CPV é ${F.pct(Math.abs(D.cpvTotal) / D.receitaBruta)} do faturamento e cai com o roteamento multi-modelo.
+      <br><br>2. <strong>Aquisição barata.</strong> 62% dos novos clientes chegam por comunidade, indicação e conteúdo. O S&M fica em ${F.pct(S.unit.investimentoAquisicao / D.receitaBruta)} do faturamento, contra 30% a 50% típicos de SaaS que compram crescimento.
+      <br><br>3. <strong>Estrutura enxuta.</strong> ${T.headcount} pessoas e nenhuma captação — não há diluição nem queima de caixa a financiar.
+    </div>`)}
+  </div>`;
+}
+
+/* ============================== 8. ESTRATÉGIAS ============================== */
+function viewEstrategias() {
+  const receitaItens = S.estrategias.filter(e => ['MRR', 'Receita', 'Vendas', 'Retenção'].includes(e.tipo));
+  const margemItens = S.estrategias.filter(e => ['Margem', 'CAC'].includes(e.tipo));
+  const somaReceita = receitaItens.reduce((s, e) => s + e.impacto, 0);
+  const somaMargem = margemItens.reduce((s, e) => s + e.impacto, 0);
+  const projetado = D.receitaBruta + somaReceita;
+  const lucroProjetado = D.lucroLiquido + somaReceita * 0.72 + somaMargem;
+
+  after(() => {
+    waterfall(document.getElementById('c-plano'), {
+      height: 340,
+      items: [
+        { label: 'Faturamento ago/26', curto: 'Hoje', valor: D.receitaBruta, tipo: 'base' },
+        ...receitaItens.map(e => ({ label: e.nome, curto: e.curto, valor: e.impacto, nota: e.alavanca })),
+        { label: 'Faturamento projetado ago/27', curto: 'Projetado', valor: projetado, tipo: 'total' },
+      ],
+    });
+    hBars(document.getElementById('c-impacto'), {
+      items: [...S.estrategias].sort((a, b) => b.impacto - a.impacto).map(e => ({
+        label: e.nome, value: e.impacto,
+        color: ['MRR', 'Receita', 'Vendas'].includes(e.tipo) ? PALETTE[0] : e.tipo === 'Retenção' ? PALETTE[3] : PALETTE[2],
+        extra: [{ k: 'Tipo de ganho', v: e.tipo }, { k: 'Progresso', v: F.pct(e.progresso, 0) }],
+        note: e.alavanca,
+      })), metric: 'Impacto mensal', labelW: 210,
+    });
+  });
+
+  return `
+  <div class="view__intro">
+    <h2>Plano estratégico</h2>
+    <p>Oito iniciativas em curso, com dono, prazo e impacto estimado. Somadas, levam o faturamento mensal de ${F.compact(D.receitaBruta)} para ${F.compact(projetado)} em doze meses — um run-rate de ${F.compact(projetado * 12)}.</p>
+  </div>
+
+  <div class="grid grid--kpi">
+    ${kpi({ label: 'Impacto em receita', value: '+' + F.compact(somaReceita), unit: '/mês', hero: true, foot: `<span class="kpi__ctx">seis iniciativas de receita em 12 meses</span>` })}
+    ${kpi({ label: 'Impacto em margem', value: '+' + F.compact(somaMargem), unit: '/mês', foot: `<span class="kpi__ctx">custo de inferência e CAC</span>` })}
+    ${kpi({ label: 'Run-rate projetado', value: F.compact(projetado * 12), foot: `<span class="delta delta--up">▲ ${F.pct(projetado / D.receitaBruta - 1)}</span><span class="kpi__ctx">sobre o run-rate atual</span>` })}
+    ${kpi({ label: 'Lucro líquido projetado', value: F.compact(lucroProjetado), unit: '/mês', hero: true, foot: `<span class="kpi__ctx">margem de ${F.pct(lucroProjetado / projetado)}</span>` })}
+  </div>
+
+  <div class="grid grid--2 mt">
+    ${panel('Ponte do faturamento — 12 meses', 'AGO/26 → AGO/27', chartBox('c-plano'), { cls: 'span-2', sub: 'Somente as iniciativas que criam receita entram na ponte. Ganhos de margem e de CAC aparecem direto na linha de lucro e estão no painel abaixo.' })}
+
+    ${panel('Impacto mensal por iniciativa', 'R$ / MÊS EM 12 MESES', chartBox('c-impacto') + legend([
+      { name: 'Receita nova', color: PALETTE[0] },
+      { name: 'Retenção', color: PALETTE[3] },
+      { name: 'Margem e CAC', color: PALETTE[2] },
+    ]), { cls: 'span-2' })}
+  </div>
+
+  <div class="grid grid--2 mt">
+    ${S.estrategias.map(e => {
+      const tagCls = e.status === 'Em execução' ? 'tag--exec' : e.status === 'Piloto' ? 'tag--pilot' : 'tag--plan';
+      return `<section class="panel">
+        <div class="strat">
+          <div class="strat__top">
+            <div>
+              <div class="strat__name">${e.nome}</div>
+              <div class="strat__meta" style="margin-top:6px"><span class="tag ${tagCls}">${e.status}</span><span class="tag">${e.tipo}</span></div>
+            </div>
+            <div class="strat__impact"><b>+${F.compact(e.impacto)}</b><span>Impacto / mês</span></div>
+          </div>
+          <p class="strat__tese">${e.tese}</p>
+          <div class="meter"><div class="meter__fill ${e.progresso > .6 ? 'meter__fill--good' : e.progresso < .3 ? 'meter__fill--warn' : ''}" style="width:${(e.progresso * 100).toFixed(0)}%"></div></div>
+          <div class="strat__meta">
+            <span>Progresso <strong style="color:var(--ink)">${F.pct(e.progresso, 0)}</strong></span>
+            <span>Dono: ${e.dono}</span>
+            <span>Horizonte: ${e.horizonte}</span>
+          </div>
+          <div class="note" style="font-size:12.5px">Alavanca: ${e.alavanca}</div>
+        </div>
+      </section>`;
+    }).join('')}
+  </div>
+
+  <div class="grid grid--2 mt">
+    ${panel('Metas 2026', 'ACOMPANHAMENTO', S.metas.map(m => {
+      const g = gaugeRow(m.atual, m.alvo, m.inverso);
+      const f = v => m.formato === 'moeda' ? F.compact(v) : m.formato === 'pct' ? F.pct(v) : F.int(v);
+      return `<div style="padding:11px 0;border-bottom:1px solid var(--hairline-soft)">
+        <div class="stat-row" style="padding:0 0 7px;border:0"><span class="stat-row__k">${m.meta}</span>
+        <span class="stat-row__v">${f(m.atual)} <span style="color:var(--ink-4)">/ ${f(m.alvo)}</span> · ${(g.pct * 100).toFixed(0)}%</span></div>
+        <div class="meter"><div class="meter__fill ${g.cls}" style="width:${(g.pct * 100).toFixed(0)}%"></div></div>
+      </div>`;
+    }).join(''))}
+
+    ${panel('Riscos monitorados', 'COMITÊ MENSAL', `
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Risco</th><th>Nível</th></tr></thead>
+        <tbody>${S.riscos.map(r => `<tr>
+          <td>${r.risco}<div style="color:var(--ink-3);font-size:11.5px;margin-top:3px">${r.mitigacao}</div></td>
+          <td><span class="tag tag--${r.nivel.toLowerCase().replace('é', 'e')}">${r.nivel}</span></td></tr>`).join('')}</tbody>
+      </table></div>`)}
+  </div>`;
+}
+
+/* ============================ 9. MODELO E PREMISSAS ============================ */
+function viewPremissas() {
+  return `
+  <div class="view__intro">
+    <h2>Modelo e premissas</h2>
+    <p>De onde vem cada número desta plataforma e qual referência de mercado foi usada para desenhar o modelo de negócio.</p>
+  </div>
+
+  <div class="grid grid--2">
+    ${panel('Modelo de referência estudado', 'PESQUISA', `<div style="font-size:13.5px;color:var(--ink-2);display:grid;gap:12px">
+      <p>A arquitetura de produto da Sarsen replica o modelo da <strong style="color:var(--ink)">Viver de IA</strong>, empresa brasileira fundada por Rafael Milagre e hoje uma das maiores operações de implementação de IA para empresas do país.</p>
+      <p><strong style="color:var(--ink)">Como aquele modelo funciona:</strong> é uma plataforma B2B de assinatura anual, com ticket médio divulgado na casa de R$ 3.500 por mês, mais de mil empresas na carteira e projeção pública de R$ 100 milhões de faturamento. A entrega combina uma ferramenta proprietária de construção de agentes — o Builder —, uma biblioteca de soluções prontas para instalar, trilhas de formação, mentorias ao vivo de implementação, uma comunidade e um acervo de casos reais documentados. A tese comercial não é vender curso: é vender redução de custo, ganho de produtividade e receita nova destravada por automação.</p>
+      <p><strong style="color:var(--ink)">O que a Sarsen replica:</strong> os nove módulos do painel de Produto espelham essa estrutura — Builder, biblioteca de soluções, trilhas, casos, mentorias, comunidade, diagnóstico de maturidade, marketplace de especialistas e copiloto de suporte. O motor comercial também: assinatura anual, aquisição majoritariamente orgânica via conteúdo e comunidade, expansão dentro da conta e uma camada de serviços de implantação para as contas maiores.</p>
+      <p style="color:var(--ink-3);font-size:12.5px">Fontes consultadas: página institucional da Viver de IA (viverdeia.ai), coluna do InfoMoney sobre a projeção de R$ 100 milhões para 2026 e materiais públicos do Viver de IA Club.</p>
+    </div>`, { cls: 'span-2' })}
+
+    ${panel('Premissas do modelo financeiro', 'METODOLOGIA', `<dl>${S.premissas.map(p => `<div class="def"><dt>${p[0]}</dt><dd>${p[1]}</dd></div>`).join('')}</dl>`, { cls: 'span-2' })}
+
+    ${panel('Âncoras aritméticas', 'O QUE FECHA COM O QUÊ', `
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Verificação</th><th>Resultado</th></tr></thead>
+        <tbody>
+          <tr><td>Faturamento − impostos − reembolsos</td><td class="num">${F.brl(D.receitaLiquida)} = receita líquida</td></tr>
+          <tr><td>Receita líquida − CPV</td><td class="num">${F.brl(D.lucroBruto)} = lucro bruto</td></tr>
+          <tr><td>Lucro bruto − despesas operacionais</td><td class="num">${F.brl(D.ebitda)} = EBITDA</td></tr>
+          <tr><td>EBITDA − D&A + resultado financeiro</td><td class="num">${F.brl(D.lucroLiquido)} = lucro líquido</td></tr>
+          <tr><td>Soma dos três planos (preço × clientes)</td><td class="num">${F.brl(S.receita.mrr)} = MRR</td></tr>
+          <tr><td>MRR + serviços de implantação</td><td class="num">${F.brl(D.receitaBruta)} = faturamento</td></tr>
+          <tr><td>Soma das sete verticais</td><td class="num">${F.brl(D.receitaBruta)} = faturamento</td></tr>
+          <tr><td>Movimentação do MRR (jul → ago)</td><td class="num">${F.brl(S.receita.mrr)} = MRR de ago/26</td></tr>
+          <tr><td>Investimento em aquisição ÷ novos contratos</td><td class="num">${F.brl(S.unit.cac)} = CAC</td></tr>
+          <tr><td>Infraestrutura ÷ execuções do mês</td><td class="num">${F.brl2(S.produto.custoPorExecucao)} = custo por execução</td></tr>
+        </tbody>
+      </table></div>`)}
+
+    ${panel('Onde a Sarsen difere do padrão de mercado', 'LEITURA CRÍTICA', `<div class="note">
+      <strong>Uma margem líquida de ${F.pct(S.margens.liquida)} está muito acima do padrão de SaaS.</strong> Empresas de software com esse porte costumam operar entre 10% e 30% de margem líquida, porque compram crescimento com vendas e marketing. O modelo aqui só fecha por três escolhas explícitas: aquisição predominantemente orgânica (S&M em ${F.pct(S.unit.investimentoAquisicao / D.receitaBruta)} do faturamento contra 30% a 50% do mercado), estrutura de ${S.time.headcount} pessoas para um run-rate de ${F.compact(S.receita.runRate)}, e enquadramento tributário de software padronizado.
+      <br><br>São premissas agressivas, e estão listadas justamente para poderem ser questionadas. Trocar qualquer uma delas derruba a margem — o que este painel entrega é o modelo fechando de ponta a ponta, não uma previsão.
+    </div>` + statRows([
+      ['Margem líquida Sarsen', F.pct(S.margens.liquida)],
+      ['Margem líquida típica de SaaS B2B', '10% a 30%'],
+      ['S&M Sarsen sobre faturamento', F.pct(S.unit.investimentoAquisicao / D.receitaBruta)],
+      ['S&M típico de SaaS em crescimento', '30% a 50%'],
+      ['Margem bruta Sarsen', F.pct(S.margens.brutaSobreLiquida)],
+      ['Margem bruta típica de SaaS', '70% a 85%'],
+      ['Rule of 40 Sarsen', S.time.ruleOf40],
+      ['Rule of 40 considerado bom', 'acima de 40'],
+    ]))}
+  </div>
+
+  <div class="grid mt">
+    ${panel('Aviso', 'NATUREZA DOS DADOS', `<div class="note">
+      Todos os números desta plataforma são <strong>ilustrativos</strong>. Foram construídos para fechar aritmeticamente entre si a partir de três âncoras definidas pela empresa — faturamento mensal de ${F.brl(D.receitaBruta)}, lucro bruto de ${F.brl(D.lucroBruto)} e lucro líquido de ${F.brl(D.lucroLiquido)} — e não representam demonstrações financeiras auditadas nem clientes reais. Os nomes de contas citados no painel de clientes são fictícios.
+    </div>`)}
+  </div>`;
+}
+
+/* ============================== ROTEAMENTO ============================== */
+const VIEWS = {
+  'visao-geral':  { title: 'Visão geral',        crumb: 'Painel executivo',  render: viewOverview },
+  'resultado':    { title: 'Resultado',          crumb: 'Finanças',          render: viewFinanceiro },
+  'receita':      { title: 'Receita recorrente', crumb: 'Finanças',          render: viewReceita },
+  'clientes':     { title: 'Clientes',           crumb: 'Carteira',          render: viewClientes },
+  'vendas':       { title: 'Vendas e aquisição', crumb: 'Carteira',          render: viewVendas },
+  'produto':      { title: 'Produto e uso',      crumb: 'Operação',          render: viewProduto },
+  'time':         { title: 'Time e eficiência',  crumb: 'Operação',          render: viewTime },
+  'estrategias':  { title: 'Estratégias',        crumb: 'Plano',             render: viewEstrategias },
+  'premissas':    { title: 'Modelo e premissas', crumb: 'Plano',             render: viewPremissas },
+};
+
+function navigate(hash) {
+  const key = (hash || '').replace(/^#\/?/, '') || 'visao-geral';
+  const v = VIEWS[key] ? key : 'visao-geral';
+  Q.length = 0;
+  const host = $('#view');
+  host.innerHTML = VIEWS[v].render();
+  $('#topbar-title').textContent = VIEWS[v].title;
+  $('#topbar-crumb').textContent = 'Sarsen · ' + VIEWS[v].crumb;
+  document.querySelectorAll('.navlink').forEach(a => {
+    if (a.getAttribute('href') === '#/' + v) a.setAttribute('aria-current', 'page');
+    else a.removeAttribute('aria-current');
+  });
+  document.title = VIEWS[v].title + ' · Sarsen';
+  requestAnimationFrame(() => { Q.forEach(fn => fn()); host.scrollIntoView({ block: 'start' }); window.scrollTo({ top: 0 }); });
+}
+
+function boot() {
+  $('#periodo').textContent = S.meta.periodo;
+  $('#atualizado').textContent = S.meta.atualizado;
+  navigate(location.hash);
+}
+
+addEventListener('hashchange', () => navigate(location.hash));
+if (document.readyState === 'loading') addEventListener('DOMContentLoaded', boot);
+else boot();
+
+</script>
