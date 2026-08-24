@@ -1,0 +1,36 @@
+# Proativa Capital — proativacapital.com.br
+
+User-agent: *
+Allow: /
+
+# Robôs de busca generativa / IA — liberados de propósito.
+# Queremos que ChatGPT, Claude, Perplexity e afins consigam ler e citar
+# corretamente quem somos, o que fazemos e as vagas abertas.
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+Sitemap: https://proativacapital.com.br/sitemap.xml
