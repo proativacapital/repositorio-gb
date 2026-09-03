@@ -80,7 +80,7 @@ const C = Object.freeze({
   VIGNETTE_IN: 0.55, VIGNETTE_A: 0.55, CURSOR_R: 7, CURSOR_STILL_R: 4, CURSOR_A: 0.5,
   CAL_FRAME0: 10, CAL_FRAME1: 70, CAL_P75_MS: 5.5, CAL_MAX_DROPS: 2,
   LADDER_DELTA_MS: 17.5, LADDER_JS_MS: 9, LADDER_JS_CAUSE_MS: 6, LADDER_FRAMES: 30, LADDER_RESTORE_FRAMES: 600, LADDER_RESTORE_MS: 11,
-  TEXT_IN: 1, TEXT_HOLD: 4, TEXT_OUT: 1.5, TEXT_MIN_PX: 14, TEXT_MARGIN: 12,
+  TEXT_IN: 1, TEXT_HOLD: 4, TEXT_OUT: 1.5, TEXT_MIN_PX: 14, TEXT_MARGIN: 12, LOBBY_FADE: 3,
   KE_EVERY: 6, TELL_LEAD: 0.5, PLINK_MAX_PER_S: 3, TICK_MAX_PER_S: 6,
   ACTS: [
     { name: 'act0', tideA: 0, tideP: 40, nV: 1, vPeak: 2.5, vortexFrom: 12, window: 12, sky: '#02030a', cap: 120, glyphs: ['G1'] },   // the cap is a safety net: G1 cannot be lost in Act 0, so at the cap it is set, not wisped
@@ -1006,7 +1006,8 @@ function textDraw(str, widths, font, ls, x, y, alpha) {
 }
 function renderText() {
   const a = G.t - TXT.t0, tot = C.TEXT_IN + C.TEXT_HOLD + C.TEXT_OUT; if (a < 0 || a > tot) return;
-  const al = a < C.TEXT_IN ? easeInOutSine(a / C.TEXT_IN) : a > C.TEXT_IN + C.TEXT_HOLD ? 1 - easeInOutSine((a - C.TEXT_IN - C.TEXT_HOLD) / C.TEXT_OUT) : 1;
+  const lk = 1 - LOBBY.k; if (lk <= 0) return;   // the line never shows through the open lobby panel
+  const al = lk * (a < C.TEXT_IN ? easeInOutSine(a / C.TEXT_IN) : a > C.TEXT_IN + C.TEXT_HOLD ? 1 - easeInOutSine((a - C.TEXT_IN - C.TEXT_HOLD) / C.TEXT_OUT) : 1);
   ctx.globalCompositeOperation = 'source-over';
   const xf = TXT.x * V.cssW, yf = TXT.y < 0 ? WR.y + TXT.y * V.cssH : TXT.y * V.cssH;
   textDraw(TXT.pt, TXT.wPt, TXT.font, TXT.ls, xf, yf, (TXT.dark ? 1 : 0.85) * al); textDraw(TXT.en, TXT.wEn, TXT.fontEn, TXT.lsEn, xf, yf + TXT.size * 1.4, (TXT.dark ? 0.6 : 0.4) * al);   // dark text on the bright dawn sky needs the full alpha
@@ -1477,7 +1478,7 @@ const NET = { mode: 'solo', state: 'idle', code: null, delay: 0, stalls: 0, resy
   syncAt: -1, syncSent: false, syncApplied: true, syncMeta: null, syncChunks: null, syncGot: 0, lastSyncAt: -1, pingTs: 0, rtts: [], pkt: new ArrayBuffer(10), joinTimer: 0, roomTimer: 0, keepTimer: 0, pending: null,
   aDoisT: -1e9, hoverADois: false, discT: -1, lostLine: false, topic: '', peerId: '', roomMs: 0 };
 NET.pv = new DataView(NET.pkt);
-const LOBBY = { open: false, el: null, view: '', status: null, timer: 0, built: false, code: '', manualRole: '', openMs: -1e9, copyPrev: '', copyTimer: 0 };
+const LOBBY = { open: false, el: null, view: '', status: null, timer: 0, built: false, code: '', manualRole: '', openMs: -1e9, copyPrev: '', copyTimer: 0, k: 0 };   // k: render-only 0..1, eased toward open at LOBBY_FADE/s — the canvas text and ring fade under the panel
 function netPublic() { return { mode: NET.mode, state: NET.state, code: NET.code, tick: G.steps, delay: NET.delay, stalls: NET.stalls, resyncs: NET.resyncs, rtt: NET.rtt, lastHash: NET.lastHash }; }
 function randBytes(n) { const a = new Uint8Array(n); crypto.getRandomValues(a); return a; }
 function roomCode() { const b = randBytes(6), cs = C.NET.CONS, vs = C.NET.VOW; let s = ''; for (let i = 0; i < 6; i++) s += (i & 1) ? vs[b[i] % vs.length] : cs[b[i] % cs.length]; return s; }
@@ -1933,6 +1934,7 @@ function frame(now) {
   LP.acc += raw * G.ts; const maxSteps = (G.ts > 1 || NET.state === 'connected') ? C.MAX_STEPS_FAST : C.MAX_STEPS; let steps = 0, lastStep = -1;
   while (LP.acc >= C.DT && steps < maxSteps) { if (NET.mode !== 'solo' && !netCanTick(G.steps)) { netStall(); break; } const s0 = nowMs(); step(); lastStep = nowMs() - s0; pushStat(ST.step, 's', lastStep); LP.acc -= C.DT; steps++; }
   if (LP.acc > 2 * C.DT) LP.acc = 0;
+  LOBBY.k += clamp((LOBBY.open ? 1 : 0) - LOBBY.k, -C.LOBBY_FADE * raw, C.LOBBY_FADE * raw);   // render-only
   if (steps > 0 || resized) { const r0 = nowMs(); ST.toneAcc = 0; render(); const rm = nowMs() - r0; pushStat(ST.render, 'r', rm); ST.toneMs = ST.toneAcc; }
   netFrame(); ladder(frameMs, nowMs() - f0); calibrate(lastStep); G.frame++;
 }
