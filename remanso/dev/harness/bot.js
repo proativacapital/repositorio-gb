@@ -57,17 +57,18 @@ let seed = +opt('seed', 7); const rnd = () => { seed = (seed * 1664525 + 1013904
     // 2) press-hold on the ghost centre up to ~10 s (game time), checking state
     holds++;
     await page.mouse.move(cx, cy, { steps: 3 }); await page.mouse.down();
-    const holdStart = Date.now(); let resolved = false;
+    const holdStart = Date.now(); let resolved = false, lastState = g.state;
     while (Date.now() - holdStart < 10000 / Math.max(1, timescale) + 2000) {
       await page.waitForTimeout(250);
       const s2 = await snap(); const g2 = (s2.glyphs || []).find(x => x.id === g.id);
+      if (g2) { lastState = g2.state; outcomes[g.id] = g2.state; }   // the post-transition state (LIFTING/STAR vs WISP/PERMANENT), not the stale pre-hold one
       if (!g2 || !['LIVE', 'FADING', 'WISP'].includes(g2.state)) { resolved = true; break; }
       if (s2.phase !== s.phase) break;
       // nudge the held pointer minimally (carry) so a stuck-still detector isn't fooled by zero events
       if ((Date.now() - holdStart) % 2000 < 260) await page.mouse.move(cx + (rnd() - .5) * 2, cy + (rnd() - .5) * 2);
     }
     await page.mouse.up();
-    if (resolved) say(`  ${g.id} resolved (${outcomes[g.id]}) after hold #${holds}`);
+    if (resolved) say(`  ${g.id} resolved -> ${lastState} after hold #${holds}`);
     await page.waitForTimeout(300);
   }
   const stats = await page.evaluate(() => { try { return window.__game.stats(); } catch (e) { return null; } });

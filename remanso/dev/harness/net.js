@@ -65,12 +65,13 @@ const say = (s) => process.stderr.write(s + '\n');
   const bots = [play(H, 'hold'), play(G, 'stir')];
   // hash monitor
   const mism = [], matched = new Set(); let perturbAt = null, resyncSeen = false, reconverged = false, lostAt = null, hostTicksAfterLoss = null;
-  const deadline = Date.now() + minutes * 60000; let lastShot = Date.now();
+  const deadline = Date.now() + minutes * 60000; let lastShot = Date.now(), lastRs = '0/0';
   while (Date.now() < deadline) {
     await new Promise(r => setTimeout(r, 1000));
     const [hl, gl, hn, gn] = await Promise.all([H.page.evaluate(() => window.__game.hashLog()).catch(() => []), G.page.evaluate(() => window.__game.hashLog()).catch(() => []), net(H), net(G).catch(() => ({ state: 'closed' }))]);
     const gm = new Map((gl || []).map(h => [h.tick, h.hash]));
-    for (const h of (hl || [])) if (gm.has(h.tick) && !matched.has(h.tick)) { matched.add(h.tick); if (gm.get(h.tick) !== h.hash) mism.push({ tick: h.tick, host: h.hash, guest: gm.get(h.tick), t: Math.round((Date.now() - t0) / 1000) }); }
+    for (const h of (hl || [])) if (gm.has(h.tick) && !matched.has(h.tick)) { matched.add(h.tick); if (gm.get(h.tick) !== h.hash) { mism.push({ tick: h.tick, host: h.hash, guest: gm.get(h.tick), t: Math.round((Date.now() - t0) / 1000) }); const ph = await H.page.evaluate(() => { const s = window.__game.snapshot(); return s.phase + '/' + s.actT.toFixed(1) + ' glyphs ' + s.glyphs.map(g => g.id + ':' + g.state).join(','); }).catch(() => '?'); say('MISMATCH tick ' + h.tick + ' t=' + Math.round((Date.now() - t0) / 1000) + 's hostTick=' + hn.tick + ' resyncs ' + hn.resyncs + '/' + (gn.resyncs === undefined ? '-' : gn.resyncs) + ' delay ' + hn.delay + ' stalls ' + hn.stalls + '/' + gn.stalls + ' host ' + ph); } }
+    { const k = hn.resyncs + '/' + (gn.resyncs === undefined ? '-' : gn.resyncs); if (k !== lastRs) { lastRs = k; say('RESYNC counters ' + k + ' at t=' + Math.round((Date.now() - t0) / 1000) + 's tick ' + hn.tick); } }
     if (perturb && !perturbAt && Date.now() - t0 > 60000) { await G.page.evaluate(() => window.__game.debugPerturb()); perturbAt = Date.now(); say('perturbed guest at tick ' + gn.tick); }
     if (perturbAt && (hn.resyncs >= 1 || gn.resyncs >= 1)) resyncSeen = true;
     if (perturbAt && resyncSeen && mism.length && Date.now() - perturbAt > 5000) { const last = mism[mism.length - 1]; reconverged = (Date.now() - t0) / 1000 - last.t > 4 && matched.size > 0; }
@@ -83,7 +84,7 @@ const say = (s) => process.stderr.write(s + '\n');
   const hs = await H.page.evaluate(() => window.__game.stats()).catch(() => null);
   await shot(H, 'end'); if (!lostAt) await shot(G, 'end');
   await browser.close(); broker.close();
-  const injected = perturb ? mism.filter(m => perturbAt && m.t >= (perturbAt - t0) / 1000 - 1) : [];
+  const injected = perturb ? mism.filter(m => perturbAt && m.t >= (perturbAt - t0) / 1000 - 1 && m.t <= (perturbAt - t0) / 1000 + 10) : [];   // only the divergence the perturb caused (resolved within seconds); a later one is unexpected
   const unexpected = mism.filter(m => !injected.includes(m));
   const solo_net_clean = true;
   const ok = H.rec.errors.length === 0 && G.rec.errors.length === 0 && unexpected.length === 0 && matched.size >= 3 && (!perturb || (resyncSeen && reconverged)) && (!disconnect || (hn.state === 'lost' && hostTicksAfterLoss > 30));

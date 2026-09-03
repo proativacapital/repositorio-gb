@@ -6,7 +6,7 @@ const problems = [], notes = [];
 const has = (re) => re.test(src);
 if (!/^\s*<!doctype html>/i.test(src)) problems.push('missing <!doctype html>');
 if (/<script[^>]+src=/i.test(src)) problems.push('external <script src> found (must be self-contained)');
-if (/<link[^>]+href=/i.test(src)) problems.push('external <link href> found');
+if (/<link[^>]+href=(?!["']data:)/i.test(src)) problems.push('external <link href> found');   // an inline data: URI (favicon) is not external
 if (/\bfetch\s*\(|XMLHttpRequest|import\s*\(|from\s+['"]http|navigator\.sendBeacon|EventSource\(/i.test(src)) problems.push('forbidden network API (fetch/XHR/import/beacon/EventSource)');
 const urls = src.match(/\b(?:https?|wss?|stuns?|turns?):[^\s'"`)]+/gi) || [];
 const badUrls = urls.filter(u => !/^(wss?:|stuns?:|turns?:)/i.test(u) && !/w3\.org/i.test(u));
