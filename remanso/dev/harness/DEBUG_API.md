@@ -28,7 +28,7 @@ window.__game = {
   skipToPhase(name),      // 'act0'..'act3','dawn','epilogue' — jumps the director, resetting act state cleanly
   setSeed(n),             // reseed the PRNG (weather/noise/IR); Math.random must never be used by the game
   setQuality(q),          // force a quality ladder step (or 'auto')
-  setRung(r),             // SOLO only: force grid rung 0|1|2 — clears the fields, history count = 0, re-derives the grid and the stamped masks; the calibrator and the ladder then leave the rung alone (det.js calls setRung(0) on both pages)
+  setRung(r),             // SOLO only: force grid rung 0|1|2 at its NOMINAL 16:9 dims (192x108 / 160x90 / 128x72) whatever the window — clears the fields, history count = 0, re-derives the grid and the stamped masks; the calibrator and the ladder then leave the rung alone (det.js calls setRung(0) on both pages, so two windows of different shape run one sim)
   stats() { return { frameMs: { avg, p95, max }, stepMs: { avg, p95, max }, renderMs: { avg, p95, max }, heapMB, quality, rung, steps }; },
 };
 ```

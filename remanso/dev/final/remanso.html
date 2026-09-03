@@ -320,20 +320,26 @@ function applyResize() {
   const a = WR.w / WR.h; if (Math.abs(a - gridAspect) / gridAspect > 0.15) gridDirty = true;
 }
 let gridDirty = false;
-function deriveGrid(rung) {
-  const aspect = WR.w / WR.h, cells = C.RUNG_CELLS[rung], lim = C.GRID_MAX_SIDE;
+const GD = { w: 192, h: 108 };
+function gridDims(rung, aspect) {          // square cells: W = floor(sqrt(cells*aspect)), H = floor(W/aspect); no side beyond the per-row / per-column scratch; W*H <= MAX_CELLS
+  const cells = C.RUNG_CELLS[rung], lim = C.GRID_MAX_SIDE;
   let w = Math.floor(Math.sqrt(cells * aspect)); let h = Math.floor(w / aspect);
-  if (w > lim) { w = lim; h = Math.floor(cells / w); } else if (h > lim) { h = lim; w = Math.floor(cells / h); }   // no side beyond the per-row / per-column scratch
+  if (w > lim) { w = lim; h = Math.floor(cells / w); } else if (h > lim) { h = lim; w = Math.floor(cells / h); }
   if (w < 16) w = 16; if (h < 16) h = 16;
   while (w * h > C.MAX_CELLS) { if (w > h) w--; else h--; }
-  GW = w; GH = h; N = GW * GH; gridAspect = aspect; G.rung = rung; gridGen++;
+  GD.w = w; GD.h = h;
+}
+function gridDimsValid(w, h) { return w >= 16 && h >= 16 && w <= C.GRID_MAX_SIDE && h <= C.GRID_MAX_SIDE && w * h <= C.MAX_CELLS; }
+function deriveGrid(rung, w, h) {          // explicit dims (online: the host's, so both peers run one grid whatever their windows; setRung: the nominal 16:9 rung) or, when absent, the local water aspect
+  if (!gridDimsValid(w, h)) { gridDims(rung, WR.w / WR.h); w = GD.w; h = GD.h; }
+  GW = w; GH = h; N = GW * GH; gridAspect = GW / GH; G.rung = rung; gridGen++;
   cellPx = WR.w / GW; cellPy = WR.h / GH;
   inkCv = mkCanvas(GW, GH); inkCtx = inkCv.getContext('2d'); inkImg = inkCtx.createImageData(GW, GH); inkPx = new Uint32Array(inkImg.data.buffer);
   bloomA = mkCanvas(GW >> 1, GH >> 1); bloomACtx = bloomA.getContext('2d'); bloomB = mkCanvas(GW >> 2, GH >> 2); bloomBCtx = bloomB.getContext('2d');
   bloomACtx.imageSmoothingEnabled = true; bloomBCtx.imageSmoothingEnabled = true;
   wetCv = mkCanvas(GW >> 1, GH >> 1); wetCtx = wetCv.getContext('2d');
   for (let k = 0; k < 1024; k++) { const dx = k < GW - 1 - k ? k : GW - 1 - k, dy = k < GH - 1 - k ? k : GH - 1 - k, ex = smooth01(dx / C.ART.SHEEN_EDGE), ey = smooth01(dy / C.ART.SHEEN_EDGE); colW[k] = ex * ex; rowW[k] = ey * ey; }   // the wall shear band never shows as a sheen seam
-  const lh = Math.min(C.LAYER_MAX_H, Math.round(C.LAYER_W / aspect));
+  const aspect = WR.w / WR.h, lh = Math.min(C.LAYER_MAX_H, Math.round(C.LAYER_W / aspect));   // the mote / fossil layers follow the local water rect (render-only)
   if (!motesCv || layerH !== lh) {
     const oldF = fossilCv; layerH = lh;
     motesCv = mkCanvas(layerW, layerH); motesCtx = motesCv.getContext('2d'); fossilCv = mkCanvas(layerW, layerH); fossilCtx = fossilCv.getContext('2d');
@@ -1332,7 +1338,7 @@ function actGlyphs() { return DIR.act ? DIR.act.glyphs : []; }
 function glyphById(id) { for (let k = 0; k < GL.n; k++) if (GL.list[k].id === id) return GL.list[k]; return null; }
 function enterAct(idx) {
   const a = C.ACTS[idx]; a.actIdx = idx; DIR.actIdx = idx; DIR.act = a; DIR.actT = 0; DIR.phase = a.name; DIR.capWarn = false; DIR.capPause = -1; DIR.exitT = -1;
-  if (gridDirty || DIR.rungPending) { const r = DIR.rungPending ? Math.min(2, G.rung + 1) : G.rung; DIR.rungPending = false; deriveGrid(r); }
+  if ((gridDirty || DIR.rungPending) && NET.mode === 'solo') { const r = DIR.rungPending ? Math.min(2, G.rung + 1) : G.rung; DIR.rungPending = false; deriveGrid(r); }   // online the grid is the host's for the whole session (the image may stretch, GDD section 8)
   weatherSet(a); HI.window = a.window; DIR.rewindRate = C.REWIND_RATE; DIR.fadingDisabled = idx === 0; RM.disabled = idx === 5; DIR.skyLift = 0; if (idx !== 4) DIR.predawn = 0; AU.padDrop = 0;
   colA = idx === 3 ? C.COL[2] : C.COL[0]; colB = C.COL[1]; GL.lastChangeT = G.t; DIR.nudgeNext = G.t + C.NUDGE_T; DIR.nudgeG = null; DIR.g3At = 1e9; DIR.demoNext = 1e9; DIR.demoActive = false; P[2].down = false; P[2].present = false;
   for (let k = 0; k < GL.n; k++) GL.list[k].stampedThisAct = false;
@@ -1586,9 +1592,9 @@ function netLost() {
   textShow(C.TEXT_LOST_PT, C.TEXT_LOST_EN, 0.5, -0.12, DIR.actIdx >= 4);
 }
 // --- lockstep ---
-function restartOnline(seedN, rung, delay) {
+function restartOnline(seedN, rung, delay, gw, gh) {   // gw/gh: the host's grid (one grid for both peers whatever their windows); absent: the local aspect
   NET.delay = delay; NET.seed = seedN; seed(seedN); G.steps = 0; G.t = 0; ST.calDone = true; G.ts = 1;
-  if (rung !== G.rung) deriveGrid(rung); Q.gsLow = false; FS.gs = C.GS_SWEEPS; DIR.rungPending = false;
+  deriveGrid(rung, gw | 0, gh | 0); Q.gsLow = false; FS.gs = C.GS_SWEEPS; DIR.rungPending = false;
   NET.lT.fill(-1); NET.rT.fill(-1); NET.rHashT.fill(-1); HL.n = 0; HL.head = 0; NET.remoteLatest = -1; NET.stallMs = -1; NET.syncAt = -1; NET.syncApplied = true; NET.lastSyncAt = -1; NET.stalls = 0; NET.resyncs = 0;
   const host = NET.role === 'host'; P[0].local = host; P[1].local = !host; for (let k = 0; k < 2; k++) tickInput(P[k], NOPTR, NOPTR, 0);
   resetAll(); DIR.fade = 0.6; textShow(C.TEXT_DUAS_PT, C.TEXT_DUAS_EN, 0.5, -0.12, false); NET.lastRemoteMs = nowMs();
@@ -1635,8 +1641,8 @@ function netControl(m) {
   const t = m.t;
   if (t === 'hi' && NET.role === 'host') { const rung = Math.max(G.rung, m.rung | 0); NET.seed = randBytes(4).reduce((a, b) => (a * 256 + b) >>> 0, 0) || 7; NET.hostRung = rung; NET.rtts = []; dcSend({ t: 'hello', v: 1, seed: NET.seed, rung }); netPing(0); }
   else if (t === 'ping') dcSend({ t: 'pong', i: m.i, ts: m.ts });
-  else if (t === 'pong' && NET.role === 'host') { NET.rtts.push(nowMs() - m.ts); if (NET.rtts.length < 8) setTimeout(() => netPing(NET.rtts.length), 125); else { const avg = NET.rtts.reduce((a, b) => a + b, 0) / NET.rtts.length; NET.rtt = Math.round(avg); const delay = clamp(Math.ceil((avg / 2) / 16.7) + 2, 3, 10); dcSend({ t: 'start', delay, at: 0, seed: NET.seed, rung: NET.hostRung, rtt: NET.rtt }); restartOnline(NET.seed, NET.hostRung, delay); } }
-  else if (t === 'start' && NET.role === 'guest') { NET.rtt = m.rtt | 0; restartOnline(m.seed >>> 0, m.rung | 0, m.delay | 0); }
+  else if (t === 'pong' && NET.role === 'host') { NET.rtts.push(nowMs() - m.ts); if (NET.rtts.length < 8) setTimeout(() => netPing(NET.rtts.length), 125); else { const avg = NET.rtts.reduce((a, b) => a + b, 0) / NET.rtts.length; NET.rtt = Math.round(avg); const delay = clamp(Math.ceil((avg / 2) / 16.7) + 2, 3, 10); gridDims(NET.hostRung, WR.w / WR.h); dcSend({ t: 'start', delay, at: 0, seed: NET.seed, rung: NET.hostRung, rtt: NET.rtt, gw: GD.w, gh: GD.h }); restartOnline(NET.seed, NET.hostRung, delay, GD.w, GD.h); } }
+  else if (t === 'start' && NET.role === 'guest') { NET.rtt = m.rtt | 0; restartOnline(m.seed >>> 0, m.rung | 0, m.delay | 0, m.gw | 0, m.gh | 0); }
   else if (t === 'h') netRemoteHash(m.tick | 0, m.hash >>> 0);
   else if (t === 'syncAt' && NET.role === 'guest') { NET.syncAt = m.at | 0; NET.syncApplied = false; NET.syncChunks = null; }
   else if (t === 'syncMeta' && NET.role === 'guest') { NET.syncMeta = m; NET.syncChunks = new Array(m.n).fill(null); NET.syncGot = 0; }
@@ -1660,7 +1666,7 @@ function netSyncSend(S) {
   NET.syncSent = true; NET.lastSyncAt = S; NET.resyncs++; DIR.flash = 1;
   for (let i = 0; i < N; i++) { d0[i] = ((Math.min(d0[i], 1.99) * 128) | 0) / 128; d1[i] = ((Math.min(d1[i], 1.99) * 128) | 0) / 128; dW[i] = ((Math.min(dW[i], 1.99) * 128) | 0) / 128; u[i] = Math.round(clamp(u[i] * 3, -127, 127)) / 3; v[i] = Math.round(clamp(v[i] * 3, -127, 127)) / 3; }
   const dirF = {}; for (const k in DIR) { const v = DIR[k]; if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string') dirF[k] = v; } dirF.nudgeG = DIR.nudgeG ? DIR.nudgeG.idx : -1;
-  const meta = { t: 'syncMeta', at: S, n: 0, json: JSON.stringify({ dir: dirF, wx: wxSyncFields(), win: HI.window, gs: FS.gs, glyphs: GL.list.map(glyphSyncFields), slots: [slotSyncFields(P[0]), slotSyncFields(P[1]), slotSyncFields(P[2])], gl: { lastChangeT: GL.lastChangeT, sky: GL.sky }, colA: colA === C.COL[2] ? 2 : 0, act: DIR.actIdx }) };
+  const meta = { t: 'syncMeta', at: S, n: 0, cells: N, json: JSON.stringify({ dir: dirF, wx: wxSyncFields(), win: HI.window, gs: FS.gs, glyphs: GL.list.map(glyphSyncFields), slots: [slotSyncFields(P[0]), slotSyncFields(P[1]), slotSyncFields(P[2])], gl: { lastChangeT: GL.lastChangeT, sky: GL.sky }, colA: colA === C.COL[2] ? 2 : 0, act: DIR.actIdx }) };
   const bytes = new Uint8Array(5 * N);
   for (let i = 0; i < N; i++) { bytes[i * 3] = d0[i] * 128; bytes[i * 3 + 1] = d1[i] * 128; bytes[i * 3 + 2] = dW[i] * 128; }
   const vel = new Int8Array(bytes.buffer, 3 * N, 2 * N); for (let i = 0; i < N; i++) { vel[i * 2] = Math.round(u[i] * 3); vel[i * 2 + 1] = Math.round(v[i] * 3); }
@@ -1675,6 +1681,7 @@ function netSyncChunk(buf) {
   if (NET.syncGot === NET.syncChunks.length) netSyncApply();
 }
 function netSyncApply() {
+  if (NET.syncMeta.cells !== N) { netLost(); return; }   // a foreign grid cannot be applied (both peers derive the host's grid, so this never fires in practice)
   const S = NET.syncMeta.at, st = JSON.parse(NET.syncMeta.json); let off = 0; const bytes = new Uint8Array(5 * N);
   for (const c of NET.syncChunks) { bytes.set(c, off); off += c.length; }
   for (let i = 0; i < N; i++) { d0[i] = bytes[i * 3] / 128; d1[i] = bytes[i * 3 + 1] / 128; dW[i] = bytes[i * 3 + 2] / 128; }
@@ -1834,7 +1841,7 @@ function ladder(frameMs, jsMs) {
   }
 }
 function forceRung(rung) {                 // harness (SOLO): pin the grid rung; fields cleared, history count 0, grid + every stamped glyph's masks re-derived
-  ST.calDrops = C.CAL_MAX_DROPS; DIR.rungPending = false; G.rungForced = true; deriveGrid(rung);
+  ST.calDrops = C.CAL_MAX_DROPS; DIR.rungPending = false; G.rungForced = true; gridDims(rung, 16 / 9); deriveGrid(rung, GD.w, GD.h);   // the nominal rung (192x108 / 160x90 / 128x72) whatever the window: two windows of different shape can be compared
   for (let k = 0; k < GL.n; k++) {
     const g = GL.list[k]; if (!g.everStamped) continue; glyphRebuildMask(g); g.gridId = gridGen;
     let x0 = GW, y0 = GH, x1 = 0, y1 = 0, ms = 0; const m = g.maskThick;
