@@ -720,7 +720,7 @@ function glyphInit(g) {                    // the one source of a glyph's boot v
   g.cohStamp = 1; g.coh = 0; g.cohN = 0; g.eligible = false; g.tStamp = 0; g.tState = 0; g.setT = 0; g.fadeT = 0; g.fadingT = 0; g.wispT = 0; g.relitT = 0; g.liftT = 0; g.fade = 0; g.bright = 1;
   g.settleable = false; g.ghostK = 0; g.nudged = false; g.stars = null; g.starCount = 0; g.skyX = 0; g.skyY = 0; g.gridId = 0; g.liftCh = 0; g.segIdx = 0; g.ch = 0; g.everStamped = false; g.stampedThisAct = false; g.permanent = false; g.lostAt = -1; g.savedAt = -1;
 }
-const GL = { list: [], n: 0, fadeSlot: new Float32Array(2), sky: { stars: 0, dim: 0, wisps: 0 }, lastChangeT: 0 };
+const GL = { list: [], n: 0, fadeSlot: new Float32Array(2), sky: { stars: 0, dim: 0, wisps: 0 }, lastChangeT: 0, lastTryT: 0 };   // lastTryT: the last tick an open remanso lay over a glyph still in play
 for (let i = 0; i < C.GLYPHS.length; i++) GL.list.push(mkGlyph(C.GLYPHS[i], i)); GL.n = GL.list.length;
 function glyphCentreCss(g) { return { x: WR.x + g.def.cx * GW * cellPx, y: WR.y + g.def.cy * GH * cellPy }; }
 function glyphExtentPx(g) { return g.def.E * Math.min(GW, GH) * cellPx; }
@@ -829,7 +829,7 @@ function glyphsStep(dt) {
   GL.fadeSlot[0] = 0; GL.fadeSlot[1] = 0;
   for (let k = 0; k < GL.n; k++) { const g = GL.list[k]; if (g.state === 'IDLE') continue; glyphUpdate(g, dt, sampled); if (g.state === 'FADING' || (g.state === 'LIVE' && g.fade > 0)) GL.fadeSlot[g.slot] = Math.max(GL.fadeSlot[g.slot], g.fade); }
 }
-function glyphsResetAll() { for (let k = 0; k < GL.n; k++) glyphInit(GL.list[k]); GL.sky.stars = 0; GL.sky.dim = 0; GL.sky.wisps = 0; GL.lastChangeT = 0; GL.fadeSlot[0] = 0; GL.fadeSlot[1] = 0; ghost.fill(0); }
+function glyphsResetAll() { for (let k = 0; k < GL.n; k++) glyphInit(GL.list[k]); GL.sky.stars = 0; GL.sky.dim = 0; GL.sky.wisps = 0; GL.lastChangeT = 0; GL.lastTryT = 0; GL.fadeSlot[0] = 0; GL.fadeSlot[1] = 0; ghost.fill(0); }
 
 // ───────────────────────────── WEATHER ─────────────────────────────
 const WX = { A: 0, P: 40, A0: 0, A1: 0, P0: 40, P1: 40, ramp0: 0, rampT: 1e9, slack: 1, slackTarget: 1, cx: 0.5, cy: 0.5,
@@ -1347,7 +1347,7 @@ function enterAct(idx) {
   const a = C.ACTS[idx]; a.actIdx = idx; DIR.actIdx = idx; DIR.act = a; DIR.actT = 0; DIR.phase = a.name; DIR.capWarn = false; DIR.capPause = -1; DIR.exitT = -1;
   if ((gridDirty || DIR.rungPending) && NET.mode === 'solo') { const r = DIR.rungPending ? Math.min(2, G.rung + 1) : G.rung; DIR.rungPending = false; deriveGrid(r); }   // online the grid is the host's for the whole session (the image may stretch, GDD section 8)
   weatherSet(a); HI.window = a.window; DIR.rewindRate = C.REWIND_RATE; DIR.fadingDisabled = idx === 0; RM.disabled = idx === 5; DIR.skyLift = 0; if (idx !== 4) DIR.predawn = 0; AU.padDrop = 0;
-  colA = idx === 3 ? C.COL[2] : C.COL[0]; colB = C.COL[1]; GL.lastChangeT = G.t; DIR.nudgeNext = G.t + C.NUDGE_T; DIR.nudgeG = null; DIR.g3At = 1e9; DIR.demoNext = 1e9; DIR.demoActive = false; P[2].down = false; P[2].present = false;
+  colA = idx === 3 ? C.COL[2] : C.COL[0]; colB = C.COL[1]; GL.lastChangeT = G.t; GL.lastTryT = G.t; DIR.nudgeNext = G.t + C.NUDGE_T; DIR.nudgeG = null; DIR.g3At = 1e9; DIR.demoNext = 1e9; DIR.demoActive = false; P[2].down = false; P[2].present = false;
   for (let k = 0; k < GL.n; k++) GL.list[k].stampedThisAct = false;
   if (idx <= 3) { setSky(a.sky, C.SKY_FADE, 0); DIR.inkK = 1; DIR.starK = 1; DIR.fossilAlpha = C.FOSSIL_ALPHA; DIR.moteK = 1; if (idx === 3) DIR.predawn = 1; }
   if (idx === 0) { DIR.demoNext = C.DEMO_T; DIR.textOpen = false; }
@@ -1364,6 +1364,13 @@ function finishAct() {                       // cap or exit: unresolved glyphs b
     else if (g.state === 'LIVE' || g.state === 'FADING') { if (DIR.actIdx === 0) { g.liftCh = g.slot; glyphLift(g, false); } else glyphToWisp(g, true); }   // Act 0: G1 cannot be lost (GDD 3.2) — at the cap the water gives it up to the sky
     else if (g.state === 'STAMPING') glyphToWisp(g, true);
   }
+}
+function remansoOverGlyph() {             // a hand's open remanso over a glyph still in play (LIVE, FADING or a relightable wisp): the player is still trying
+  for (let k = 0; k < 2; k++) {
+    const p = P[k]; if (!p.open) continue; const R = p.R, x0 = p.x - R, x1 = p.x + R, y0 = p.y - R, y1 = p.y + R;
+    for (let q = 0; q < GL.n; q++) { const g = GL.list[q]; if (!g.settleable) continue; if (g.bx1 < x0 || g.bx0 > x1 || g.by1 < y0 || g.by0 > y1) continue; return true; }
+  }
+  return false;
 }
 function startDemo(g) { DIR.demoActive = true; DIR.demoT = 0; P[2].x = g.cxC; P[2].y = g.cyC; P[2].present = true; P[2].down = true; P[2].s = 0; P[2].holdT = 0; P[2].d = 0; P[2].speed = 0; }
 function targetGlyph() { let best = null; for (const id of actGlyphs()) { const g = glyphById(id); if (!g) continue; if (g.state === 'LIVE' || g.state === 'FADING' || g.state === 'WISP') { if (!best || (g.state === 'FADING' && best.state !== 'FADING') || g.cohN < best.cohN) best = g; } } return best; }
@@ -1397,7 +1404,8 @@ function directorStep(dt) {
     let exit = false;
     if (any && allRes) { if (DIR.exitT < 0) DIR.exitT = t; if (t - DIR.exitT >= C.ACT_EXIT_PAUSE) exit = true; }
     else DIR.exitT = -1;
-    if (any && allDone && idx > 0 && t - GL.lastChangeT >= C.ACT_SETTLE_T) exit = true;
+    if (remansoOverGlyph()) GL.lastTryT = t;
+    if (any && allDone && idx > 0 && t - Math.max(GL.lastChangeT, GL.lastTryT) >= C.ACT_SETTLE_T) exit = true;   // idle-resolved exit: 25 s with no state change AND no hand trying
     if (DIR.actT >= cap) exit = true;
     if (exit) { finishAct(); DIR.capPause = t; }
   } else if (t - DIR.capPause >= C.CAP_PAUSE) { enterAct(idx + 1); return; }
@@ -1678,7 +1686,7 @@ function netSyncSend(S) {
   NET.syncSent = true; NET.lastSyncAt = S; NET.resyncs++; DIR.flash = 1;
   for (let i = 0; i < N; i++) { d0[i] = ((Math.min(d0[i], 1.99) * 128) | 0) / 128; d1[i] = ((Math.min(d1[i], 1.99) * 128) | 0) / 128; dW[i] = ((Math.min(dW[i], 1.99) * 128) | 0) / 128; u[i] = Math.round(clamp(u[i] * 3, -127, 127)) / 3; v[i] = Math.round(clamp(v[i] * 3, -127, 127)) / 3; }
   const dirF = {}; for (const k in DIR) { const v = DIR[k]; if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string') dirF[k] = v; } dirF.nudgeG = DIR.nudgeG ? DIR.nudgeG.idx : -1;
-  const meta = { t: 'syncMeta', at: S, n: 0, cells: N, json: JSON.stringify({ dir: dirF, wx: wxSyncFields(), win: HI.window, gs: FS.gs, glyphs: GL.list.map(glyphSyncFields), slots: [slotSyncFields(P[0]), slotSyncFields(P[1]), slotSyncFields(P[2])], gl: { lastChangeT: GL.lastChangeT, sky: GL.sky }, colA: colA === C.COL[2] ? 2 : 0, act: DIR.actIdx }) };
+  const meta = { t: 'syncMeta', at: S, n: 0, cells: N, json: JSON.stringify({ dir: dirF, wx: wxSyncFields(), win: HI.window, gs: FS.gs, glyphs: GL.list.map(glyphSyncFields), slots: [slotSyncFields(P[0]), slotSyncFields(P[1]), slotSyncFields(P[2])], gl: { lastChangeT: GL.lastChangeT, lastTryT: GL.lastTryT, sky: GL.sky }, colA: colA === C.COL[2] ? 2 : 0, act: DIR.actIdx }) };
   const bytes = new Uint8Array(5 * N);
   for (let i = 0; i < N; i++) { bytes[i * 3] = d0[i] * 128; bytes[i * 3 + 1] = d1[i] * 128; bytes[i * 3 + 2] = dW[i] * 128; }
   const vel = new Int8Array(bytes.buffer, 3 * N, 2 * N); for (let i = 0; i < N; i++) { vel[i * 2] = Math.round(u[i] * 3); vel[i * 2 + 1] = Math.round(v[i] * 3); }
@@ -1703,7 +1711,7 @@ function netSyncApply() {
   HI.window = st.win; FS.gs = st.gs; RM.disabled = DIR.actIdx === 5; colA = st.colA === 2 ? C.COL[2] : C.COL[0];
   for (let k = 0; k < GL.n; k++) { const g = GL.list[k], f = st.glyphs[k]; for (const q in f) g[q] = f[q]; if (g.everStamped && g.gridId === gridGen) glyphRebuildMask(g); }
   for (let k = 0; k < NSLOT; k++) { const p = P[k], f = st.slots[k]; for (const q in f) { if (q === 'ring') { for (let i = 0; i < f.ring.length; i++) p.ring[i] = f.ring[i]; } else p[q] = f[q]; } }
-  GL.lastChangeT = st.gl.lastChangeT; GL.sky.stars = st.gl.sky.stars; GL.sky.dim = st.gl.sky.dim; GL.sky.wisps = st.gl.sky.wisps;
+  GL.lastChangeT = st.gl.lastChangeT; GL.lastTryT = st.gl.lastTryT || 0; GL.sky.stars = st.gl.sky.stars; GL.sky.dim = st.gl.sky.dim; GL.sky.wisps = st.gl.sky.wisps;
   histReset(); ghostRebuild(); weatherTargets(); NET.syncApplied = true; NET.syncChunks = null; NET.syncMeta = null; NET.lastSyncAt = S; NET.syncAt = -1; NET.resyncs++; DIR.flash = 1; recall.fill(0); wk.fill(0, 0, N);
   console.warn('REMANSO: resynchronised at tick ' + S);
 }
