@@ -1695,7 +1695,7 @@ function netCompareHash(tick, hash, isLocal) {
   if (isLocal) { for (let k = 0; k < 8; k++) if (NET.rHashT[k] === tick) other = NET.rHashV[k]; }
   else { for (let n = 0; n < HL.n; n++) { const k = (HL.head - 1 - n + 16) % 16; if (HL.tick[k] === tick) other = HL.hash[k]; } }
   if (other < 0 || tick <= NET.lastSyncAt) return;
-  if ((other >>> 0) !== (hash >>> 0) && NET.role === 'host' && NET.syncAt < 0) { NET.syncAt = Math.ceil((G.steps + 120) / 60) * 60; NET.syncSent = false; dcSend({ t: 'syncAt', at: NET.syncAt }); }
+  if ((other >>> 0) !== (hash >>> 0) && NET.role === 'host' && NET.syncAt < 0) { NET.syncAt = Math.ceil((G.steps + 2 * NET.delay + 2) / 60) * 60; NET.syncSent = false; dcSend({ t: 'syncAt', at: NET.syncAt }); }   // the guest is at most delay ticks ahead, and the ordered channel delivers 'syncAt' before the host's input for S: the next hash tick is enough (re-convergence in ~1 s, not 3-4)
 }
 function glyphSyncFields(g) {
   return { state: g.state, bx0: g.bx0, by0: g.by0, bx1: g.bx1, by1: g.by1, maskSum: g.maskSum, cohStamp: g.cohStamp, coh: g.coh, cohN: g.cohN, eligible: g.eligible, tStamp: g.tStamp, tState: g.tState, setT: g.setT, fadeT: g.fadeT, fadingT: g.fadingT, wispT: g.wispT, relitT: g.relitT, liftT: g.liftT, fade: g.fade, bright: g.bright, settleable: g.settleable, ghostK: g.ghostK, everStamped: g.everStamped, stampedThisAct: g.stampedThisAct, permanent: g.permanent, lostAt: g.lostAt, savedAt: g.savedAt, pos: g.pos, emitPos: g.emitPos, segIdx: 0, liftCh: g.liftCh, cxC: g.cxC, cyC: g.cyC, Ec: g.Ec, gridId: g.gridId, stampDur: g.stampDur, skyX: g.skyX, skyY: g.skyY, starCount: g.starCount, stars: g.stars };
@@ -1703,7 +1703,7 @@ function glyphSyncFields(g) {
 function slotSyncFields(p) { return { present: p.present, down: p.down, x: p.x, y: p.y, sx0: p.sx0, sy0: p.sy0, hasSeg: p.hasSeg, ring: Array.from(p.ring), rn: p.rn, rh: p.rh, speed: p.speed, s: p.s, holdT: p.holdT, d: 0, R: p.R, Reff: p.Reff, open: p.open, still: p.still, openT: p.openT }; }
 function wxSyncFields() { const o = {}; for (const k in WX) { const v = WX[k]; if (typeof v === 'number' || typeof v === 'boolean') o[k] = v; else if (v && v.length !== undefined && !(v instanceof Object && v.constructor === Object)) o[k] = Array.from(v); } return o; }
 function netSyncSend(S) {
-  NET.syncSent = true; NET.lastSyncAt = S; NET.resyncs++; DIR.flash = 1;
+  NET.syncSent = true; NET.lastSyncAt = S; NET.resyncs++; DIR.flash = 1; console.warn('REMANSO: resynchronised at tick ' + S);   // the one allowed console line, once per resync on each hand
   for (let i = 0; i < N; i++) { d0[i] = ((Math.min(d0[i], 1.99) * 128) | 0) / 128; d1[i] = ((Math.min(d1[i], 1.99) * 128) | 0) / 128; dW[i] = ((Math.min(dW[i], 1.99) * 128) | 0) / 128; u[i] = Math.round(clamp(u[i] * 3, -127, 127)) / 3; v[i] = Math.round(clamp(v[i] * 3, -127, 127)) / 3; }
   const dirF = {}; for (const k in DIR) { const v = DIR[k]; if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string') dirF[k] = v; } dirF.nudgeG = DIR.nudgeG ? DIR.nudgeG.idx : -1;
   const meta = { t: 'syncMeta', at: S, n: 0, cells: N, json: JSON.stringify({ dir: dirF, wx: wxSyncFields(), win: HI.window, gs: FS.gs, glyphs: GL.list.map(glyphSyncFields), slots: [slotSyncFields(P[0]), slotSyncFields(P[1]), slotSyncFields(P[2])], gl: { lastChangeT: GL.lastChangeT, lastTryT: GL.lastTryT, sky: GL.sky }, colA: colA === C.COL[2] ? 2 : 0, act: DIR.actIdx }) };
