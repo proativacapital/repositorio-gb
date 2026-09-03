@@ -1621,7 +1621,7 @@ function restartOnline(seedN, rung, delay, gw, gh) {   // gw/gh: the host's grid
   deriveGrid(rung, gw | 0, gh | 0); Q.gsLow = false; FS.gs = C.GS_SWEEPS; DIR.rungPending = false;
   NET.lT.fill(-1); NET.rT.fill(-1); NET.rHashT.fill(-1); HL.n = 0; HL.head = 0; NET.remoteLatest = -1; NET.stallMs = -1; NET.syncAt = -1; NET.syncApplied = true; NET.lastSyncAt = -1; NET.stalls = 0; NET.resyncs = 0;
   const host = NET.role === 'host'; P[0].local = host; P[1].local = !host; for (let k = 0; k < 2; k++) tickInput(P[k], NOPTR, NOPTR, 0);
-  resetAll(); DIR.fade = 0.6; textShow(C.TEXT_DUAS_PT, C.TEXT_DUAS_EN, 0.5, -0.12, false); NET.lastRemoteMs = nowMs();
+  resetAll(); DIR.textOpen = true; DIR.fade = 0.6; textShow(C.TEXT_DUAS_PT, C.TEXT_DUAS_EN, 0.5, -0.12, false); NET.lastRemoteMs = nowMs();   // both hands already read the opening line: the co-op line plays whole
 }
 function netSendInput(tick) {
   sampleRaw(0); const i = tick % RING_N;
