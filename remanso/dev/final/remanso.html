@@ -58,7 +58,7 @@ const C = Object.freeze({
   RIM_SEGS: 24, RIM_BEADS: 12, R_EFF_K: 0.35, RIM_DASH_SPEED: 90, RIM_BEAD_R: 0.82, RIM_FLICKER: 0.7, RIM_BREAK: 0.95, SPARKS: 24,
   MOTES: 1500, MOTES_LOW: 900, MOTE_BACK: 1.5, MOTE_BACK_R: 0.9, MOTE_LIFE: 20, MIST: 400,
   COH_EVERY: 6, COH_STAMP_MIN: 0.6, SET_COH: 0.70, SET_HOLD: 1, ELIG_COH: 0.45, ELIG_T: 20, FADE_COH: 0.20, FADE_T: 6, RECOVER_COH: 0.35,
-  WISP_COH: 0.08, WISP_T: 12, RELIT_COH: 0.55, RELIT_T: 1, WISP_SRC: 0.002, WISP_SIGMA: 3, LIFT_T: 3, DRAIN_T: 1.5, STAR_FLIGHTS: 200,
+  WISP_COH: 0.08, WISP_T: 12, RELIT_COH: 0.55, RELIT_T: 1, WISP_FLOOR: 0.7, WISP_SRC: 0.002, WISP_SIGMA: 3, LIFT_T: 3, DRAIN_T: 1.5, STAR_FLIGHTS: 200,
   NUDGE_T: 60, NUDGE_REPEAT: 45, NUDGE_DUR: 8, NUDGE_GHOST: 2, NUDGE_WEATHER: 0.4, IDLE_T: 120, DEMO_T: 16, DEMO_REPEAT: 30, DEMO_HOLD: 2,
   WEATHER_RAMP: 10, SKY_FADE: 6, CAP_WARN: 15, CAP_SLACK: 0.4, CAP_PAUSE: 3, ACT_SETTLE_T: 25, ACT_EXIT_PAUSE: 4, G3_DELAY: 40,
   DAWN_T: 40, DAWN_REWIND: 3, DAWN_BLEND_END: 8, DAWN_FOSSIL_END: 30, DAWN_TEXT: 34, DAWN_STAR_FADE: 36,
@@ -592,6 +592,12 @@ function histInjectSplat(ch, cx, cy, sigma) {      // stamp one Gaussian sub-spl
     for (let y = 0; y < fh; y++) { const row = od + ((y + y0) * GW + x0) * 3 + ch, fr = y * fw; for (let x = 0; x < fw; x++) { const q = injFoot[fr + x], o = row + x * 3; if (q > dyeSnap[o]) dyeSnap[o] = q; } }
   }
 }
+function histMoveChannel(src, dst, bx0, by0, bx1, by1) {   // a lost glyph's remembered ink turns grey with it: max-merge channel src into dst and clear src inside the bbox, in every valid slot (a remanso over a wisp then recalls grey instead of deleting it)
+  for (let s = 0; s < HI.count; s++) {
+    const slot = (HI.head - s + C.SLOTS) % C.SLOTS, od = slot * N * 3;
+    for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) { const o = od + (x + y * GW) * 3, q = dyeSnap[o + src]; if (q > dyeSnap[o + dst]) dyeSnap[o + dst] = q; dyeSnap[o + src] = 0; }
+  }
+}
 function histEraseChannel(ch, bx0, by0, bx1, by1) {
   for (let s = 0; s < HI.count; s++) {
     const slot = (HI.head - s + C.SLOTS) % C.SLOTS, od = slot * N * 3;
@@ -667,8 +673,12 @@ function remansoKernel(p) {
       if (hv && w > prev) {
         const wr = prev > 0 ? (w - prev) / (1 - prev * kd) : w, wrv = prev > 0 ? (w - prev) / (1 - prev * kv) : w;   // a later kernel applies only the increment: the combined per-step rate is the larger weight's, not the product of both
         const qa = (oA + i) * 3, qb = (oB + i) * 3;
-        let h0 = (dyeSnap[qa] * fa + dyeSnap[qb] * fr) * (1 / 128), h1 = (dyeSnap[qa + 1] * fa + dyeSnap[qb + 1] * fr) * (1 / 128); const hw = (dyeSnap[qa + 2] * fa + dyeSnap[qb + 2] * fr) * (1 / 128);
-        if (deep) for (let g = 0; g < nc; g++) { const gl = RM.cand[g]; if (gl.state === 'WISP' || x < gl.bx0 || x > gl.bx1 || y < gl.by0 || y > gl.by1) continue; const m = gl.maskThick[i] * gl.cohStamp; if (gl.slot === 0) { if (m > h0) h0 = m; } else if (m > h1) h1 = m; }
+        let h0 = (dyeSnap[qa] * fa + dyeSnap[qb] * fr) * (1 / 128), h1 = (dyeSnap[qa + 1] * fa + dyeSnap[qb + 1] * fr) * (1 / 128), hw = (dyeSnap[qa + 2] * fa + dyeSnap[qb + 2] * fr) * (1 / 128);
+        if (deep) for (let g = 0; g < nc; g++) {   // the place's memory of the stamp: full for a live glyph in its own channel, dimmer (WISP_FLOOR) and grey for a wisp — so a wisp can be relit (GDD 3.3 WISP -> RELIT -> DIM STAR)
+          const gl = RM.cand[g]; if (x < gl.bx0 || x > gl.bx1 || y < gl.by0 || y > gl.by1) continue;
+          if (gl.state === 'WISP') { const m = gl.maskThick[i] * gl.cohStamp * C.WISP_FLOOR; if (m > hw) hw = m; }
+          else { const m = gl.maskThick[i] * gl.cohStamp; if (gl.slot === 0) { if (m > h0) h0 = m; } else if (m > h1) h1 = m; }
+        }
         const e0 = h0 - d0[i], e1 = h1 - d1[i], ew = hw - dW[i];
         d0[i] += wr * kd * e0; d1[i] += wr * kd * e1; dW[i] += wr * kd * ew;
         let m = Math.abs(e0) + Math.abs(e1) + Math.abs(ew); m *= 3; if (m > 1) m = 1; m *= w; if (m > recall[i]) recall[i] = m;
@@ -792,6 +802,7 @@ function ghostRebuild() {
 function glyphToWisp(g, permanent) {
   const dye = dyeOf(g.slot);
   for (let i = 0; i < N; i++) { dW[i] += dye[i]; dye[i] = 0; }
+  histMoveChannel(g.slot, 2, g.bx0, g.by0, g.bx1, g.by1);
   g.lostAt = G.t; glyphSetState(g, 'WISP'); g.fade = 0; g.settleable = !permanent; g.wispT = 0; g.relitT = 0;
   audioLost(); DIR.skyDip = 2; motesPuff(g.cxC, g.cyC, 60);
   if (permanent) glyphPermanent(g); else ghostRebuild();
