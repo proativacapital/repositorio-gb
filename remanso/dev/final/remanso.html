@@ -1827,9 +1827,10 @@ function lobbyHitTest(x, y) {
   aDoisRect(adTmp); if (x >= adTmp.x && x <= adTmp.x + adTmp.w && y >= adTmp.y && y <= adTmp.y + adTmp.h) { lobbyOpen(); return true; }
   return false;
 }
+function netTextCol() { return DIR.actIdx >= 4 ? C.TEXT_COL_DAWN : C.TEXT_COL; }   // render-only: the word and its hairline go dark on the dawn / morning sky, like the diegetic line
 function netLink(x, y, len, a0, a1, aLine) {   // two dots (teal, rose) joined by a hairline, each dot over a soft glow; x = the teal dot, y = the line's height
   const A = C.ART, dr = A.ADOIS_DOT_R, gr = A.ADOIS_GLOW_R;
-  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = aLine; ctx.strokeStyle = C.TEXT_COL; ctx.lineWidth = A.HAIRLINE; ctx.beginPath(); ctx.moveTo(x + dr, y); ctx.lineTo(x + len - dr, y); ctx.stroke();
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = aLine; ctx.strokeStyle = netTextCol(); ctx.lineWidth = A.HAIRLINE; ctx.beginPath(); ctx.moveTo(x + dr, y); ctx.lineTo(x + len - dr, y); ctx.stroke();
   ctx.globalCompositeOperation = 'lighter'; drawSprite(SPR.cursorA, x, y, gr, a0); drawSprite(SPR.cursorB, x + len, y, gr, a1);
   ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = a0; ctx.fillStyle = PLAYER_TINT[0]; ctx.beginPath(); ctx.arc(x, y, dr, 0, TWO_PI); ctx.fill();
@@ -1846,7 +1847,7 @@ function renderNet() {                   // cosmetic: the "a dois" word with the
   if (NET.state === 'signaling' || NET.state === 'connecting' || t < NET.aDoisT) return;
   const r = RAW.p[0], hover = r.active && r.cx >= adTmp.x && r.cx <= adTmp.x + adTmp.w && r.cy >= adTmp.y && r.cy <= adTmp.y + adTmp.h;
   const al = hover ? 0.8 : 0.35;
-  ctx.font = TXT.fontAd; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillStyle = C.TEXT_COL; ctx.globalAlpha = al;
+  ctx.font = TXT.fontAd; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillStyle = netTextCol(); ctx.globalAlpha = al;
   if (TXT.hasLS) ctx.letterSpacing = TXT.lsAd; ctx.fillText('a dois', xe - len - 16, y); if (TXT.hasLS) ctx.letterSpacing = '0px';
   netLink(xe - len, y, len, al, al, al * 0.6);
 }
