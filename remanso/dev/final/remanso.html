@@ -37,7 +37,7 @@ const C = Object.freeze({
   DAWN_T: 40, DAWN_REWIND: 3, DAWN_BLEND_END: 8, DAWN_FOSSIL_END: 30, DAWN_TEXT: 34, DAWN_STAR_FADE: 36,
   EPI_RESTART_HOLD: 2, RESTART_KEY_HOLD: 1, RESTART_FADE: 2,
   PIXEL_BUDGET: 2.6e6, SCALE_MIN: 0.75, SCALE_MAX: 1.5, DPR_CAP: 1.5, HORIZON: 0.25, HORIZON_PORTRAIT: 0.20,
-  LAYER_W: 960, LAYER_MAX_H: 1280, REFL_W: 256, REFL_H: 64, REFL_SLICES: 30, REFL_ALPHA: 0.2, REFL_DEPTH: 0.15,
+  LAYER_W: 960, LAYER_MAX_H: 1280, REFL_W: 256, REFL_H: 64, REFL_SLICES: 30, REFL_ALPHA: 0.85, REFL_DEPTH: 0.15,
   BLOOM_B: 0.45, BLOOM_A: 0.2, MOTE_FADE: 0.09, MOTE_FADE_8: 0.25, FOSSIL_ALPHA: 0.10, FOSSIL_DAWN: 0.9, GRAIN_ALPHA: 0.035,
   ART: {   // render-only look (art pass): nothing here is read by the sim
     NOISE_SEED: 0x2545f491, NOISE_P0: 64, NOISE_P1: 32, NOISE_BASE: 0.4, NOISE_AMP: 1.0, NOISE_DRIFT: 0.6, NOISE_FLOW: 0.6,
@@ -45,11 +45,12 @@ const C = Object.freeze({
     MOTE_DRAW: 1100, MOTE_DRAW_LOW: 800, MOTE_SPEEDS: [0.8, 2, 4, 8], MOTE_SIZES: [1.0, 1.1, 1.25, 1.4, 1.5, 1.5, 1.6],
     RIM_W: 2, RIM_HALO_W: 6, RIM_HALO_A: 0.22, RIM_GAP: 0.1, RIM_OUTER: 6, RIM_OUTER_A: 0.55, RIM_GLOW_A: 0.14,
     BEAD_LIT_R: 4, BEAD_DIM_R: 2.5, BEAD_LIT_A: 0.95, BEAD_DIM_A: 0.22,
-    STARS: 220, STAR_PHASES: 6, STAR_A: [0.16, 0.28, 0.42], STAR_SIZE: 1.6, STAR_TWINKLE: 0.45, HERO_STARS: 8, HERO_R: 3.5, HERO_A: 0.4,
-    HGLOW_A: 0.11, HGLOW_R: 0.62, HORIZON_BAND: 2, HORIZON_A: 0.85, HORIZON_LIFT: [20, 24, 48],
-    CONST_K: 0.07, CONST_LINE_A: 0.18, CONST_STAR_R: 6, CONST_HALO_R: 18, CONST_HALO_A: 0.35,
-    DAWN_SKY_TOP: '#1e1c48', DAWN_HORIZON: '#ffe6b4', DAWN_TOP_MIX: 0.62, DAWN_HORIZON_MIX: 0.7,
-    FOSSIL_STROKE_A: 0.12, FOSSIL_STROKE_W: 3.5, FOSSIL_RING_A: 0.2, FOSSIL_DISC_A: 0.04,
+    STARS: 220, STAR_PHASES: 6, STAR_A: [0.16, 0.28, 0.42], STAR_SIZE: 1.6, STAR_TWINKLE: 0.2, HERO_STARS: 8, HERO_R: 3.5, HERO_A: 0.4,
+    HGLOW_A: 0.10, HGLOW_A_DAWN: 0.34, HGLOW_R: 0.62, HORIZON_BAND: 4, HORIZON_A: 0.5, HORIZON_LIFT: [20, 24, 48], SUN_PATH_W: 0.2, SUN_PATH_H: 0.3, SUN_A: 0.4, SUN_NIGHT: 0.3, SUN_HAND_R: 26, SUN_HAND_A: 0.55, EPI_LIGHT_A: 0.45,
+    CONST_K: 0.10, CONST_LINE_A: 0.18, CONST_STAR_R: 6, CONST_HALO_R: 18, CONST_HALO_A: 0.35,
+    DAWN_SKY_TOP: '#1b1f5c', DAWN_ROSE: '#b84a78', DAWN_HORIZON: '#ffe6b4', DAWN_TOP_MIX: 0.85, DAWN_ROSE_MIX: 0.55, DAWN_ROSE_MORNING: 0.25, DAWN_HORIZON_MIX: 0.7, MORNING_TOP: '#5a74b8', MORNING_TOP_MIX: 0.75,
+    DAWN_FIRST: '#c8607a', DAWN_FIRST_T: 9, DAWN_GOLD_T: 20, DAWN_GOLD_FADE: 15, DAWN_WATER_T: 26, DAWN_WATER_DUR: 12, PREDAWN_OUT: 3,
+    FOSSIL_STROKE_A: 0.09, FOSSIL_STROKE_W: 2.2, FOSSIL_RING_A: 0.11, FOSSIL_RING_W: 1.3, FOSSIL_DISC_A: 0.035, FOSSIL_GLOW_A: 1.0,
     CURSOR_HALO_R: 16, CURSOR_HALO_A: 0.16, ADOIS_LS: 0.14, HAIRLINE: 1.5 },
   VIGNETTE_IN: 0.55, VIGNETTE_A: 0.55, CURSOR_R: 7, CURSOR_STILL_R: 4, CURSOR_A: 0.5,
   CAL_FRAME0: 10, CAL_FRAME1: 70, CAL_P75_MS: 5.5, CAL_MAX_DROPS: 2,
@@ -74,7 +75,7 @@ const C = Object.freeze({
   RECALL_COL: [0.45, 0.55, 0.60], CALM_COL: [0.045, 0.060, 0.090], GHOST_COL: [0.55, 0.65, 0.80], GHOST_K: 0.12,
   WATER_TOP: '#050814', WATER_BOT: '#0b1330', EPI_TOP: '#1a2a4a', EPI_BOT: '#2a4a6a',
   RIM_TEAL: [0x7f, 0xe3, 0xff], RIM_AMBER: [0xff, 0xb3, 0x47], STAR_COL: '#ffe9b0', DIM_COL: '#9aa6c0', TEXT_COL: '#f2e8d5', TEXT_COL_DAWN: '#4a3424',
-  MOTE_COL: '#cfd8e3', MOTE_BACK_COL: '#bfe9ff', MIST_COL: '#9aa3b0', FOSSIL_COL: '#ffe9b0',
+  MOTE_COL: '#cfd8e3', MOTE_BACK_COL: '#bfe9ff', MIST_COL: '#9aa3b0', FOSSIL_COL: '#ffd88c',
   TEXT_OPEN_PT: 'O que a água leva, a mão parada lembra.', TEXT_OPEN_EN: 'What the water takes, the still hand remembers.',
   TEXT_DAWN_PT: 'A manhã não devolve. Só ilumina.', TEXT_DAWN_EN: 'Morning gives nothing back. It only lights.',
   TEXT_DUAS_PT: 'Duas mãos lembram mais.', TEXT_DUAS_EN: 'Two hands remember more.', TEXT_LOST_PT: 'A outra mão se foi.', TEXT_LOST_EN: 'The other hand is gone.',
@@ -179,7 +180,7 @@ let GW = 192, GH = 108, N = GW * GH, cellPx = 1, cellPy = 1, gridAspect = 16 / 9
 function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, w | 0); c.height = Math.max(1, h | 0); return c; }
 let inkCv = null, inkCtx = null, inkImg = null, inkPx = null, bloomA = null, bloomB = null, bloomACtx = null, bloomBCtx = null, wetCv = null, wetCtx = null;
 let layerW = C.LAYER_W, layerH = 540, motesCv = null, motesCtx = null, fossilCv = null, fossilCtx = null, layerSx = 1, layerSy = 1;
-const reflCv = mkCanvas(C.REFL_W, C.REFL_H), reflCtx = reflCv.getContext('2d');
+const reflCv = mkCanvas(C.REFL_W, 2 * C.REFL_H), reflCtx = reflCv.getContext('2d');   // two mirrored-sky strips stacked: rows 0..H-1 = the sky fading out, H..2H-1 = the sky fading in
 const grainCv = mkCanvas(256, 256); let grainPat = null;
 const SPR = {};
 function radialSprite(size, stops) {
@@ -201,33 +202,52 @@ function buildSprites() {
   SPR.dimHalo = radialSprite(64, [0, 'rgba(190,205,235,0.45)', 0.3, 'rgba(170,185,220,0.18)', 0.7, 'rgba(154,166,192,0.04)', 1, 'rgba(154,166,192,0)']);
   SPR.cursorA = radialSprite(32, [0, 'rgba(191,239,255,0.55)', 0.45, 'rgba(191,239,255,0.14)', 1, 'rgba(191,239,255,0)']);
   SPR.cursorB = radialSprite(32, [0, 'rgba(255,192,208,0.55)', 0.45, 'rgba(255,192,208,0.14)', 1, 'rgba(255,192,208,0)']);
+  SPR.sun = radialSprite(64, [0, 'rgba(255,186,100,1)', 0.3, 'rgba(255,180,96,0.7)', 0.62, 'rgba(255,176,90,0.18)', 1, 'rgba(255,170,80,0)']);   // epilogue: the small sun that follows the hand in the sky (source-over: it must read on a bright sky)
   const g = grainCv.getContext('2d'), im = g.createImageData(256, 256), d = im.data;
   for (let i = 0; i < 65536; i++) { const v = 90 + rnd() * 130; d[i * 4] = v; d[i * 4 + 1] = v; d[i * 4 + 2] = v; d[i * 4 + 3] = 140 + rnd() * 115; }
   g.putImageData(im, 0, 0); grainPat = ctx.createPattern(grainCv, 'repeat');
 }
-const GRAD = { sky: null, sky2: null, water: null, water2: null, vig: null, predawn: null, glow: null, glow2: null, hz: null, hz2: null };
-let skyFrom = '#02030a', skyTo = '#02030a', skyT0 = -1e9, skyDur = 6, skyInvFrom = false, skyInvTo = false;
-let waterFrom = 0, waterTo = 0, waterT0 = -1e9;
+const GRAD = { sky: null, sky2: null, water: null, water2: null, vig: null, predawn: null, glow: null, glow2: null, hz: null, hz2: null, sun: null, sun2: null };
+let skyFrom = '#02030a', skyTo = '#02030a', skyT0 = -1e9, skyDur = 6, skyInvFrom = 0, skyInvTo = 0;   // sky mode: 0 night, 1 dawn, 2 first light, 3 morning
+let waterFrom = 0, waterTo = 0, waterT0 = -1e9, waterDur = C.SKY_FADE;
 function mixHex(h1, h2, t) { const a = hexRGB(h1), b = hexRGB(h2); return rgbStr(lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)); }
-function skyGradient(hex, inverted) {                // inverted (Dawn, epilogue): indigo zenith → the act colour → a gold band at the horizon
-  const g = ctx.createLinearGradient(0, 0, 0, WR.y || 1), A = C.ART;
-  if (inverted) { g.addColorStop(0, mixHex(hex, A.DAWN_SKY_TOP, A.DAWN_TOP_MIX)); g.addColorStop(0.5, shade(hex, 0.9)); g.addColorStop(0.84, hex); g.addColorStop(1, mixHex(hex, A.DAWN_HORIZON, A.DAWN_HORIZON_MIX)); }
+function skyGradient(hex, mode) {                     // 0 night: the act colour at the zenith, 45 % darker at the horizon. 2 first light: indigo → violet → a rose horizon.
+  const g = ctx.createLinearGradient(0, 0, 0, WR.y || 1), A = C.ART;   // 1 dawn / 3 morning: indigo zenith → a rose band → the act colour → a gold band at the horizon
+  if (mode === 1 || mode === 3) { g.addColorStop(0, mode === 1 ? mixHex(hex, A.DAWN_SKY_TOP, A.DAWN_TOP_MIX) : mixHex(hex, A.MORNING_TOP, A.MORNING_TOP_MIX)); g.addColorStop(0.3, mixHex(hex, A.DAWN_ROSE, mode === 1 ? A.DAWN_ROSE_MIX : A.DAWN_ROSE_MORNING)); g.addColorStop(0.68, hex); g.addColorStop(1, mixHex(hex, A.DAWN_HORIZON, A.DAWN_HORIZON_MIX)); }
+  else if (mode === 2) { g.addColorStop(0, mixHex(hex, A.DAWN_SKY_TOP, A.DAWN_TOP_MIX)); g.addColorStop(0.55, mixHex(hex, A.DAWN_SKY_TOP, 0.45)); g.addColorStop(1, hex); }
   else { g.addColorStop(0, hex); g.addColorStop(1, shade(hex, 0.55)); }
   return g;
 }
-function skyBottomRGB(hex, inverted) {               // the colour of the sky at the horizon
-  const c = hexRGB(hex); if (!inverted) return [c[0] * 0.55, c[1] * 0.55, c[2] * 0.55];
+function skyBottomRGB(hex, mode) {                   // the colour of the sky at the horizon
+  const c = hexRGB(hex); if (mode === 0) return [c[0] * 0.55, c[1] * 0.55, c[2] * 0.55]; if (mode === 2) return c;
   const g = hexRGB(C.ART.DAWN_HORIZON), t = C.ART.DAWN_HORIZON_MIX; return [lerp(c[0], g[0], t), lerp(c[1], g[1], t), lerp(c[2], g[2], t)];
 }
-function horizonBand(hex, inverted) {                // soft 2·HORIZON_BAND px band, sky-bottom colour lightened 30 % (+ a small lift so the darkest night still has a horizon)
-  const c = skyBottomRGB(hex, inverted), L = C.ART.HORIZON_LIFT, bw = C.ART.HORIZON_BAND;
+function horizonBand(hex, mode) {                    // soft ±HORIZON_BAND px band with a bell-shaped alpha (~3 px at half height, never a 1-px line), sky-bottom colour lightened 30 % (+ a small lift so the darkest night still has a horizon)
+  const c = skyBottomRGB(hex, mode), L = C.ART.HORIZON_LIFT, bw = C.ART.HORIZON_BAND, a = C.ART.HORIZON_A;
   const s = (clamp(c[0] * 1.3 + L[0], 0, 255) | 0) + ',' + (clamp(c[1] * 1.3 + L[1], 0, 255) | 0) + ',' + (clamp(c[2] * 1.3 + L[2], 0, 255) | 0);
-  const g = ctx.createLinearGradient(0, WR.y - bw, 0, WR.y + bw); g.addColorStop(0, 'rgba(' + s + ',0)'); g.addColorStop(0.5, 'rgba(' + s + ',' + C.ART.HORIZON_A + ')'); g.addColorStop(1, 'rgba(' + s + ',0)'); return g;
+  const g = ctx.createLinearGradient(0, WR.y - bw, 0, WR.y + bw);
+  g.addColorStop(0, 'rgba(' + s + ',0)'); g.addColorStop(0.3, 'rgba(' + s + ',' + (a * 0.4).toFixed(3) + ')'); g.addColorStop(0.5, 'rgba(' + s + ',' + a + ')'); g.addColorStop(0.7, 'rgba(' + s + ',' + (a * 0.4).toFixed(3) + ')'); g.addColorStop(1, 'rgba(' + s + ',0)'); return g;
 }
-function glowGradient(hex) {                         // soft radial glow centred on the horizon, in the act's colour
-  const c = hexRGB(hex), W = V.cssW, A = C.ART, s = (Math.min(255, c[0] * 1.5 + 30) | 0) + ',' + (Math.min(255, c[1] * 1.5 + 36) | 0) + ',' + (Math.min(255, c[2] * 1.5 + 60) | 0);
+function glowRGB(hex, mode) {                        // the horizon glow's colour: the act colour lifted toward blue-white at night, toward warm white at dawn
+  const c = hexRGB(hex);
+  if (mode === 0) return (Math.min(255, c[0] * 1.5 + 30) | 0) + ',' + (Math.min(255, c[1] * 1.5 + 36) | 0) + ',' + (Math.min(255, c[2] * 1.5 + 60) | 0);
+  return (Math.min(255, c[0] * 1.3 + 40) | 0) + ',' + (Math.min(255, c[1] * 1.25 + 30) | 0) + ',' + (Math.min(255, c[2] * 1.1 + 10) | 0);
+}
+function glowGradient(hex, mode) {                   // soft radial glow centred on the horizon, in the act's colour (the sun below the horizon at dawn)
+  const W = V.cssW, A = C.ART, a = mode === 0 ? A.HGLOW_A : A.HGLOW_A_DAWN, s = glowRGB(hex, mode);
   const g = ctx.createRadialGradient(W / 2, WR.y, 0, W / 2, WR.y, A.HGLOW_R * W);
-  g.addColorStop(0, 'rgba(' + s + ',' + A.HGLOW_A + ')'); g.addColorStop(0.5, 'rgba(' + s + ',' + (A.HGLOW_A * 0.35) + ')'); g.addColorStop(1, 'rgba(' + s + ',0)'); return g;
+  g.addColorStop(0, 'rgba(' + s + ',' + a + ')'); g.addColorStop(0.5, 'rgba(' + s + ',' + (a * 0.35).toFixed(3) + ')'); g.addColorStop(1, 'rgba(' + s + ',0)'); return g;
+}
+function sunGradient(hex, mode) {                   // the horizon glow's reflection: an elliptical glow down the centre of the water, drawn 'lighter' so gold on dark water stays gold
+  const A = C.ART, r = A.SUN_PATH_W * V.cssW, a = mode === 0 ? A.SUN_A * A.SUN_NIGHT : A.SUN_A, s = glowRGB(hex, mode), g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+  g.addColorStop(0, 'rgba(' + s + ',' + a + ')'); g.addColorStop(0.4, 'rgba(' + s + ',' + (a * 0.35).toFixed(3) + ')'); g.addColorStop(1, 'rgba(' + s + ',0)'); return g;
+}
+function reflStrip(y0, hex, mode) {                  // one mirrored-sky strip: the horizon colour at the top, the sky lower down at the bottom
+  const A = C.ART, rg = reflCtx.createLinearGradient(0, y0, 0, y0 + C.REFL_H);
+  if (mode === 1 || mode === 3) { rg.addColorStop(0, mixHex(hex, A.DAWN_HORIZON, A.DAWN_HORIZON_MIX)); rg.addColorStop(0.4, hex); rg.addColorStop(1, mixHex(hex, A.DAWN_ROSE, mode === 1 ? A.DAWN_ROSE_MIX : A.DAWN_ROSE_MORNING)); }
+  else if (mode === 2) { rg.addColorStop(0, hex); rg.addColorStop(1, mixHex(hex, A.DAWN_SKY_TOP, 0.45)); }
+  else { rg.addColorStop(0, shade(hex, 0.55)); rg.addColorStop(1, hex); }
+  reflCtx.fillStyle = rg; reflCtx.fillRect(0, y0, C.REFL_W, C.REFL_H);
 }
 function waterGradient(epi) {
   const g = ctx.createLinearGradient(0, WR.y, 0, WR.y + WR.h);
@@ -235,22 +255,19 @@ function waterGradient(epi) {
 }
 function rebuildGradients() {
   GRAD.sky = skyGradient(skyFrom, skyInvFrom); GRAD.sky2 = skyGradient(skyTo, skyInvTo);
-  GRAD.glow = glowGradient(skyFrom); GRAD.glow2 = glowGradient(skyTo); GRAD.hz = horizonBand(skyFrom, skyInvFrom); GRAD.hz2 = horizonBand(skyTo, skyInvTo);
+  GRAD.glow = glowGradient(skyFrom, skyInvFrom); GRAD.glow2 = glowGradient(skyTo, skyInvTo); GRAD.hz = horizonBand(skyFrom, skyInvFrom); GRAD.hz2 = horizonBand(skyTo, skyInvTo);
+  GRAD.sun = sunGradient(skyFrom, skyInvFrom); GRAD.sun2 = sunGradient(skyTo, skyInvTo);
   GRAD.water = waterGradient(false); GRAD.water2 = waterGradient(true);
   const cx = V.cssW / 2, cy = V.cssH / 2, rr = Math.sqrt(cx * cx + cy * cy);
   const vg = ctx.createRadialGradient(cx, cy, rr * C.VIGNETTE_IN, cx, cy, rr);
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,' + C.VIGNETTE_A + ')'); GRAD.vig = vg;
   const pg = ctx.createLinearGradient(0, WR.y - WR.y * 0.35, 0, WR.y);
   pg.addColorStop(0, 'rgba(242,178,122,0)'); pg.addColorStop(1, 'rgba(242,178,122,0.22)'); GRAD.predawn = pg;
-  // mirrored sky for the reflection slices: horizon colour at the top of the strip
-  const rg = reflCtx.createLinearGradient(0, 0, 0, C.REFL_H), sc = skyTo, inv = skyInvTo;
-  if (inv) { rg.addColorStop(0, mixHex(sc, C.ART.DAWN_HORIZON, C.ART.DAWN_HORIZON_MIX)); rg.addColorStop(0.4, sc); rg.addColorStop(1, mixHex(sc, C.ART.DAWN_SKY_TOP, C.ART.DAWN_TOP_MIX)); }
-  else { rg.addColorStop(0, shade(sc, 0.55)); rg.addColorStop(1, sc); }
-  reflCtx.fillStyle = rg; reflCtx.fillRect(0, 0, C.REFL_W, C.REFL_H);
+  reflCtx.clearRect(0, 0, C.REFL_W, 2 * C.REFL_H); reflStrip(0, skyFrom, skyInvFrom); reflStrip(C.REFL_H, skyTo, skyInvTo);
 }
-function setSky(hex, dur, inverted) {
-  if (hex === skyTo && inverted === skyInvTo) return;
-  skyFrom = skyTo; skyInvFrom = skyInvTo; skyTo = hex; skyInvTo = !!inverted; skyT0 = G.t; skyDur = dur; rebuildGradients();
+function setSky(hex, dur, mode) {
+  mode = mode | 0; if (hex === skyTo && mode === skyInvTo) return;
+  skyFrom = skyTo; skyInvFrom = skyInvTo; skyTo = hex; skyInvTo = mode; skyT0 = G.t; skyDur = dur; rebuildGradients();
 }
 function applyResize() {
   V.dirty = false;
@@ -282,6 +299,7 @@ function deriveGrid(rung) {
     const oldF = fossilCv; layerH = lh;
     motesCv = mkCanvas(layerW, layerH); motesCtx = motesCv.getContext('2d'); fossilCv = mkCanvas(layerW, layerH); fossilCtx = fossilCv.getContext('2d');
     fossilCtx.lineCap = 'round'; fossilCtx.lineJoin = 'round';
+    FO.lo = mkCanvas(layerW >> 1, layerH >> 1); FO.loCtx = FO.lo.getContext('2d'); FO.lo2 = mkCanvas(layerW >> 2, layerH >> 2); FO.lo2Ctx = FO.lo2.getContext('2d'); FO.dirty = true;
     if (oldF) fossilCtx.drawImage(oldF, 0, 0, layerW, layerH);
   }
   layerSx = layerW / GW; layerSy = layerH / GH; NZ.sx = 192 / GW; NZ.sy = 192 / GW;
@@ -873,7 +891,7 @@ function skyConstellation(g) {
   }
   g.stars = pts; g.starCount = 5; g.skyX = 0.12 + 0.76 * (g.idx + 0.5) / 6; g.skyY = SKY_SLOT_Y[g.idx];
 }
-function starPos(g, k, out) { const sz = Math.min(C.ART.CONST_K * V.cssW, 0.5 * WR.y); out.x = g.skyX * V.cssW + g.stars[k].dx * sz; out.y = g.skyY * WR.y + g.stars[k].dy * sz; }
+function starPos(g, k, out) { const sz = Math.min(C.ART.CONST_K * V.cssW, 0.65 * WR.y); out.x = g.skyX * V.cssW + g.stars[k].dx * sz; out.y = g.skyY * WR.y + g.stars[k].dy * sz; }   // a 5-star constellation spans ~6-8 % of the width; capped so the highest slot still clears the top of the sky
 const sTmp = { x: 0, y: 0 };
 function starFlights(g) {
   let made = 0;
@@ -889,17 +907,23 @@ function starFlights(g) {
 function flightsStep(dt) { for (let i = 0; i < FL.n; i++) { if (!FL.on[i]) continue; FL.t[i] += dt; if (FL.t[i] > FL.dur[i]) FL.on[i] = 0; } }
 
 // ───────────────────────────── FOSSIL ─────────────────────────────
-function fossilStroke(x0, y0, x1, y1) {          // cells in
+const FO = { dirty: true, lo: null, loCtx: null, lo2: null, lo2Ctx: null };   // the fossil's bloom pyramid (1/2, 1/4), render-only
+function fossilStroke(x0, y0, x1, y1) {          // cells in: a thin gold trace of every drag
   fossilCtx.globalAlpha = C.ART.FOSSIL_STROKE_A; fossilCtx.strokeStyle = C.FOSSIL_COL; fossilCtx.lineWidth = C.ART.FOSSIL_STROKE_W; fossilCtx.beginPath();
-  fossilCtx.moveTo(x0 * layerSx, y0 * layerSy); fossilCtx.lineTo(x1 * layerSx, y1 * layerSy); fossilCtx.stroke();
+  fossilCtx.moveTo(x0 * layerSx, y0 * layerSy); fossilCtx.lineTo(x1 * layerSx, y1 * layerSy); fossilCtx.stroke(); FO.dirty = true;
 }
-function fossilCircle(x, y, R) {               // cells in
-  const lx = x * layerSx, ly = y * layerSy, r = R * layerSx;
-  fossilCtx.fillStyle = C.FOSSIL_COL; fossilCtx.strokeStyle = C.FOSSIL_COL; fossilCtx.lineWidth = 2;
-  fossilCtx.globalAlpha = C.ART.FOSSIL_DISC_A; fossilCtx.beginPath(); fossilCtx.arc(lx, ly, r, 0, Math.PI * 2); fossilCtx.fill();
-  fossilCtx.globalAlpha = C.ART.FOSSIL_RING_A; fossilCtx.beginPath(); fossilCtx.arc(lx, ly, r, 0, Math.PI * 2); fossilCtx.stroke();
+function fossilCircle(x, y, R) {               // cells in: a thin ring and a faint disc where a remanso closed
+  const lx = x * layerSx, ly = y * layerSy, r = R * layerSx; if (!(r > 0.5)) return;
+  fossilCtx.fillStyle = C.FOSSIL_COL; fossilCtx.strokeStyle = C.FOSSIL_COL; fossilCtx.lineWidth = C.ART.FOSSIL_RING_W;
+  fossilCtx.globalAlpha = C.ART.FOSSIL_DISC_A; fossilCtx.beginPath(); fossilCtx.arc(lx, ly, r, 0, TWO_PI); fossilCtx.fill();
+  fossilCtx.globalAlpha = C.ART.FOSSIL_RING_A; fossilCtx.beginPath(); fossilCtx.arc(lx, ly, r, 0, TWO_PI); fossilCtx.stroke(); FO.dirty = true;
 }
-function fossilClear() { fossilCtx.globalAlpha = 1; fossilCtx.clearRect(0, 0, layerW, layerH); }
+function fossilClear() { fossilCtx.globalAlpha = 1; fossilCtx.clearRect(0, 0, layerW, layerH); FO.dirty = true; }
+function fossilGlowUpdate() {                  // 2× resampling pyramid of the fossil layer, rebuilt only after a stroke or a ring was added (and only while the glow is drawn)
+  if (!FO.dirty) return; FO.dirty = false;
+  FO.loCtx.clearRect(0, 0, FO.lo.width, FO.lo.height); FO.loCtx.drawImage(fossilCv, 0, 0, FO.lo.width, FO.lo.height);
+  FO.lo2Ctx.clearRect(0, 0, FO.lo2.width, FO.lo2.height); FO.lo2Ctx.drawImage(FO.lo, 0, 0, FO.lo2.width, FO.lo2.height);
+}
 
 // ───────────────────────────── RENDER ─────────────────────────────
 const Q = { level: 0, grain: true, bloomA: true, motes: C.MOTES, moteDraw: C.ART.MOTE_DRAW, gs: C.GS_SWEEPS, scale: 0, forced: -1, name: 'high', gsLow: false };
@@ -1050,11 +1074,20 @@ function render() {
   const starK = DIR.starK * (1 - 0.5 * DIR.skyLift); if (starK > 0.01) renderStars(starK);
   ctx.globalCompositeOperation = 'source-over';
   // 3 water (+ epilogue crossfade), 4 reflection slices, soft horizon band
-  const wf = clamp((t - waterT0) / C.SKY_FADE, 0, 1), wmix = lerp(waterFrom, waterTo, wf);
+  const wf = easeInOutSine((t - waterT0) / waterDur), wmix = lerp(waterFrom, waterTo, wf);
   if (wmix < 1) { ctx.fillStyle = GRAD.water; ctx.fillRect(0, WR.y, W, WR.h); }
   if (wmix > 0) { ctx.globalAlpha = wmix; ctx.fillStyle = GRAD.water2; ctx.fillRect(0, WR.y, W, WR.h); ctx.globalAlpha = 1; }
-  const rh = WR.h * C.REFL_DEPTH, sl = rh / C.REFL_SLICES, srcH = C.REFL_H / C.REFL_SLICES;
-  for (let k = 0; k < C.REFL_SLICES; k++) { const f = 1 - k / C.REFL_SLICES, ox = 3 * Math.sin(1.3 * t + 0.4 * k), y0 = Math.round(k * sl), y1 = Math.round((k + 1) * sl); ctx.globalAlpha = C.REFL_ALPHA * f * f; ctx.drawImage(reflCv, 0, k * srcH, C.REFL_W, srcH, ox, WR.y + y0, W, y1 - y0); }
+  const rh = WR.h * C.REFL_DEPTH, sl = rh / C.REFL_SLICES, srcH = C.REFL_H / C.REFL_SLICES, rk = kf < 1 ? kf : 1;   // mirrored sky in 30 wobbling slices: a near-mirror at the horizon (grazing angle), gone by mid-band; both strips during a sky crossfade
+  for (let k = 0; k < C.REFL_SLICES; k++) {
+    const f = 1 - k / C.REFL_SLICES, f2 = f * f, a = C.REFL_ALPHA * f2 * f2, ox = 3 * Math.sin(1.3 * t + 0.4 * k) - 3, y0 = Math.round(k * sl), y1 = Math.round((k + 1) * sl);
+    if (rk < 1) { ctx.globalAlpha = a * (1 - rk); ctx.drawImage(reflCv, 0, k * srcH, C.REFL_W, srcH, ox, WR.y + y0, W + 6, y1 - y0); }
+    ctx.globalAlpha = a * rk; ctx.drawImage(reflCv, 0, C.REFL_H + k * srcH, C.REFL_W, srcH, ox, WR.y + y0, W + 6, y1 - y0);
+  }
+  ctx.globalCompositeOperation = 'lighter'; const spw = A.SUN_PATH_W * W;   // the sun path: the horizon glow reflected down the centre of the water (an elliptical additive glow)
+  ctx.translate(W / 2, WR.y); ctx.scale(1, A.SUN_PATH_H * WR.h / spw);
+  if (rk < 1) { ctx.globalAlpha = 1 - rk; ctx.fillStyle = GRAD.sun; ctx.fillRect(-spw, 0, 2 * spw, spw); }
+  ctx.globalAlpha = rk; ctx.fillStyle = GRAD.sun2; ctx.fillRect(-spw, 0, 2 * spw, spw);
+  ctx.setTransform(V.scale, 0, 0, V.scale, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   if (kf < 1) { ctx.globalAlpha = 1 - kf; ctx.fillStyle = GRAD.hz; ctx.fillRect(0, WR.y - hb, W, 2 * hb); ctx.globalAlpha = kf; } else ctx.globalAlpha = 1;
   ctx.fillStyle = GRAD.hz2; ctx.fillRect(0, WR.y - hb, W, 2 * hb); ctx.globalAlpha = 1;
   // 5 ink (tone map over the scrolled noise) + 6 bloom (screen, so the cores keep their colour instead of blowing to white)
@@ -1072,7 +1105,8 @@ function render() {
   ctx.globalCompositeOperation = 'lighter';
   // 7 motes, 8 fossil, set flash + ring, 9 rims
   renderMotes(); ctx.globalAlpha = 1; ctx.drawImage(motesCv, WR.x, WR.y, WR.w, WR.h);
-  ctx.globalAlpha = DIR.fossilAlpha; ctx.drawImage(fossilCv, WR.x, WR.y, WR.w, WR.h); ctx.globalAlpha = 1;
+  const fa = DIR.fossilAlpha, fg = (fa - C.FOSSIL_ALPHA) * A.FOSSIL_GLOW_A;   // fossil: thin gold lines, and at Dawn their soft bloom (the 1/4 pyramid level, bilinear upscale) so they glow instead of reading as a diagram
+  if (fa > 0) { ctx.globalAlpha = fa; ctx.drawImage(fossilCv, WR.x, WR.y, WR.w, WR.h); if (fg > 0.005) { fossilGlowUpdate(); ctx.globalAlpha = fg; ctx.drawImage(FO.lo2, WR.x, WR.y, WR.w, WR.h); } ctx.globalAlpha = 1; }
   if (DIR.flash > 0) { ctx.globalAlpha = 0.12 * DIR.flash; ctx.fillStyle = '#ffffff'; ctx.fillRect(0, WR.y, W, WR.h); ctx.globalAlpha = 1; }
   if (DIR.ringT >= 0 && DIR.ringT < 1.2) { const k = DIR.ringT / 1.2, r = 0.3 * Math.min(WR.w, WR.h) * k; ctx.globalAlpha = 0.5 * (1 - k); ctx.lineWidth = 2; ctx.strokeStyle = '#fff1d6'; ctx.beginPath(); ctx.arc(WR.x + DIR.ringX * cellPx, WR.y + DIR.ringY * cellPy, Math.max(1, r), 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
   for (let k = 0; k < NSLOT; k++) if (P[k].open || P[k].s > 0) renderRim(P[k]);
@@ -1089,15 +1123,23 @@ function render() {
   // 11 hand, demo, sparks, pointer halo + breathing ring (P1 teal-white, P2 rose)
   for (let k = 0; k < GL.n; k++) { const g = GL.list[k]; if (g.state !== 'STAMPING') continue; const jx = Math.sin(G.frame * 12.9898) * 3, jy = Math.cos(G.frame * 7.233) * 3; drawSprite(SPR.hand, WR.x + g.handX * cellPx + jx, WR.y + g.handY * cellPy + jy, 32, 0.9); }
   for (let i = 0; i < SPK.n; i++) if (SPK.life[i] > 0) drawSprite(SPR.spark, SPK.x[i], SPK.y[i], 3, SPK.life[i] * 2);
+  let epiK = 0;
   for (let k = 0; k < 2; k++) {
-    const q = P[k]; let x, y, down;
-    if (q.local) { const r = RAW.p[k]; if (!r.active || !(r.down || (r.type === 'mouse' && RAW.everMoved))) continue; x = r.cx; y = r.cy; down = r.down || (k === 0 && RAW.space); }
+    const q = P[k]; let x, y, down, still = 0;
+    if (q.local) { const r = RAW.p[k]; if (!r.active || !(r.down || (r.type === 'mouse' && RAW.everMoved))) continue; x = r.cx; y = r.cy; down = r.down || (k === 0 && RAW.space); still = r.stillT; }
     else { if (!q.present) continue; x = WR.x + q.x * cellPx; y = WR.y + q.y * cellPy; down = q.down; }
     const pi = q.player - 1, r = q.open ? C.CURSOR_STILL_R : C.CURSOR_R + Math.sin(Math.PI * t) * 1;
+    if (DIR.actIdx === 5 && q.local && y < WR.y) {     // epilogue: the restart lives in the sky — a small sun follows the hand there and swells while it holds still; a dark arc counts the hold
+      const hk = down ? clamp(still / C.EPI_RESTART_HOLD, 0, 1) : 0; if (hk > epiK) epiK = hk;
+      ctx.globalCompositeOperation = 'source-over'; drawSprite(SPR.sun, x, y, A.SUN_HAND_R * (1 + 0.8 * hk), A.SUN_HAND_A + (down ? 0.2 + 0.25 * hk : 0));
+      if (down) { ctx.globalAlpha = 0.55; ctx.strokeStyle = C.TEXT_COL_DAWN; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, C.CURSOR_R + 8, -HALF_PI, -HALF_PI + TWO_PI * hk); ctx.stroke(); }
+      ctx.globalCompositeOperation = 'lighter';
+    }
     drawSprite(pi ? SPR.cursorB : SPR.cursorA, x, y, A.CURSOR_HALO_R, A.CURSOR_HALO_A * (q.local ? 1 : 0.8));
     ctx.globalAlpha = C.CURSOR_A * (q.local ? 1 : 0.7); ctx.strokeStyle = PLAYER_TINT[pi]; ctx.fillStyle = PLAYER_TINT[pi]; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); if (down) ctx.fill(); else ctx.stroke(); ctx.globalAlpha = 1;
   }
+  if (epiK > 0) { ctx.globalAlpha = A.EPI_LIGHT_A * epiK; ctx.fillStyle = GRAD.glow2; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }   // the horizon brightens as the hold completes (the radial fades out by itself: no clipped edge)
   // vignette, grain, text, restart fade
   ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = GRAD.vig; ctx.fillRect(0, 0, W, H);
   if (Q.grain && grainPat) { const off = ((G.frame >> 2) * 37) % 256; ctx.globalAlpha = C.GRAIN_ALPHA; ctx.translate(-off, -off); ctx.fillStyle = grainPat; ctx.fillRect(off, off, W + 256, H + 256); ctx.translate(off, off); ctx.globalAlpha = 1; }
@@ -1226,13 +1268,13 @@ function glyphById(id) { for (let k = 0; k < GL.n; k++) if (GL.list[k].id === id
 function enterAct(idx) {
   const a = C.ACTS[idx]; a.actIdx = idx; DIR.actIdx = idx; DIR.act = a; DIR.actT = 0; DIR.phase = a.name; DIR.capWarn = false; DIR.capPause = -1; DIR.exitT = -1;
   if (gridDirty || DIR.rungPending) { const r = DIR.rungPending ? Math.min(2, G.rung + 1) : G.rung; DIR.rungPending = false; deriveGrid(r); }
-  weatherSet(a); HI.window = a.window; DIR.rewindRate = C.REWIND_RATE; DIR.fadingDisabled = idx === 0; RM.disabled = idx === 5; DIR.skyLift = 0; DIR.predawn = 0; AU.padDrop = 0;
+  weatherSet(a); HI.window = a.window; DIR.rewindRate = C.REWIND_RATE; DIR.fadingDisabled = idx === 0; RM.disabled = idx === 5; DIR.skyLift = 0; if (idx !== 4) DIR.predawn = 0; AU.padDrop = 0;
   colA = idx === 3 ? C.COL[2] : C.COL[0]; colB = C.COL[1]; GL.lastChangeT = G.t; DIR.nudgeNext = G.t + C.NUDGE_T; DIR.nudgeG = null; DIR.g3At = 1e9; DIR.demoNext = 1e9; DIR.demoActive = false; P[2].down = false; P[2].present = false;
   for (let k = 0; k < GL.n; k++) GL.list[k].stampedThisAct = false;
-  if (idx <= 3) { setSky(a.sky, C.SKY_FADE, false); DIR.inkK = 1; DIR.starK = 1; DIR.fossilAlpha = C.FOSSIL_ALPHA; DIR.moteK = 1; if (idx === 3) DIR.predawn = 1; }
+  if (idx <= 3) { setSky(a.sky, C.SKY_FADE, 0); DIR.inkK = 1; DIR.starK = 1; DIR.fossilAlpha = C.FOSSIL_ALPHA; DIR.moteK = 1; if (idx === 3) DIR.predawn = 1; }
   if (idx === 0) { DIR.demoNext = C.DEMO_T; DIR.textOpen = false; }
-  if (idx === 4) { setSky('#f2b27a', 20, true); DIR.textDawn = false; DIR.mistDone = false; DIR.dawnAudio = false; DIR.rewindRate = C.REWIND_DAWN; }
-  if (idx === 5) { setSky('#fff1d6', C.SKY_FADE, true); waterFrom = waterTo; waterTo = 1; waterT0 = G.t; d0.fill(0); d1.fill(0); dW.fill(0); recall.fill(0); ghost.fill(0); DIR.inkK = 1; DIR.starK = 0; DIR.fossilAlpha = 0; DIR.epiHold = 0; }
+  if (idx === 4) { setSky(C.ART.DAWN_FIRST, C.ART.DAWN_FIRST_T, 2); DIR.textDawn = false; DIR.mistDone = false; DIR.dawnAudio = false; DIR.rewindRate = C.REWIND_DAWN; }
+  if (idx === 5) { setSky(a.sky, C.SKY_FADE, 3); waterFrom = waterTo; waterTo = 1; waterT0 = G.t; waterDur = C.SKY_FADE; d0.fill(0); d1.fill(0); dW.fill(0); recall.fill(0); ghost.fill(0); DIR.inkK = 1; DIR.starK = 0; DIR.fossilAlpha = 0; DIR.epiHold = 0; }
   DIR.horizonCol = shade(a.sky, idx >= 4 ? 1.0 : 0.55 * 1.3);
 }
 function stampGlyph(id) { const g = glyphById(id); if (g && g.state === 'IDLE') glyphStart(g); }
@@ -1300,7 +1342,11 @@ function dawnStep(dt) {
   }
   if (T >= C.DAWN_BLEND_END && !DIR.dawnAudio) { DIR.dawnAudio = true; audioDawn(); }
   if (T >= C.DAWN_BLEND_END && T <= C.DAWN_FOSSIL_END) DIR.fossilAlpha = lerp(C.FOSSIL_ALPHA, C.FOSSIL_DAWN, (T - C.DAWN_BLEND_END) / (C.DAWN_FOSSIL_END - C.DAWN_BLEND_END));
-  if (T >= 20 && skyTo !== '#fff1d6') setSky('#fff1d6', 15, true);
+  const A = C.ART;   // the sky rises in stages that never pass through grey: night blue → first light (rose horizon) → dawn (rose band, gold horizon) → gold
+  if (T >= A.DAWN_FIRST_T && T < A.DAWN_GOLD_T && skyTo === A.DAWN_FIRST) setSky(C.ACTS[4].sky, A.DAWN_GOLD_T - A.DAWN_FIRST_T, 1);
+  if (T >= A.DAWN_GOLD_T && skyTo !== C.ACTS[5].sky) setSky(C.ACTS[5].sky, A.DAWN_GOLD_FADE, 1);
+  if (T >= A.DAWN_WATER_T && waterTo !== 1) { waterFrom = 0; waterTo = 1; waterT0 = G.t; waterDur = A.DAWN_WATER_DUR; }   // the water itself lightens as the sun comes (render-only)
+  if (DIR.predawn > 0) DIR.predawn = Math.max(0, DIR.predawn - dt / A.PREDAWN_OUT);
   if (T >= C.DAWN_FOSSIL_END) { const k = clamp((T - C.DAWN_FOSSIL_END) / (C.DAWN_T - C.DAWN_FOSSIL_END), 0, 1); DIR.inkK = 1 - k; DIR.fossilAlpha = C.FOSSIL_DAWN * (1 - k); if (!DIR.mistDone) { DIR.mistDone = true; motesMist(C.MIST); } }
   if (T >= C.DAWN_TEXT && !DIR.textDawn) { DIR.textDawn = true; textShow(C.TEXT_DAWN_PT, C.TEXT_DAWN_EN, 0.5, 0.14, true); }
   DIR.starK = T < C.DAWN_STAR_FADE ? 1 : 1 - clamp((T - C.DAWN_STAR_FADE) / (C.DAWN_T - C.DAWN_STAR_FADE), 0, 1);
@@ -1311,7 +1357,7 @@ function resetAll() {
   SPK.life.fill(0); FL.on.fill(0); for (let k = 0; k < NSLOT; k++) { const q = P[k]; q.s = 0; q.d = 0; q.holdT = 0; q.open = false; q.R = 0; q.rn = 0; q.hasSeg = false; } P[2].down = false; P[2].present = false;
   WX.A = 0; WX.A0 = 0; WX.vp.fill(0); WX.vp0.fill(0); WX.nudgeT = 0; WX.aimed = null;
   DIR.restarting = false; DIR.fade = 1; DIR.flash = 0; DIR.ringT = -1; DIR.skyDip = 0; DIR.demoActive = false; DIR.nudgeG = null; RAW.rHold = 0; TXT.pt = '';
-  waterFrom = 0; waterTo = 0; waterT0 = -1e9; skyTo = '#02030a'; skyFrom = '#02030a'; skyInvTo = false; skyInvFrom = false; skyT0 = -1e9; rebuildGradients();
+  waterFrom = 0; waterTo = 0; waterT0 = -1e9; waterDur = C.SKY_FADE; skyTo = '#02030a'; skyFrom = '#02030a'; skyInvTo = 0; skyInvFrom = 0; skyT0 = -1e9; rebuildGradients();
   enterAct(0);
 }
 function skipToPhase(name) {
