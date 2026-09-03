@@ -4,7 +4,7 @@
 <title>REMANSO</title>
 <style>html,body{margin:0;height:100%;background:#02030a;overflow:hidden}canvas{display:block;position:fixed;left:0;top:0;touch-action:none;cursor:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
 /* lobby (GDD-ONLINE): the game's palette and serif stack, radius 14, 1-px border, no backdrop-filter; buttons >= 44 px tall for touch */
-#lobby{position:fixed;left:50%;top:4%;transform:translateX(-50%);width:min(92vw,440px);box-sizing:border-box;background:rgba(5,8,20,.78);border:1px solid rgba(242,232,213,.18);border-radius:14px;color:#f2e8d5;padding:20px 26px 20px;font:500 16px 'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif;letter-spacing:.04em;cursor:auto;user-select:text;-webkit-user-select:text;z-index:2;box-shadow:0 24px 70px rgba(0,0,0,.4)}
+#lobby{position:fixed;left:50%;top:4%;transform:translateX(-50%);width:min(92vw,440px);box-sizing:border-box;background:rgba(5,8,20,.78);border:1px solid rgba(242,232,213,.18);border-radius:14px;color:#f2e8d5;padding:20px 26px 20px;font:500 16px 'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif;letter-spacing:.04em;cursor:auto;user-select:text;-webkit-user-select:text;z-index:2;box-shadow:0 24px 70px rgba(0,0,0,.4);max-height:calc(92vh - 12px);overflow-y:auto;-webkit-overflow-scrolling:touch}
 #lobby .ttl{display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.24em;opacity:.62;padding-bottom:12px;margin-bottom:18px;border-bottom:1px solid rgba(242,232,213,.12)}
 #lobby .link{display:inline-flex;align-items:center}
 #lobby .link i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#bfefff;box-shadow:0 0 7px rgba(191,239,255,.8)}
@@ -26,6 +26,7 @@
 #lobby .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#7fe3ff;box-shadow:0 0 8px rgba(127,227,255,.8);margin-right:10px;vertical-align:middle;animation:breathe 2s ease-in-out infinite}
 @keyframes breathe{0%,100%{opacity:.25}50%{opacity:1}}
 @media (max-width:480px){#lobby{top:7%;padding:16px 20px 16px}#lobby .verbs{flex-direction:column}#lobby .code{font-size:40px}#lobby input{font-size:28px}}
+@media (max-height:480px){#lobby{top:2%;padding:12px 18px;max-height:calc(96vh - 12px)}#lobby textarea{height:44px;margin:4px 0 6px}#lobby .lbl{margin:0 0 4px}#lobby .ttl{margin-bottom:8px;padding-bottom:6px}#lobby .st{margin-top:8px}#lobby .verbs{margin-top:8px}}
 </style>
 </head><body><canvas id="c"></canvas><script>
 'use strict';
