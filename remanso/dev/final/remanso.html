@@ -1471,7 +1471,7 @@ const NET = { mode: 'solo', state: 'idle', code: null, delay: 0, stalls: 0, resy
   lIn: new Uint16Array(RING_N * 2), lF: new Uint8Array(RING_N), lT: new Int32Array(RING_N).fill(-1), rIn: new Uint16Array(RING_N * 2), rF: new Uint8Array(RING_N), rT: new Int32Array(RING_N).fill(-1),
   remoteLatest: -1, lastRemoteMs: 0, stallMs: -1, stallCounted: false, rHashT: new Int32Array(8).fill(-1), rHashV: new Uint32Array(8), rHashI: 0,
   syncAt: -1, syncSent: false, syncApplied: true, syncMeta: null, syncChunks: null, syncGot: 0, lastSyncAt: -1, pingTs: 0, rtts: [], pkt: new ArrayBuffer(10), joinTimer: 0, roomTimer: 0, keepTimer: 0, pending: null,
-  aDoisT: -1e9, hoverADois: false, discT: -1, lostLine: false, topic: '', peerId: '' };
+  aDoisT: -1e9, hoverADois: false, discT: -1, lostLine: false, topic: '', peerId: '', roomMs: 0 };
 NET.pv = new DataView(NET.pkt);
 const LOBBY = { open: false, el: null, view: '', status: null, timer: 0, built: false, code: '', manualRole: '', openMs: -1e9, copyPrev: '', copyTimer: 0 };
 function netPublic() { return { mode: NET.mode, state: NET.state, code: NET.code, tick: G.steps, delay: NET.delay, stalls: NET.stalls, resyncs: NET.resyncs, rtt: NET.rtt, lastHash: NET.lastHash }; }
@@ -1536,7 +1536,7 @@ function netKeepalive() { if (NET.state === 'connected') dcSend({ t: 'k' }); }  
 function netCreate() {
   return new Promise(async (res, rej) => {
     try {
-      netLeave(true); NET.role = 'host'; NET.mode = 'host'; NET.state = 'signaling'; NET.code = roomCode(); NET.id = clientId(); NET.topic = 'remanso/1/' + NET.code;
+      netLeave(true); NET.role = 'host'; NET.mode = 'host'; NET.state = 'signaling'; NET.code = roomCode(); NET.id = clientId(); NET.topic = 'remanso/1/' + NET.code; NET.roomMs = nowMs();
       const m = await brokerConnect(); NET.mqtt = m; m.subscribe(NET.topic);
       m.onmessage = async (topic, payload) => {
         let msg; try { msg = JSON.parse(payload); } catch (e) { return; } if (!msg || msg.id === NET.id) return;
@@ -1546,7 +1546,7 @@ function netCreate() {
           const pc = mkPC(); bindDC(pc.createDataChannel('game', { ordered: true }));
           const o = await pc.createOffer(); await pc.setLocalDescription(o); await gather(pc);
           m.send(NET.topic, JSON.stringify({ t: 'offer', id: NET.id, to: msg.id, sdp: pc.localDescription.sdp }));
-          setTimeout(() => { if (NET.state === 'connecting') netFail(); }, C.NET.CONNECT_TIMEOUT);
+          setTimeout(() => { if (NET.state === 'connecting') netHostRetry(); }, C.NET.CONNECT_TIMEOUT);
         } else if (msg.t === 'answer' && msg.to === NET.id && NET.pc) { try { await NET.pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp }); } catch (e) { netFail(); } }
       };
       NET.roomTimer = setTimeout(() => { if (NET.state === 'signaling') { lobbyStatus('o mar adormeceu'); netLeave(true); } }, C.NET.ROOM_TIMEOUT);   // the panel stays so the line can be read (Escape closes it)
@@ -1615,6 +1615,13 @@ function netManualAccept(answerStr) {
     try { await NET.pc.setRemoteDescription({ type: 'answer', sdp }); } catch (e) { lobbyStatus('resposta inválida'); return rej(new Error('invalid')); }   // a failed setRemoteDescription is atomic: the offer stands
     NET.pending = { res, rej }; setTimeout(() => { if (NET.state === 'connecting') { netFail(); rej(new Error('timeout')); } }, C.NET.CONNECT_TIMEOUT);
   });
+}
+function netHostRetry() {                 // the guest vanished during the handshake: keep the room (same code) and wait for another hand, unless the relay is gone or the room is too old
+  if (NET.role === 'host' && NET.mqtt && NET.mqtt.ws && NET.mqtt.ws.readyState === 1 && nowMs() - NET.roomMs < C.NET.ROOM_TIMEOUT) {
+    if (NET.dc) { NET.dc.onclose = null; NET.dc.onerror = null; try { NET.dc.close(); } catch (e) { /* closed */ } NET.dc = null; }
+    if (NET.pc) { NET.pc.onconnectionstatechange = null; try { NET.pc.close(); } catch (e) { /* closed */ } NET.pc = null; }
+    NET.peerId = ''; NET.discT = -1; NET.state = 'signaling'; lobbyStatus('esperando a outra mão…');
+  } else netFail();
 }
 function netFail() { if (NET.state === 'connected') return; lobbyStatus('o mar não respondeu'); lobbyShowManualLink(); if (NET.pending) { NET.pending.rej(new Error('connect failed')); NET.pending = null; } netTeardown(); NET.state = 'idle'; NET.mode = 'solo'; }
 function netTeardown() {
@@ -1809,6 +1816,7 @@ function netLink(x, y, len, a0, a1, aLine) {   // two dots (teal, rose) joined b
   ctx.globalAlpha = a1; ctx.fillStyle = PLAYER_TINT[1]; ctx.beginPath(); ctx.arc(x + len, y, dr, 0, TWO_PI); ctx.fill(); ctx.globalAlpha = 1;
 }
 function renderNet() {                   // cosmetic: the "a dois" word with the two-dot link, or the two-dot indicator while online (local dot brighter, remote dot pulses on a stall)
+  if (LOBBY.open) return;                // the panel is the affordance while it is open
   const t = G.t, A = C.ART; ctx.globalCompositeOperation = 'source-over'; aDoisRect(adTmp);
   const len = A.ADOIS_LINE, xe = adTmp.x + adTmp.w - 8, y = 28;
   if (NET.state === 'connected') {
