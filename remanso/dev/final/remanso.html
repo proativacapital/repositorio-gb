@@ -654,16 +654,16 @@ function remansoKernel(p) {
       const dx = x - cx, dist = Math.sqrt(dx * dx + dy * dy), i = x + y * W;
       if (dist >= R) { wk[i] = 0; continue; }
       let t = (R - dist) * invR; if (t > 1) t = 1; let w = t * t * (3 - 2 * t) * s; const sv = 1 - speed[i] * invV; w *= sv > 0 ? sv : 0; if (w > 1) w = 1;
-      if (w < wk[i]) w = wk[i];                       // cells under two remansos take the larger weight (wk is cleared per step)
-      wk[i] = w;
-      if (hv && w > 0) {
+      const prev = wk[i]; if (w < prev) w = prev; wk[i] = w;   // cells under two remansos take the larger weight (wk is cleared per step)
+      if (hv && w > prev) {
+        const wr = prev > 0 ? (w - prev) / (1 - prev * kd) : w, wrv = prev > 0 ? (w - prev) / (1 - prev * kv) : w;   // a later kernel applies only the increment: the combined per-step rate is the larger weight's, not the product of both
         const qa = (oA + i) * 3, qb = (oB + i) * 3;
         let h0 = (dyeSnap[qa] * fa + dyeSnap[qb] * fr) * (1 / 128), h1 = (dyeSnap[qa + 1] * fa + dyeSnap[qb + 1] * fr) * (1 / 128); const hw = (dyeSnap[qa + 2] * fa + dyeSnap[qb + 2] * fr) * (1 / 128);
         if (deep) for (let g = 0; g < nc; g++) { const gl = RM.cand[g]; if (gl.state === 'WISP' || x < gl.bx0 || x > gl.bx1 || y < gl.by0 || y > gl.by1) continue; const m = gl.maskThick[i] * gl.cohStamp; if (gl.slot === 0) { if (m > h0) h0 = m; } else if (m > h1) h1 = m; }
         const e0 = h0 - d0[i], e1 = h1 - d1[i], ew = hw - dW[i];
-        d0[i] += w * kd * e0; d1[i] += w * kd * e1; dW[i] += w * kd * ew;
+        d0[i] += wr * kd * e0; d1[i] += wr * kd * e1; dW[i] += wr * kd * ew;
         let m = Math.abs(e0) + Math.abs(e1) + Math.abs(ew); m *= 3; if (m > 1) m = 1; m *= w; if (m > recall[i]) recall[i] = m;
-        const va = (oA + i) * 2, vb = (oB + i) * 2, hu = (velSnap[va] * fa + velSnap[vb] * fr) * kvk, hvv = (velSnap[va + 1] * fa + velSnap[vb + 1] * fr) * kvk, wv = w * kv;
+        const va = (oA + i) * 2, vb = (oB + i) * 2, hu = (velSnap[va] * fa + velSnap[vb] * fr) * kvk, hvv = (velSnap[va + 1] * fa + velSnap[vb + 1] * fr) * kvk, wv = wrv * kv;
         u[i] += wv * (hu - u[i]); v[i] += wv * (hvv - v[i]);
       }
       sumD[0] += d0[i]; sumD[1] += d1[i]; sumD[2] += dW[i];
