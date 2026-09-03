@@ -80,7 +80,7 @@ const C = Object.freeze({
   VIGNETTE_IN: 0.55, VIGNETTE_A: 0.55, CURSOR_R: 7, CURSOR_STILL_R: 4, CURSOR_A: 0.5,
   CAL_FRAME0: 10, CAL_FRAME1: 70, CAL_P75_MS: 5.5, CAL_MAX_DROPS: 2,
   LADDER_DELTA_MS: 17.5, LADDER_JS_MS: 9, LADDER_JS_CAUSE_MS: 6, LADDER_FRAMES: 30, LADDER_RESTORE_FRAMES: 600, LADDER_RESTORE_MS: 11,
-  TEXT_IN: 1, TEXT_HOLD: 4, TEXT_OUT: 1.5,
+  TEXT_IN: 1, TEXT_HOLD: 4, TEXT_OUT: 1.5, TEXT_MIN_PX: 14, TEXT_MARGIN: 12,
   KE_EVERY: 6, TELL_LEAD: 0.5, PLINK_MAX_PER_S: 3, TICK_MAX_PER_S: 6,
   ACTS: [
     { name: 'act0', tideA: 0, tideP: 40, nV: 1, vPeak: 2.5, vortexFrom: 12, window: 12, sky: '#02030a', cap: 120, glyphs: ['G1'] },   // the cap is a safety net: G1 cannot be lost in Act 0, so at the cap it is set, not wisped
@@ -981,19 +981,23 @@ function fossilGlowUpdate() {                  // 2× resampling pyramid of the 
 
 // ───────────────────────────── RENDER ─────────────────────────────
 const Q = { level: 0, grain: true, bloomA: true, motes: C.MOTES, moteDraw: C.ART.MOTE_DRAW, gs: C.GS_SWEEPS, scale: 0, forced: -1, name: 'high', gsLow: false };
-const TXT = { pt: '', en: '', t0: -1e9, size: 24, col: C.TEXT_COL, dark: false, x: 0, y: 0, font: '', fontEn: '', wPt: null, wEn: null, ls: 0, lsEn: 0, lsAd: '0px', hasLS: ('letterSpacing' in ctx) };
-function textLayout() {
-  const vmin = Math.min(V.cssW, V.cssH) / 100; TXT.size = clamp(2.4 * vmin, 18, 34);
-  TXT.font = "500 " + TXT.size.toFixed(1) + "px 'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif";
-  TXT.fontEn = "500 " + (TXT.size * 0.72).toFixed(1) + "px 'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif";
-  TXT.ls = TXT.size * 0.08; TXT.lsEn = TXT.size * 0.72 * 0.08; TXT.lsAd = (TXT.size * 0.72 * C.ART.ADOIS_LS).toFixed(2) + 'px'; if (TXT.pt) textMeasure();
+const TXT = { pt: '', en: '', t0: -1e9, size: 24, base: 24, col: C.TEXT_COL, dark: false, x: 0, y: 0, font: '', fontEn: '', fontAd: '', wPt: null, wEn: null, ls: 0, lsEn: 0, lsAd: '0px', hasLS: ('letterSpacing' in ctx) };
+function fontStr(px) { return "500 " + px.toFixed(1) + "px 'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif"; }
+function textLayout() {                    // the base size from the viewport (the "a dois" word keeps it); the line itself is fitted to the width by textFit
+  const vmin = Math.min(V.cssW, V.cssH) / 100; TXT.base = clamp(2.4 * vmin, 18, 34);
+  TXT.fontAd = fontStr(TXT.base * 0.72); TXT.lsAd = (TXT.base * 0.72 * C.ART.ADOIS_LS).toFixed(2) + 'px'; textFit(); if (TXT.pt) textMeasure();
+}
+function textFit() {                       // shrink (floor TEXT_MIN_PX) until the PT line, tracking included, fits the width with a margin on each side: no clipping on 320-px phones
+  let size = TXT.base;
+  if (TXT.pt) { ctx.font = fontStr(size); if (TXT.hasLS) ctx.letterSpacing = '0px'; const w = ctx.measureText(TXT.pt).width + size * 0.08 * TXT.pt.length, maxW = V.cssW - 2 * C.TEXT_MARGIN; if (w > maxW) size = Math.max(C.TEXT_MIN_PX, Math.floor(size * maxW / w * 10) / 10); }   // rounded down to the 0.1 px the font string carries, so the fit holds
+  TXT.size = size; TXT.font = fontStr(size); TXT.fontEn = fontStr(size * 0.72); TXT.ls = size * 0.08; TXT.lsEn = size * 0.72 * 0.08;
 }
 function textMeasure() {
   if (TXT.hasLS) return;
   ctx.font = TXT.font; TXT.wPt = []; for (const ch of TXT.pt) TXT.wPt.push(ctx.measureText(ch).width);
   ctx.font = TXT.fontEn; TXT.wEn = []; for (const ch of TXT.en) TXT.wEn.push(ctx.measureText(ch).width);
 }
-function textShow(pt, en, x, y, dark) { TXT.pt = pt; TXT.en = en; TXT.x = x; TXT.y = y; TXT.t0 = G.t; TXT.dark = !!dark; TXT.col = dark ? C.TEXT_COL_DAWN : C.TEXT_COL; textMeasure(); }
+function textShow(pt, en, x, y, dark) { TXT.pt = pt; TXT.en = en; TXT.x = x; TXT.y = y; TXT.t0 = G.t; TXT.dark = !!dark; TXT.col = dark ? C.TEXT_COL_DAWN : C.TEXT_COL; textFit(); textMeasure(); }
 function textDraw(str, widths, font, ls, x, y, alpha) {
   ctx.font = font; ctx.fillStyle = TXT.col; ctx.globalAlpha = alpha; ctx.textBaseline = 'middle';
   if (TXT.hasLS) { ctx.letterSpacing = ls.toFixed(2) + 'px'; ctx.textAlign = 'center'; ctx.fillText(str, x + ls / 2, y); ctx.letterSpacing = '0px'; return; }
@@ -1800,7 +1804,7 @@ function lobbyAct(a) {
   else if (a === 'accept') { const ta = el.querySelector('#taAnswer'); if (ta) { lobbyStatus('conectando…'); netManualAccept(ta.value).catch(e => { if (!(e && e.message === 'invalid')) lobbyStatus('o mar não respondeu'); }); } }
   else if (a === 'answer') { const ta = el.querySelector('#taOffer'); if (ta) { lobbyStatus('conectando…'); netManualAnswer(ta.value).then(s => { const tb = el.querySelector('#taAnswer'); if (tb) tb.value = s; }).catch(e => { if (!(e && e.message === 'invalid')) lobbyStatus('o mar não respondeu'); }); } }
 }
-function aDoisRect(out) { const w = TXT.size * 0.72 * 4.2 + 44; out.x = V.cssW - w - 12; out.y = 6; out.w = w + 4; out.h = 44; }   // the word + the two-dot link, right-aligned 18 px from the edge; a 44-px-tall hit area (touch)
+function aDoisRect(out) { const w = TXT.base * 0.72 * 4.2 + 44; out.x = V.cssW - w - 12; out.y = 6; out.w = w + 4; out.h = 44; }   // the word + the two-dot link, right-aligned 18 px from the edge; a 44-px-tall hit area (touch)
 const adTmp = { x: 0, y: 0, w: 0, h: 0 };
 function lobbyHitTest(x, y) {
   if (LOBBY.open) return true; if (NET.state === 'connected' || NET.state === 'signaling' || NET.state === 'connecting' || G.t < NET.aDoisT) return false;
@@ -1826,7 +1830,7 @@ function renderNet() {                   // cosmetic: the "a dois" word with the
   if (NET.state === 'signaling' || NET.state === 'connecting' || t < NET.aDoisT) return;
   const r = RAW.p[0], hover = r.active && r.cx >= adTmp.x && r.cx <= adTmp.x + adTmp.w && r.cy >= adTmp.y && r.cy <= adTmp.y + adTmp.h;
   const al = hover ? 0.8 : 0.35;
-  ctx.font = TXT.fontEn; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillStyle = C.TEXT_COL; ctx.globalAlpha = al;
+  ctx.font = TXT.fontAd; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillStyle = C.TEXT_COL; ctx.globalAlpha = al;
   if (TXT.hasLS) ctx.letterSpacing = TXT.lsAd; ctx.fillText('a dois', xe - len - 16, y); if (TXT.hasLS) ctx.letterSpacing = '0px';
   netLink(xe - len, y, len, al, al, al * 0.6);
 }
