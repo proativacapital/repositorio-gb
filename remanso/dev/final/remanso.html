@@ -1486,7 +1486,7 @@ const RING_N = 1024;
 const NET = { mode: 'solo', state: 'idle', gen: 0, code: null, delay: 0, stalls: 0, resyncs: 0, rtt: 0, lastHash: 0, role: '', id: '', mqtt: null, pc: null, dc: null, seed: 0,
   lIn: new Uint16Array(RING_N * 2), lF: new Uint8Array(RING_N), lT: new Int32Array(RING_N).fill(-1), rIn: new Uint16Array(RING_N * 2), rF: new Uint8Array(RING_N), rT: new Int32Array(RING_N).fill(-1),
   remoteLatest: -1, lastRemoteMs: 0, stallMs: -1, stallCounted: false, rHashT: new Int32Array(8).fill(-1), rHashV: new Uint32Array(8), rHashI: 0,
-  syncAt: -1, syncSent: false, syncApplied: true, syncMeta: null, syncChunks: null, syncGot: 0, lastSyncAt: -1, pingTs: 0, rtts: [], pkt: new ArrayBuffer(10), joinTimer: 0, roomTimer: 0, keepTimer: 0, pending: null,
+  syncAt: -1, syncSent: false, syncApplied: true, syncMeta: null, syncChunks: null, syncGot: 0, lastSyncAt: -1, pingTs: 0, rtts: [], pkt: new ArrayBuffer(10), joinTimer: 0, roomTimer: 0, keepTimer: 0, connTimer: 0, pending: null,
   aDoisT: -1e9, hoverADois: false, discT: -1, lostLine: false, topic: '', peerId: '', roomMs: 0 };
 NET.pv = new DataView(NET.pkt);
 const LOBBY = { open: false, el: null, view: '', status: null, timer: 0, built: false, code: '', manualRole: '', openMs: -1e9, copyPrev: '', copyTimer: 0, k: 0 };   // k: render-only 0..1, eased toward open at LOBBY_FADE/s — the canvas text and ring fade under the panel
@@ -1544,7 +1544,7 @@ function mkPC() {
 function gather(pc) { return new Promise(r => { if (pc.iceGatheringState === 'complete') return r(); const t = setTimeout(r, C.NET.GATHER_MS); pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete') { clearTimeout(t); r(); } }); }); }
 function bindDC(dc) {
   dc.binaryType = 'arraybuffer'; NET.dc = dc;
-  dc.onopen = () => { NET.state = 'connected'; NET.lastRemoteMs = nowMs(); clearInterval(NET.keepTimer); NET.keepTimer = setInterval(netKeepalive, C.NET.KEEP_MS); if (NET.mqtt) { NET.mqtt.unsubscribe(NET.topic); NET.mqtt.close(); NET.mqtt = null; } if (NET.pending) { NET.pending.res(); NET.pending = null; } lobbyStatus('conectado'); lobbyFade(); if (NET.role === 'guest') dcSend({ t: 'hi', v: 1, rung: G.rung }); };
+  dc.onopen = () => { NET.state = 'connected'; NET.lastRemoteMs = nowMs(); clearTimeout(NET.connTimer); NET.connTimer = 0; clearInterval(NET.keepTimer); NET.keepTimer = setInterval(netKeepalive, C.NET.KEEP_MS); if (NET.mqtt) { NET.mqtt.unsubscribe(NET.topic); NET.mqtt.close(); NET.mqtt = null; } if (NET.pending) { NET.pending.res(); NET.pending = null; } lobbyStatus('conectado'); lobbyFade(); if (NET.role === 'guest') dcSend({ t: 'hi', v: 1, rung: G.rung }); };
   dc.onmessage = onDcMessage; dc.onclose = () => netLost(); dc.onerror = () => netLost();
 }
 function dcSend(obj) { if (NET.dc && NET.dc.readyState === 'open') NET.dc.send(JSON.stringify(obj)); }
@@ -1566,7 +1566,7 @@ function netCreate() {
           const o = await pc.createOffer(); await pc.setLocalDescription(o); await gather(pc);
           if (NET.pc !== pc) return;   // torn down while gathering
           m.send(NET.topic, JSON.stringify({ t: 'offer', id: NET.id, to: msg.id, sdp: pc.localDescription.sdp }));
-          setTimeout(() => { if (NET.state === 'connecting') netHostRetry(); }, C.NET.CONNECT_TIMEOUT);
+          netConnectTimeout(pc, netHostRetry);
         } else if (msg.t === 'answer' && msg.to === NET.id && NET.pc) { try { await NET.pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp }); } catch (e) { netFail(); } }
       };
       NET.roomTimer = setTimeout(() => { if (NET.state === 'signaling') { lobbyStatus('o mar adormeceu'); netLeave(true); } }, C.NET.ROOM_TIMEOUT);   // the panel stays so the line can be read (Escape closes it)
@@ -1592,7 +1592,7 @@ function netJoin(code) {
           await pc.setRemoteDescription({ type: 'offer', sdp: msg.sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); await gather(pc);
           if (NET.pc !== pc) return;   // torn down while answering
           m.send(NET.topic, JSON.stringify({ t: 'answer', id: NET.id, to: msg.id, sdp: pc.localDescription.sdp }));
-          setTimeout(() => { if (NET.state === 'connecting') netFail(); }, C.NET.CONNECT_TIMEOUT);
+          netConnectTimeout(pc, netFail);
         } else if (msg.t === 'busy' && msg.to === NET.id && NET.state === 'signaling') {   // the sea is full: stop asking (the retry loop would have replaced this line with 'ninguém nesse mar' ten seconds later)
           clearTimeout(NET.joinTimer); lobbyStatus('esse mar já tem duas mãos'); NET.state = 'idle'; NET.mode = 'solo'; m.close(); NET.mqtt = null;
           if (NET.pending) { NET.pending.rej(new Error('busy')); NET.pending = null; }
@@ -1629,7 +1629,7 @@ async function netManualAnswer(offerStr) {
     const pc = mkPC(); pc.ondatachannel = (e) => bindDC(e.channel);
     await pc.setRemoteDescription({ type: 'offer', sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); await gather(pc);
     if (NET.pc !== pc) throw new Error('cancelled');
-    setTimeout(() => { if (NET.state === 'connecting') netFail(); }, C.NET.CONNECT_TIMEOUT);
+    netConnectTimeout(pc, netFail);
     return packSdp(pc.localDescription.sdp);
   } catch (e) { if (gen === NET.gen) netFail(); throw e; }   // an offer the browser refuses restores solo; a cancelled attempt is already solo
 }
@@ -1640,8 +1640,12 @@ function netManualAccept(answerStr) {
     if (!NET.pc) return rej(new Error('cancelled'));
     if (!/^v=0/.test(sdp)) { lobbyStatus('resposta inválida'); return rej(new Error('invalid')); }   // an unreadable paste leaves the invite alive: the friend's real answer can still be pasted
     try { await NET.pc.setRemoteDescription({ type: 'answer', sdp }); } catch (e) { lobbyStatus('resposta inválida'); return rej(new Error('invalid')); }   // a failed setRemoteDescription is atomic: the offer stands
-    NET.pending = { res, rej }; setTimeout(() => { if (NET.state === 'connecting') { netFail(); rej(new Error('timeout')); } }, C.NET.CONNECT_TIMEOUT);
+    NET.pending = { res, rej }; netConnectTimeout(NET.pc, netFail);   // netFail rejects the pending promise
   });
+}
+function netConnectTimeout(pc, fail) {    // one tracked CONNECT_TIMEOUT per attempt: cleared by netTeardown and bound to its own peer connection, so a timer left by a failed handshake can never fire into a newer one
+  clearTimeout(NET.connTimer);
+  NET.connTimer = setTimeout(() => { NET.connTimer = 0; if (NET.pc === pc && NET.state === 'connecting') fail(); }, C.NET.CONNECT_TIMEOUT);
 }
 function netRelayClosed(m) {              // the relay dropped the socket on its own while the room was still waiting (or a join was still asking): fail visibly ('o mar não respondeu' + the manual link) instead of showing a dead code for ten minutes; an intentional close (bindDC, netTeardown, the join retry limit) is silent
   return () => { if (m.closed || NET.mqtt !== m) return; NET.mqtt = null; if (NET.state === 'signaling' || (NET.state === 'connecting' && !NET.pc)) netFail(); };
@@ -1655,7 +1659,7 @@ function netHostRetry() {                 // the guest vanished during the hands
 }
 function netFail() { if (NET.state === 'connected') return; lobbyStatus('o mar não respondeu'); lobbyShowManualLink(); if (NET.pending) { NET.pending.rej(new Error('connect failed')); NET.pending = null; } netTeardown(); NET.state = 'idle'; NET.mode = 'solo'; }
 function netTeardown() {
-  NET.gen++; clearTimeout(NET.joinTimer); clearTimeout(NET.roomTimer); clearInterval(NET.keepTimer); NET.keepTimer = 0;   // gen: every continuation still awaiting the relay or ICE belongs to an older attempt from here on
+  NET.gen++; clearTimeout(NET.joinTimer); clearTimeout(NET.roomTimer); clearTimeout(NET.connTimer); NET.connTimer = 0; clearInterval(NET.keepTimer); NET.keepTimer = 0;   // gen: every continuation still awaiting the relay or ICE belongs to an older attempt from here on
   if (NET.pending) { const pd = NET.pending; NET.pending = null; pd.rej(new Error('cancelled')); }
   if (NET.mqtt) { try { NET.mqtt.close(); } catch (e) { /* closed */ } NET.mqtt = null; }
   if (NET.dc) { NET.dc.onclose = null; NET.dc.onerror = null; try { NET.dc.close(); } catch (e) { /* closed */ } NET.dc = null; }
