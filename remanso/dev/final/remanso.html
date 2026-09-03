@@ -358,8 +358,16 @@ function deriveGrid(rung, w, h) {          // explicit dims (online: the host's,
     if (oldF) fossilCtx.drawImage(oldF, 0, 0, layerW, layerH);
   }
   layerSx = layerW / GW; layerSy = layerH / GH; NZ.sx = 192 / Math.max(GW, GH); NZ.sy = NZ.sx;
-  for (let k = 0; k < GL.n; k++) { const g = GL.list[k]; if (g.everStamped) { g.cxC = g.def.cx * GW; g.cyC = g.def.cy * GH; g.Ec = g.def.E * Math.min(GW, GH); } }
-  fieldsClear(); histReset(); motesRespawnAll(); gridDirty = false;
+  fieldsClear(); histReset(); motesRespawnAll(); gridDirty = false; glyphsRederive();
+}
+function glyphsRederive() {                // after a grid change every stamped glyph's geometry, masks, bbox and mask mass follow the new grid (a rung drop at an act boundary used to leave the saved glyphs on the old grid, so Dawn's blend skipped them)
+  for (let k = 0; k < GL.n; k++) {
+    const g = GL.list[k]; if (!g.everStamped) continue; glyphRebuildMask(g); g.gridId = gridGen;
+    let x0 = GW, y0 = GH, x1 = 0, y1 = 0, ms = 0; const m = g.maskThick;
+    for (let y = 1; y < GH - 1; y++) for (let x = 1; x < GW - 1; x++) { const q = m[x + y * GW]; if (q > 0.01) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } ms += q; }
+    g.bx0 = Math.max(1, x0 - 4); g.by0 = Math.max(1, y0 - 4); g.bx1 = Math.min(GW - 2, x1 + 4); g.by1 = Math.min(GH - 2, y1 + 4); g.maskSum = Math.max(1e-4, ms);
+  }
+  ghostRebuild();
 }
 
 // ───────────────────────────── INPUT ─────────────────────────────
@@ -1968,14 +1976,7 @@ function ladder(frameMs, jsMs) {
   }
 }
 function forceRung(rung) {                 // harness (SOLO): pin the grid rung; fields cleared, history count 0, grid + every stamped glyph's masks re-derived
-  ST.calDrops = C.CAL_MAX_DROPS; DIR.rungPending = false; G.rungForced = true; gridDims(rung, 16 / 9); deriveGrid(rung, GD.w, GD.h);   // the nominal rung (192x108 / 160x90 / 128x72) whatever the window: two windows of different shape can be compared
-  for (let k = 0; k < GL.n; k++) {
-    const g = GL.list[k]; if (!g.everStamped) continue; glyphRebuildMask(g); g.gridId = gridGen;
-    let x0 = GW, y0 = GH, x1 = 0, y1 = 0, ms = 0; const m = g.maskThick;
-    for (let y = 1; y < GH - 1; y++) for (let x = 1; x < GW - 1; x++) { const q = m[x + y * GW]; if (q > 0.01) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } ms += q; }
-    g.bx0 = Math.max(1, x0 - 4); g.by0 = Math.max(1, y0 - 4); g.bx1 = Math.min(GW - 2, x1 + 4); g.by1 = Math.min(GH - 2, y1 + 4); g.maskSum = Math.max(1e-4, ms);
-  }
-  ghostRebuild();
+  ST.calDrops = C.CAL_MAX_DROPS; DIR.rungPending = false; G.rungForced = true; gridDims(rung, 16 / 9); deriveGrid(rung, GD.w, GD.h);   // the nominal rung (192x108 / 160x90 / 128x72) whatever the window: two windows of different shape can be compared; deriveGrid re-derives every stamped glyph
 }
 function calibrate(stepMs) {
   if (ST.calDone) return;
