@@ -1,0 +1,1501 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>REMANSO</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#02030a}
+canvas{display:block;position:fixed;left:0;top:0;touch-action:none;cursor:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+</style>
+</head>
+<body><canvas id="c"></canvas>
+<script>
+'use strict';
+/* REMANSO - "Onde a agua para, ela lembra." / Where the water stills, it remembers.
+   A night sea remembers 12 seconds. Move to stir the ink. Press and hold still to open a remanso:
+   inside the circle time runs backward and the glyph re-condenses; drag slowly to carry it.
+   Whole glyphs rise to the sky as constellations; lost ones become grey wisps. Morning lights what you kept.
+   Keys (optional): Space = still pointer at the last position, M = mute, hold R = restart. */
+
+// ---------------------------------------------------------------- CONST
+const K = Object.freeze({
+  DT: 1 / 60, MAX_STEPS: 2, MAX_STEPS_FAST: 6, ACC_CLAMP: 0.05,
+  CELLS: [20736, 14400, 9216], MAX: 20736,
+  VMAX: 40, V_RES: 12, K_TIDE: 1.5, EPS_CONFINE: 6.0, GS_SWEEPS: 10, GS_SWEEPS_DEG: 7,
+  DISS_INK: 0.9995, DISS_WISP: 0.9998, VEL_DAMP: 0.998, WALL_DAMP: 0.97, WALL_BAND: 3,
+  VORTEX_RC: 10, VORT_W1: 2 * Math.PI / 47, VORT_W2: 2 * Math.PI / 31, VORT_AX: 0.36, VORT_AY: 0.32, VORT_PHI: 2.1, VORT_PSI: 1.3,
+  VORT_PAIR_SHRINK: 0.5, RESID_AMP: 0.3, WEATHER_EVERY: 3,
+  STIR_SIGMA: 2.5, STIR_GAIN: 0.8, STIR_HOVER: 0.25, STIR_COUNTER: 1.6, STIR_AMP_MAX: 45, SUBSPLAT_STEP: 1.5, SUBSPLAT_MAX: 12,
+  STAMP_SIGMA: 1.2, THIN_SIGMA: 0.5, STAMP_SPACING: 0.7, HAND_VEL: 0.3, HAND_SIGMA: 2, HAND_RELAX: 0.35, HAND_JITTER: 6,
+  STILL_SPEED: 40, STILL_WINDOW: 0.15, S_RISE: 2.5, S_FALL: 6, S_RELEASE: 2, S_OPEN: 0.02,
+  R_MIN: 60, R_MAX: 230, R_GROW: 2, R_FLOOR: 44, KSCALE_MIN: 0.42, KSCALE_MAX: 1.2,
+  REWIND_RATE: 1, REWIND_DAWN: 4, WINDOW: 12, WINDOW_ACT3: 6, SNAP_HZ: 20, SLOTS: 240, SNAP_EVERY: 3,
+  RECALL_DYE: 0.35, RECALL_VEL: 0.5, RECALL_VEL_K: 1.2, RECALL_PLATEAU: 0.75, SETTLE: 0.08, RECALL_DECAY: 0.94,
+  RIM_SEG: 24, BEADS: 12, R_EFF_STRAIN: 0.35, RIM_DASH_SPEED: 90, RIM_FLICKER: 0.7, RIM_BREAK: 0.95, BEAD_R: 0.82,
+  MOTES: 1500, MOTES_DEG: 900, MOTE_BACK: 1.5, MOTE_AGE: 20, MOTE_BACK_R: 0.9, MIST: 400, MIST_RISE: 5,
+  COH_EVERY: 6, SET_COH: 0.70, SET_TIME: 1, ELIG_COH: 0.45, ELIG_TIME: 20,
+  FADE_COH: 0.20, FADE_TIME: 6, RECOVER_COH: 0.35, WISP_COH: 0.08, WISP_TIME: 12, RELIT_COH: 0.55, RELIT_TIME: 1,
+  FADE_MAX: 0.6, FADE_RATE: 0.1, LIFT_TIME: 3, DRAIN_TIME: 1.5, WISP_SRC: 0.002, WISP_SIGMA: 3, DIM_BRIGHT: 0.45,
+  NUDGE_T: 60, NUDGE_REPEAT: 45, NUDGE_DUR: 8, NUDGE_GHOST: 2, NUDGE_WEATHER: 0.4, IDLE_T: 120,
+  DEMO_T: 16, DEMO_REPEAT: 30, DEMO_HOLD: 2,
+  WEATHER_RAMP: 10, SKY_FADE: 6, CAP_WARN: 15, CAP_TIDE: 0.4, CAP_SKY: 0.06, CAP_PAUSE: 3, LOST_SKY: 0.06, LOST_SKY_T: 2, LOST_PUFF: 60,
+  ACT0_VORTEX_AT: 12, ACT0_VORTEX_LEAD: 8, ACT1_CROSS: 12, ACT1_G3_AT: 60, ACT2_SKY_AT: 0.5, ACT_MIN_LEN: 3,
+  ACTS: [
+    { id: 'act0', cap: 0, tideA: 0, tideP: 40, vort: 1, vpk: 2.5, window: 12, sky: '#02030a', noFade: true, glyphs: ['G1'] },
+    { id: 'act1', cap: 150, tideA: 6, tideP: 40, vort: 1, vpk: 5, window: 12, sky: '#1a0f3a', glyphs: ['G2', 'G3'] },
+    { id: 'act2', cap: 210, tideA: 9, tideP: 40, vort: 2, vpk: 8, window: 12, sky: '#3a1a4a', sky2: '#16357a', glyphs: ['G4', 'G5'] },
+    { id: 'act3', cap: 180, tideA: 14, tideP: 28, vort: 3, vpk: 12, window: 6, sky: '#16357a', predawn: true, glyphs: ['G6'] }
+  ],
+  GLYPHS: [
+    { id: 'G1', name: 'Espiral', act: 0, slot: 0, col: 'amber', cx: 0.50, cy: 0.50, E: 0.34, dur: 2 },
+    { id: 'G2', name: 'Abraco', act: 1, slot: 0, col: 'amber', cx: 0.38, cy: 0.52, E: 0.36, dur: 2 },
+    { id: 'G3', name: 'Ramo', act: 1, slot: 1, col: 'rose', cx: 0.64, cy: 0.50, E: 0.40, dur: 2 },
+    { id: 'G4', name: 'Lua', act: 2, slot: 0, col: 'amber', cx: 0.34, cy: 0.56, E: 0.34, dur: 2 },
+    { id: 'G5', name: 'Onda', act: 2, slot: 1, col: 'rose', cx: 0.66, cy: 0.56, E: 0.36, dur: 2 },
+    { id: 'G6', name: 'A Figura', act: 3, slot: 0, col: 'gold', cx: 0.50, cy: 0.52, E: 0.62, dur: 4 }
+  ],
+  DAWN_LEN: 40, DAWN_SKY: ['#16357a', '#f2b27a', '#fff1d6'], DAWN_REWIND: 3, DAWN_BLEND: 8, DAWN_BLEND_K: 0.1, DAWN_FOSSIL: 30, DAWN_BLEACH: 30, DAWN_TEXT: 34, DAWN_STARS_OUT: 36,
+  EPI_TIDE: 1.5, EPI_VPK: 1.5, EPI_SKY: '#fff1d6', EPI_RESTART_HOLD: 2, EPI_RIM_LIFE: 0.5, RESTART_KEY_HOLD: 1, RESTART_FADE: 2,
+  WATER: ['#050814', '#0b1330'], WATER_EPI: ['#1a2a4a', '#2a4a6a'], HORIZON: 0.25, HORIZON_PORTRAIT: 0.20,
+  COL: { amber: [1, 0.70, 0.42], rose: [1, 0.44, 0.57], gold: [1, 0.91, 0.69], grey: [0.42, 0.45, 0.50] },
+  RECALL_COL: [0.45, 0.55, 0.60], CALM_COL: [0.022, 0.030, 0.045], GHOST_COL: [0.55, 0.65, 0.80], GHOST_K: 0.12, SHEEN_K: 0.35, KNEE: 0.35, CALM_SPEED: 6,
+  SKY_HORIZON_DARK: 0.45, SCALE_PX: 2.6e6, SCALE_MIN: 0.75, SCALE_MAX: 1.5, MOTE_LAYER_W: 960, MOTE_LAYER_HMAX: 1280,
+  REFL_W: 256, REFL_H: 64, REFL_SLICES: 30, REFL_ALPHA: 0.12, REFL_DEPTH: 0.15, REFL_WOBBLE: 3,
+  BLOOM_B: 0.45, BLOOM_A: 0.2, BLOOM_C: 0.25, MOTE_FADE: 0.14, MOTE_FADE8: 0.25, MOTE_SPEEDS: [1.5, 5], MOTE_MARGIN: 4, MOTE_STALL: 0.08, MOTE_STALL_T: 2,
+  FOSSIL_ALPHA: 0.10, FOSSIL_DAWN: 0.9, FOSSIL_STROKE: 0.04, FOSSIL_RING: 0.08, FOSSIL_DISC: 0.02, VIGNETTE: 0.55, VIGNETTE_R0: 0.55, GRAIN: 0.035,
+  TEXT_PT: 0.85, TEXT_EN: 0.4, TEXT_IN: 1, TEXT_HOLD: 4, TEXT_OUT: 1.5, TEXT_OPEN_AT: 0.5,
+  STAR_FLIGHTS: 200, FLIGHT_POOL: 256, SPARKS: 24, SPARK_POOL: 64, RIPPLES: 16, RING_R: 7, RING_STILL_R: 4,
+  SET_FLASH: 0.12, SET_FLASH_T: 0.6, SET_RING_R: 0.3, SET_RING_T: 1.2,
+  CAL_START: 10, CAL_END: 70, CAL_MS: 5.5, CAL_MAX_DROPS: 2, LADDER_DT: 17.5, LADDER_JS: 9, LADDER_RESTORE: 11, LADDER_FRAMES: 30, LADDER_RESTORE_FRAMES: 600,
+  AU: { master: 0.5, bus: 0.8, reverb: 0.3, bed1: 0.10, bed2: 0.05, pad: 0.12, padAttack: 1.2, padRelease: 0.03, plink: 0.04, tell: 0.05, swell: 0.08, chord: 0.12, thud: 0.15, partial: 0.02, partialDim: 0.015, partialWisp: 0.012, tick: 0.03, mute: 0.05 }
+});
+
+// ---------------------------------------------------------------- UTIL
+let rngState = 2463534242;
+function rnd() { rngState ^= rngState << 13; rngState ^= rngState >>> 17; rngState ^= rngState << 5; return (rngState >>> 0) / 4294967296; }
+function seedRng(n) { rngState = (n | 0) || 88675123; }
+const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
+const lerp = (a, b, t) => a + (b - a) * t;
+function smooth(e0, e1, x) { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); }
+const easeOutCubic = t => 1 - (1 - t) * (1 - t) * (1 - t);
+const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const easeInOutSine = t => -(Math.cos(Math.PI * t) - 1) / 2;
+const easeInQuad = t => t * t;
+const easeOutQuad = t => 1 - (1 - t) * (1 - t);
+function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function rgbStr(c, a) { return 'rgba(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ',' + a + ')'; }
+function mixRgb(a, b, t) { return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]; }
+function scaleRgb(c, k) { return [c[0] * k, c[1] * k, c[2] * k]; }
+const WHITE = [255, 255, 255];
+const FONT = "500 {S}px 'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif";
+const KNEE = new Uint8Array(1024);
+for (let i = 0; i < 1024; i++) { const x = i / 512; KNEE[i] = Math.round(255 * x / (1 + K.KNEE * x)); }
+const RIM_COLS = new Array(33);
+for (let i = 0; i <= 32; i++) {
+  const t = i / 32, teal = [127, 227, 255], amber = [255, 179, 71];
+  const c = t < 0.5 ? mixRgb(teal, amber, t * 2) : mixRgb(amber, WHITE, (t - 0.5) * 2);
+  RIM_COLS[i] = rgbStr(c, 0.85 * (1 - 0.8 * t));
+}
+const MOTE_COLS = ['rgba(190,204,222,0.08)', 'rgba(207,216,227,0.22)', 'rgba(215,224,235,0.45)', 'rgba(191,233,255,0.8)', 'rgba(230,236,244,0.3)'];
+const MOTE_COLS_EPI = ['rgba(255,246,225,0.5)', 'rgba(255,246,225,0.7)', 'rgba(255,255,240,0.9)', 'rgba(191,233,255,0.8)', 'rgba(230,236,244,0.3)'];
+let T = 0;            // game seconds since boot (fixed steps)
+let realNow = 0;      // performance.now() once per frame (ms)
+let frameNo = 0;
+
+// ---------------------------------------------------------------- CANVAS
+const cvs = document.getElementById('c');
+const ctx = cvs.getContext('2d', { alpha: false });
+const L = { cssW: 1, cssH: 1, scale: 1, hx: 0, wx: 0, wy: 0, ww: 1, wh: 1, lmin: 1, kScale: 1, portrait: false, cellW: 1, cellH: 1, dirty: true };
+function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, w | 0); c.height = Math.max(1, h | 0); return c; }
+const OFF = { ink: null, inkCtx: null, img: null, pix: null, bloomA: null, bloomB: null, bloomC: null, motes: null, motesCtx: null, fossil: null, fossilCtx: null, refl: mkCanvas(K.REFL_W, K.REFL_H), grain: null, mw: 1, mh: 1 };
+OFF.reflCtx = OFF.refl.getContext('2d');
+function radialSprite(size, stops) {
+  const c = mkCanvas(size, size), g = c.getContext('2d'), r = size / 2;
+  const gr = g.createRadialGradient(r, r, 0, r, r, r);
+  for (let i = 0; i < stops.length; i++) gr.addColorStop(stops[i][0], stops[i][1]);
+  g.fillStyle = gr; g.fillRect(0, 0, size, size); return c;
+}
+const SPR = {
+  star: radialSprite(32, [[0, 'rgba(255,240,200,1)'], [0.18, 'rgba(255,233,176,0.9)'], [0.45, 'rgba(255,233,176,0.25)'], [1, 'rgba(255,233,176,0)']]),
+  starDim: radialSprite(32, [[0, 'rgba(200,210,235,1)'], [0.2, 'rgba(154,166,192,0.8)'], [0.5, 'rgba(154,166,192,0.2)'], [1, 'rgba(154,166,192,0)']]),
+  glow: radialSprite(64, [[0, 'rgba(255,236,200,0.9)'], [0.25, 'rgba(255,210,150,0.45)'], [0.6, 'rgba(255,190,120,0.12)'], [1, 'rgba(255,180,100,0)']]),
+  spark: radialSprite(16, [[0, 'rgba(230,250,255,1)'], [0.4, 'rgba(160,230,255,0.6)'], [1, 'rgba(120,200,255,0)']]),
+  bead: radialSprite(12, [[0, 'rgba(255,255,255,1)'], [0.35, 'rgba(210,240,255,0.9)'], [1, 'rgba(160,220,255,0)']]),
+  disc: radialSprite(128, [[0, 'rgba(180,230,255,0.55)'], [0.55, 'rgba(160,220,255,0.22)'], [0.85, 'rgba(140,210,255,0.05)'], [1, 'rgba(140,210,255,0)']]),
+  ring: radialSprite(128, [[0, 'rgba(140,210,255,0)'], [0.72, 'rgba(140,210,255,0)'], [0.9, 'rgba(180,230,255,0.5)'], [1, 'rgba(200,240,255,0)']]),
+  grainOK: true
+};
+function buildGrain() {
+  const c = mkCanvas(256, 256), g = c.getContext('2d'), im = g.createImageData(256, 256), d = im.data;
+  for (let i = 0; i < 256 * 256; i++) { const v = (rnd() * 255) | 0; d[i * 4] = v; d[i * 4 + 1] = v; d[i * 4 + 2] = v; d[i * 4 + 3] = 255; }
+  g.putImageData(im, 0, 0); OFF.grain = c; OFF.grainPat = ctx.createPattern(c, 'repeat');
+}
+function applyResize() {
+  L.dirty = false;
+  L.cssW = Math.max(1, window.innerWidth | 0); L.cssH = Math.max(1, window.innerHeight | 0);
+  const dpr = window.devicePixelRatio || 1;
+  L.scale = clamp(Math.min(dpr, K.SCALE_MAX, Math.sqrt(K.SCALE_PX / (L.cssW * L.cssH))), K.SCALE_MIN, K.SCALE_MAX) * Q.scaleMul;
+  cvs.width = Math.max(1, Math.round(L.cssW * L.scale)); cvs.height = Math.max(1, Math.round(L.cssH * L.scale));
+  cvs.style.width = L.cssW + 'px'; cvs.style.height = L.cssH + 'px';
+  ctx.setTransform(L.scale, 0, 0, L.scale, 0, 0);
+  L.portrait = L.cssH > L.cssW;
+  L.hx = Math.round(L.cssH * (L.portrait ? K.HORIZON_PORTRAIT : K.HORIZON));
+  L.wx = 0; L.wy = L.hx; L.ww = L.cssW; L.wh = Math.max(1, L.cssH - L.hx);
+  L.lmin = Math.min(L.ww, L.wh);
+  L.kScale = clamp(Math.min(L.cssW, L.cssH) / 1080, K.KSCALE_MIN, K.KSCALE_MAX);
+  if (G.W > 1) { L.cellW = L.ww / G.W; L.cellH = L.wh / G.H; }
+  SKY.rebuild(); RENDER.rebuildStatic();
+}
+window.addEventListener('resize', () => { L.dirty = true; });
+
+// ---------------------------------------------------------------- INPUT
+const INPUT = { lastX: -1, lastY: -1, lastInputT: 0, pressed: false, rDownAt: -1, muted: false, lastTouchMs: -1e9 };
+const PTR = [];
+function mkPtr(id, kind) {
+  return { id, kind, type: 'mouse', alive: true, down: false, x: 0, y: 0, lx: 0, ly: 0, ring: new Float32Array(96), ri: 0, rn: 0, speed: 0,
+    s: 0, holdT: 0, d: 0, R: 0, Reff: 0, strain: new Float32Array(K.RIM_SEG), strainAvg: 0, breakFrame: new Int32Array(K.RIM_SEG),
+    inSky: false, wasOpen: false, spent: false, dash: 0, openT: 0, mask: null, gainN: 0, gainD: 0, etched: false };
+}
+function findPtr(id) { for (let i = 0; i < PTR.length; i++) if (PTR[i].alive && PTR[i].id === id) return PTR[i]; return null; }
+function allocPtr(id, kind) {
+  let real = 0; for (let i = 0; i < PTR.length; i++) if (PTR[i].alive && PTR[i].kind === 'real') real++;
+  if (kind === 'real' && real >= 2) return null;
+  for (let i = 0; i < PTR.length; i++) if (!PTR[i].alive) { const p = PTR[i]; Object.assign(p, mkPtr(id, kind)); p.ring.fill(0); p.rn = 0; return p; }
+  const p = mkPtr(id, kind); PTR.push(p); return p;
+}
+function pointerGuard(e) {
+  const now = performance.now();
+  if (e.pointerType === 'touch') INPUT.lastTouchMs = now;
+  else if (e.pointerType === 'mouse' && now - INPUT.lastTouchMs < 500) return false;
+  return true;
+}
+function noteInput(x, y) { INPUT.lastX = x; INPUT.lastY = y; INPUT.lastInputT = T; }
+cvs.addEventListener('pointerdown', e => {
+  if (!pointerGuard(e)) return;
+  AUDIO.init();
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  let p = findPtr(e.pointerId);
+  if (!p) { p = allocPtr(e.pointerId, 'real'); if (!p) return; p.type = e.pointerType; p.x = p.lx = e.clientX; p.y = p.ly = e.clientY; }
+  p.down = true; p.x = e.clientX; p.y = e.clientY; p.spent = false; INPUT.pressed = true; noteInput(p.x, p.y);
+  try { cvs.setPointerCapture(e.pointerId); } catch (err) { /* capture is optional */ }
+});
+cvs.addEventListener('pointermove', e => {
+  if (!pointerGuard(e)) return;
+  let p = findPtr(e.pointerId);
+  if (!p) { if (e.pointerType !== 'mouse') return; p = allocPtr(e.pointerId, 'real'); if (!p) return; p.type = 'mouse'; p.x = p.lx = e.clientX; p.y = p.ly = e.clientY; }
+  p.x = e.clientX; p.y = e.clientY; noteInput(p.x, p.y);
+});
+function pointerEnd(e) { if (!pointerGuard(e)) return; const p = findPtr(e.pointerId); if (!p) return; p.down = false; p.spent = false; if (e.pointerType !== 'mouse') p.x = e.clientX, p.y = e.clientY; }
+cvs.addEventListener('pointerup', pointerEnd);
+cvs.addEventListener('pointercancel', pointerEnd);
+cvs.addEventListener('contextmenu', e => e.preventDefault());
+cvs.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+cvs.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+cvs.addEventListener('dblclick', e => e.preventDefault());
+function releaseAll() { for (let i = 0; i < PTR.length; i++) { const p = PTR[i]; p.down = false; if (p.kind !== 'real') p.alive = false; } INPUT.rDownAt = -1; }
+window.addEventListener('blur', releaseAll);
+window.addEventListener('keydown', e => {
+  AUDIO.init();
+  if (e.code === 'Space') { e.preventDefault(); let p = findPtr('space'); if (!p) { p = allocPtr('space', 'space'); if (!p) return; const x = INPUT.lastX < 0 ? L.cssW / 2 : INPUT.lastX, y = INPUT.lastY < 0 ? L.wy + L.wh / 2 : INPUT.lastY; p.x = p.lx = x; p.y = p.ly = y; } p.down = true; INPUT.lastInputT = T; }
+  else if (e.code === 'KeyM' && !e.repeat) AUDIO.toggleMute();
+  else if (e.code === 'KeyR' && INPUT.rDownAt < 0) INPUT.rDownAt = performance.now();
+});
+window.addEventListener('keyup', e => {
+  if (e.code === 'Space') { const p = findPtr('space'); if (p) p.down = false; }
+  else if (e.code === 'KeyR') INPUT.rDownAt = -1;
+});
+// per-frame speed sampling (150 ms mean) and per-step stillness / stir
+INPUT.frame = function (nowMs) {
+  for (let i = 0; i < PTR.length; i++) {
+    const p = PTR[i]; if (!p.alive) continue;
+    const r = p.ring, ri = p.ri; r[ri * 3] = nowMs; r[ri * 3 + 1] = p.x; r[ri * 3 + 2] = p.y;
+    p.ri = (ri + 1) & 31; if (p.rn < 32) p.rn++;
+    let j = ri, best = -1;
+    for (let k = 1; k < p.rn; k++) { j = (j + 31) & 31; if (nowMs - r[j * 3] >= K.STILL_WINDOW * 1000) { best = j; break; } best = j; }
+    if (best < 0) { p.speed = 0; continue; }
+    const dt = Math.max(0.016, (nowMs - r[best * 3]) / 1000);
+    const dx = p.x - r[best * 3 + 1], dy = p.y - r[best * 3 + 2];
+    p.speed = Math.sqrt(dx * dx + dy * dy) / dt;
+  }
+};
+INPUT.step = function () {
+  const win = DIR.windowNow(), epi = DIR.phase === 'epilogue';
+  for (let i = 0; i < PTR.length; i++) {
+    const p = PTR[i]; if (!p.alive) continue;
+    p.inSky = p.y < L.wy;
+    const canHold = p.down && !p.inSky && !p.spent;
+    const still = p.speed < K.STILL_SPEED;
+    if (canHold && still) { p.s = Math.min(1, p.s + K.S_RISE * K.DT); p.holdT += K.DT; }
+    else if (canHold) { p.s = Math.max(0, p.s - K.S_FALL * K.DT); if (p.s === 0) { p.holdT = 0; p.d = 0; } }
+    else { p.s = Math.max(0, p.s - K.S_RELEASE * K.DT); if (p.s === 0) { p.holdT = 0; p.d = 0; } }
+    const open = p.s > K.S_OPEN;
+    if (open) {
+      if (canHold && still) {
+        const tg = GLYPHS.settleTarget((p.x - L.wx) / L.cellW, (p.y - L.wy) / L.cellH, p.R / L.cellW);
+        p.d = Math.min(p.d + DIR.rewindRate() * K.DT, win, HIST.depthAvail(), HIST.depthLimit(tg));
+      }
+      p.R = Math.max(K.R_FLOOR, (K.R_MIN + (K.R_MAX - K.R_MIN) * easeOutCubic(Math.min(p.holdT, K.R_GROW) / K.R_GROW)) * L.kScale);
+      p.openT += K.DT;
+      if (epi && p.holdT > K.EPI_RIM_LIFE) p.spent = true;
+    }
+    if (open && !p.wasOpen) { p.openT = 0; p.dash = 0; AUDIO.padOn(); }
+    if (!open && p.wasOpen) { REMANSO.close(p); AUDIO.padOff(); }
+    p.wasOpen = open;
+    // stir along the segment moved since the last step
+    const dx = p.x - p.lx, dy = p.y - p.ly;
+    if (dx !== 0 || dy !== 0) {
+      if (p.kind === 'real' && !(open && p.down) && !p.inSky && p.ly >= L.wy && !DIR.fading) REMANSO.stir(p, dx, dy);
+      if (p.down && !p.inSky && p.ly >= L.wy) FOSSIL.stroke(p.lx, p.ly, p.x, p.y);
+      p.lx = p.x; p.ly = p.y;
+    }
+    if (!p.down && p.s === 0 && (p.kind !== 'real' || p.type !== 'mouse')) p.alive = false;
+  }
+};
+
+// ---------------------------------------------------------------- FLUID
+const G = { W: 0, H: 0, N: 0, rung: 0, aspect: 1, calibrated: false };
+const F = {};
+for (const n of ['u', 'v', 'u0', 'v0', 'd0', 'd1', 'dW', 't0', 't1', 'tW', 'p', 'div', 'curl', 'speed', 'recall', 'uT', 'vT', 'ghost', 'dawn0', 'dawn1', 'dawnW']) F[n] = new Float32Array(K.MAX);
+let stepNo = 0, nanWarned = false;
+function clearFields() { for (const n in F) F[n].fill(0); }
+function deriveGrid(rung) {
+  const aspect = L.ww / L.wh, cells = K.CELLS[rung];
+  let W = Math.max(8, Math.floor(Math.sqrt(cells * aspect))), H = Math.max(8, Math.floor(W / aspect));
+  while (W * H > K.MAX) H--;
+  G.W = W; G.H = H; G.N = W * H; G.rung = rung; G.aspect = aspect;
+  L.cellW = L.ww / W; L.cellH = L.wh / H;
+  clearFields(); HIST.count = 0; HIST.head = 0;
+  OFF.ink = mkCanvas(W, H); OFF.inkCtx = OFF.ink.getContext('2d');
+  OFF.img = OFF.inkCtx.createImageData(W, H); OFF.pix = new Uint32Array(OFF.img.data.buffer);
+  OFF.bloomA = mkCanvas(Math.ceil(W / 2), Math.ceil(H / 2)); OFF.bloomB = mkCanvas(Math.ceil(W / 4), Math.ceil(H / 4)); OFF.bloomC = mkCanvas(Math.ceil(W / 8), Math.ceil(H / 8));
+  let mw = K.MOTE_LAYER_W, mh = Math.round(mw / aspect);
+  if (mh > K.MOTE_LAYER_HMAX) { mh = K.MOTE_LAYER_HMAX; mw = Math.round(mh * aspect); }
+  OFF.mw = mw; OFF.mh = mh;
+  OFF.motes = mkCanvas(mw, mh); OFF.motesCtx = OFF.motes.getContext('2d');
+  const old = OFF.fossil; OFF.fossil = mkCanvas(mw, mh); OFF.fossilCtx = OFF.fossil.getContext('2d');
+  if (old) OFF.fossilCtx.drawImage(old, 0, 0, mw, mh);
+  MOTES.reseed();
+  for (let i = 0; i < GLYPHS.list.length; i++) { const g = GLYPHS.list[i]; if (g.state === 'PENDING' || g.state === 'STAR' || g.state === 'DIM') continue; g.needMask = true; }
+  GLYPHS.rebuildGhost();
+}
+function splatVel(cx, cy, ax, ay, sigma) {
+  const W = G.W, H = G.H, u = F.u, v = F.v, r = Math.ceil(3 * sigma), inv = -1 / (2 * sigma * sigma);
+  const x0 = Math.max(1, Math.floor(cx - r)), x1 = Math.min(W - 2, Math.ceil(cx + r)), y0 = Math.max(1, Math.floor(cy - r)), y1 = Math.min(H - 2, Math.ceil(cy + r));
+  for (let y = y0; y <= y1; y++) { const dy = y - cy; for (let x = x0; x <= x1; x++) { const dx = x - cx, g = Math.exp((dx * dx + dy * dy) * inv), i = x + y * W; u[i] += ax * g; v[i] += ay * g; } }
+}
+function splatToward(cx, cy, tx, ty, sigma, k) {
+  const W = G.W, H = G.H, u = F.u, v = F.v, r = Math.ceil(3 * sigma), inv = -1 / (2 * sigma * sigma);
+  const x0 = Math.max(1, Math.floor(cx - r)), x1 = Math.min(W - 2, Math.ceil(cx + r)), y0 = Math.max(1, Math.floor(cy - r)), y1 = Math.min(H - 2, Math.ceil(cy + r));
+  for (let y = y0; y <= y1; y++) { const dy = y - cy; for (let x = x0; x <= x1; x++) { const dx = x - cx, g = k * Math.exp((dx * dx + dy * dy) * inv), i = x + y * W; u[i] += (tx - u[i]) * g; v[i] += (ty - v[i]) * g; } }
+}
+function splatMax(arr, cx, cy, sigma) {
+  const W = G.W, H = G.H, r = Math.ceil(3 * sigma), inv = -1 / (2 * sigma * sigma);
+  const x0 = Math.max(1, Math.floor(cx - r)), x1 = Math.min(W - 2, Math.ceil(cx + r)), y0 = Math.max(1, Math.floor(cy - r)), y1 = Math.min(H - 2, Math.ceil(cy + r));
+  for (let y = y0; y <= y1; y++) { const dy = y - cy; for (let x = x0; x <= x1; x++) { const dx = x - cx, g = Math.exp((dx * dx + dy * dy) * inv), i = x + y * W; if (g > arr[i]) arr[i] = g; } }
+}
+function splatAdd(arr, cx, cy, sigma, amp) {
+  const W = G.W, H = G.H, r = Math.ceil(3 * sigma), inv = -1 / (2 * sigma * sigma);
+  const x0 = Math.max(1, Math.floor(cx - r)), x1 = Math.min(W - 2, Math.ceil(cx + r)), y0 = Math.max(1, Math.floor(cy - r)), y1 = Math.min(H - 2, Math.ceil(cy + r));
+  for (let y = y0; y <= y1; y++) { const dy = y - cy; for (let x = x0; x <= x1; x++) { const dx = x - cx; arr[x + y * W] += amp * Math.exp((dx * dx + dy * dy) * inv); } }
+}
+function sampleBilinear(arr, x, y) {
+  const W = G.W, H = G.H; x = clamp(x, 0, W - 1.001); y = clamp(y, 0, H - 1.001);
+  const x0 = x | 0, y0 = y | 0, fx = x - x0, fy = y - y0, i = x0 + y0 * W;
+  return (arr[i] * (1 - fx) + arr[i + 1] * fx) * (1 - fy) + (arr[i + W] * (1 - fx) + arr[i + W + 1] * fx) * fy;
+}
+function fluidForces() {
+  const W = G.W, H = G.H, u = F.u, v = F.v, uT = F.uT, vT = F.vT, kt = K.K_TIDE * K.DT, band = K.WALL_BAND, wd = K.WALL_DAMP;
+  for (let y = 1; y < H - 1; y++) {
+    const wallY = y < band || y >= H - band;
+    for (let x = 1; x < W - 1; x++) {
+      const i = x + y * W;
+      u[i] += (uT[i] - u[i]) * kt; v[i] += (vT[i] - v[i]) * kt;
+      if (wallY || x < band || x >= W - band) { u[i] *= wd; v[i] *= wd; }
+    }
+  }
+  INPUT.step(); GLYPHS.stampStep(); GLYPHS.wispSources();
+}
+function fluidConfine() {
+  const W = G.W, H = G.H, u = F.u, v = F.v, curl = F.curl, e = K.EPS_CONFINE * K.DT;
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { const i = x + y * W; curl[i] = 0.5 * ((v[i + 1] - v[i - 1]) - (u[i + W] - u[i - W])); }
+  for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) {
+    const i = x + y * W, c = curl[i];
+    const gx = 0.5 * (Math.abs(curl[i + 1]) - Math.abs(curl[i - 1])), gy = 0.5 * (Math.abs(curl[i + W]) - Math.abs(curl[i - W]));
+    const len = Math.sqrt(gx * gx + gy * gy) + 1e-6;
+    u[i] += e * (gy / len) * c; v[i] -= e * (gx / len) * c;
+  }
+}
+function fluidDamp() {
+  const N = G.N, u = F.u, v = F.v, sp = F.speed, dmp = K.VEL_DAMP, vm2 = K.VMAX * K.VMAX;
+  for (let i = 0; i < N; i++) {
+    let a = u[i] * dmp, b = v[i] * dmp, m2 = a * a + b * b;
+    if (m2 > vm2) { const k = K.VMAX / Math.sqrt(m2); a *= k; b *= k; m2 = vm2; }
+    u[i] = a; v[i] = b; sp[i] = Math.sqrt(m2);
+  }
+}
+function fluidAdvect() {
+  const W = G.W, H = G.H, u = F.u, v = F.v, d0 = F.d0, d1 = F.d1, dW = F.dW, nu = F.u0, nv = F.v0, n0 = F.t0, n1 = F.t1, nW = F.tW, dt = K.DT;
+  const mx = W - 1.5, my = H - 1.5;
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    const i = x + y * W;
+    let bx = x - u[i] * dt, by = y - v[i] * dt;
+    bx = bx < 0.5 ? 0.5 : bx > mx ? mx : bx; by = by < 0.5 ? 0.5 : by > my ? my : by;
+    const x0 = bx | 0, y0 = by | 0, fx = bx - x0, fy = by - y0, j = x0 + y0 * W;
+    const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy, j1 = j + 1, jw = j + W, jw1 = j + W + 1;
+    nu[i] = u[j] * w00 + u[j1] * w10 + u[jw] * w01 + u[jw1] * w11;
+    nv[i] = v[j] * w00 + v[j1] * w10 + v[jw] * w01 + v[jw1] * w11;
+    n0[i] = d0[j] * w00 + d0[j1] * w10 + d0[jw] * w01 + d0[jw1] * w11;
+    n1[i] = d1[j] * w00 + d1[j1] * w10 + d1[jw] * w01 + d1[jw1] * w11;
+    nW[i] = dW[j] * w00 + dW[j1] * w10 + dW[jw] * w01 + dW[jw1] * w11;
+  }
+  F.u = nu; F.u0 = u; F.v = nv; F.v0 = v; F.d0 = n0; F.t0 = d0; F.d1 = n1; F.t1 = d1; F.dW = nW; F.tW = dW;
+}
+function fluidWalls() {
+  const W = G.W, H = G.H, u = F.u, v = F.v;
+  for (let x = 0; x < W; x++) { v[x] = 0; u[x] = u[x + W]; const b = x + (H - 1) * W; v[b] = 0; u[b] = u[b - W]; }
+  for (let y = 0; y < H; y++) { const l = y * W, r = l + W - 1; u[l] = 0; v[l] = v[l + 1]; u[r] = 0; v[r] = v[r - 1]; }
+}
+function fluidProject() {
+  const W = G.W, H = G.H, u = F.u, v = F.v, p = F.p, div = F.div, sweeps = Q.gs;
+  fluidWalls();
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { const i = x + y * W; div[i] = 0.5 * (u[i + 1] - u[i - 1] + v[i + W] - v[i - W]); p[i] = 0; }
+  for (let k = 0; k < sweeps; k++) {
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { const i = x + y * W; p[i] = (p[i - 1] + p[i + 1] + p[i - W] + p[i + W] - div[i]) * 0.25; }
+    for (let x = 0; x < W; x++) { p[x] = p[x + W]; p[x + (H - 1) * W] = p[x + (H - 2) * W]; }
+    for (let y = 0; y < H; y++) { p[y * W] = p[y * W + 1]; p[y * W + W - 1] = p[y * W + W - 2]; }
+  }
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { const i = x + y * W; u[i] -= 0.5 * (p[i + 1] - p[i - 1]); v[i] -= 0.5 * (p[i + W] - p[i - W]); }
+  fluidWalls();
+}
+function fluidDissipate() {
+  const N = G.N, d0 = F.d0, d1 = F.d1, dW = F.dW, rc = F.recall, ki = K.DISS_INK, kw = K.DISS_WISP, kr = K.RECALL_DECAY;
+  for (let i = 0; i < N; i++) { d0[i] *= ki; d1[i] *= ki; dW[i] *= kw; rc[i] *= kr; }
+}
+function fluidStep() {
+  stepNo++;
+  if (stepNo % K.WEATHER_EVERY === 0) WEATHER.targets();
+  fluidForces(); fluidConfine(); fluidDamp(); fluidAdvect(); fluidProject(); fluidDissipate();
+  REMANSO.kernels();
+  if (stepNo % K.SNAP_EVERY === 0 && !REMANSO.anyOpen() && !DIR.dawnRewind && DIR.phase !== 'epilogue') HIST.write();
+  MOTES.step();
+  if (stepNo % K.COH_EVERY === 0) GLYPHS.coherence();
+  const c = (G.W >> 1) + (G.H >> 1) * G.W;
+  if (!isFinite(F.u[c]) || !isFinite(F.d0[c])) { F.u.fill(0); F.v.fill(0); F.u0.fill(0); F.v0.fill(0); F.p.fill(0); F.div.fill(0); if (!nanWarned) { nanWarned = true; console.warn('REMANSO: fluid NaN sentinel fired; velocity reset'); } }
+}
+function flowAtCss(x, y) {
+  if (x < L.wx || y < L.wy || x >= L.wx + L.ww || y >= L.wy + L.wh || G.N === 0) return { u: 0, v: 0, speed: 0 };
+  const cx = (x - L.wx) / L.cellW, cy = (y - L.wy) / L.cellH;
+  const u = sampleBilinear(F.u, cx, cy) * L.cellW, v = sampleBilinear(F.v, cx, cy) * L.cellH;
+  return { u, v, speed: Math.sqrt(u * u + v * v) };
+}
+
+// ---------------------------------------------------------------- HISTORY
+const HIST = {
+  buf: new ArrayBuffer(K.SLOTS * K.MAX * 5), head: 0, count: 0, total: 0,
+  slotA: 0, slotB: 0, frac: 0, valid: false,
+  depthAvail() { return Math.max(0, (this.count - 1) / K.SNAP_HZ); },
+  // the water remembers a glyph from the moment it was drawn: a hold over it cannot reach before its stamp
+  depthLimit(g) { return g ? Math.max(0, (this.total - g.snapAtStamp) / K.SNAP_HZ) : 1e9; },
+  write() {
+    const N = G.N, d0 = F.d0, d1 = F.d1, dW = F.dW, u = F.u, v = F.v, dy = this.dye, ve = this.vel;
+    this.head = (this.head + 1) % K.SLOTS; this.count = Math.min(this.count + 1, K.SLOTS); this.total++;
+    const b3 = this.head * N * 3, b2 = this.head * N * 2;
+    for (let i = 0; i < N; i++) {
+      let a = d0[i]; dy[b3 + i] = (a > 1.99 ? 1.99 : a) * 128;
+      a = d1[i]; dy[b3 + N + i] = (a > 1.99 ? 1.99 : a) * 128;
+      a = dW[i]; dy[b3 + 2 * N + i] = (a > 1.99 ? 1.99 : a) * 128;
+      a = u[i] * 3; a = a > 127 ? 127 : a < -127 ? -127 : a; ve[b2 + i] = (a + (a >= 0 ? 0.5 : -0.5)) | 0;
+      a = v[i] * 3; a = a > 127 ? 127 : a < -127 ? -127 : a; ve[b2 + N + i] = (a + (a >= 0 ? 0.5 : -0.5)) | 0;
+    }
+  },
+  // prepare an interpolated read at depth d seconds (sets slotA/slotB/frac); valid=false when nothing is stored
+  seek(d) {
+    if (this.count < 2) { this.valid = false; return; }
+    let kf = Math.max(0, d) * K.SNAP_HZ; const maxK = this.count - 2;
+    if (kf > maxK) kf = maxK;
+    const k = kf | 0; this.frac = kf - k;
+    this.slotA = (this.head - k + K.SLOTS * 2) % K.SLOTS; this.slotB = (this.slotA - 1 + K.SLOTS) % K.SLOTS; this.valid = true;
+  }
+};
+HIST.dye = new Uint8Array(HIST.buf, 0, K.SLOTS * K.MAX * 3);
+HIST.vel = new Int8Array(HIST.buf, K.SLOTS * K.MAX * 3, K.SLOTS * K.MAX * 2);
+
+// ---------------------------------------------------------------- REMANSO
+const REMANSO = {
+  sparks: new Float32Array(K.SPARK_POOL * 5), sparkN: 0, tickBudget: 0, ticks: 0,
+  anyOpen() { for (let i = 0; i < PTR.length; i++) { const p = PTR[i]; if (p.alive && p.s > K.S_OPEN) return true; } return false; },
+  stir(p, dx, dy) {
+    const cw = L.cellW, ch = L.cellH, len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 0.01 || G.N === 0) return;
+    const ux = dx / len, uy = dy / len, speedCells = p.speed / (0.5 * (cw + ch));
+    let amp = Math.min(speedCells, K.STIR_AMP_MAX) * K.STIR_GAIN * (p.down ? 1 : K.STIR_HOVER);
+    if (amp < 0.05) return;
+    const cx1 = (p.x - L.wx) / cw, cy1 = (p.y - L.wy) / ch, cx0 = (p.lx - L.wx) / cw, cy0 = (p.ly - L.wy) / ch;
+    const lu = sampleBilinear(F.u, cx1, cy1), lv = sampleBilinear(F.v, cx1, cy1);
+    if (ux * lu + uy * lv < 0) amp *= K.STIR_COUNTER;
+    const sx = cx1 - cx0, sy = cy1 - cy0, seg = Math.sqrt(sx * sx + sy * sy);
+    const n = Math.min(K.SUBSPLAT_MAX, Math.max(1, Math.ceil(seg / K.SUBSPLAT_STEP)));
+    for (let k = 0; k < n; k++) { const t = (k + 0.5) / n; splatVel(cx0 + sx * t, cy0 + sy * t, amp * ux, amp * uy, K.STIR_SIGMA); }
+    if (p.down) AUDIO.stirSpeed = Math.max(AUDIO.stirSpeed, p.speed);
+  },
+  rim(p) {
+    const cw = L.cellW, ch = L.cellH, cx = (p.x - L.wx) / cw, cy = (p.y - L.wy) / ch, R = p.R / cw, st = p.strain;
+    let sum = 0, broke = false;
+    for (let k = 0; k < K.RIM_SEG; k++) {
+      const a = (k + 0.5) / K.RIM_SEG * Math.PI * 2;
+      const sp = sampleBilinear(F.speed, cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+      const s = sp > K.V_RES ? 1 : sp / K.V_RES;
+      if (s > K.RIM_BREAK && st[k] <= K.RIM_BREAK) { p.breakFrame[k] = frameNo; broke = true; }
+      st[k] = s; sum += s;
+    }
+    p.strainAvg = sum / K.RIM_SEG;
+    p.Reff = p.R * (1 - K.R_EFF_STRAIN * p.strainAvg);
+    if (broke && this.ticks < 6) { this.ticks++; AUDIO.tick(); }
+  },
+  kernels() {
+    if (stepNo % 60 === 0) this.ticks = 0;
+    const epi = DIR.phase === 'epilogue', wbuf = F.tW, W = G.W, H = G.H;
+    let n = 0;
+    for (let i = 0; i < PTR.length; i++) {
+      const p = PTR[i]; if (!p.alive || p.s <= K.S_OPEN) continue;
+      this.rim(p);
+      if (epi || DIR.dawnRewind) continue;
+      const cx = (p.x - L.wx) / L.cellW, cy = (p.y - L.wy) / L.cellH, R = p.Reff / L.cellW;
+      const x0 = Math.max(1, Math.floor(cx - R)), x1 = Math.min(W - 2, Math.ceil(cx + R)), y0 = Math.max(1, Math.floor(cy - R)), y1 = Math.min(H - 2, Math.ceil(cy + R));
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) wbuf[x + y * W] = 0;
+      n++;
+    }
+    if (n === 0) return;
+    let idx = 0;
+    for (let i = 0; i < PTR.length; i++) {
+      const p = PTR[i]; if (!p.alive || p.s <= K.S_OPEN) continue;
+      this.apply(p, idx++);
+    }
+  },
+  apply(p, idx) {
+    const W = G.W, H = G.H, cx = (p.x - L.wx) / L.cellW, cy = (p.y - L.wy) / L.cellH, R = p.Reff / L.cellW;
+    if (R < 1) return;
+    HIST.seek(p.d);
+    const valid = HIST.valid, N = G.N, dyH = HIST.dye, veH = HIST.vel, fr = HIST.frac, fa = 1 - fr;
+    const a3 = HIST.slotA * N * 3, b3 = HIST.slotB * N * 3, a2 = HIST.slotA * N * 2, b2 = HIST.slotB * N * 2;
+    const u = F.u, v = F.v, d0 = F.d0, d1 = F.d1, dW = F.dW, sp = F.speed, rc = F.recall, wbuf = F.tW;
+    const s = p.s, kd = K.RECALL_DYE, kv = K.RECALL_VEL, kvk = K.RECALL_VEL_K, vres = K.V_RES;
+    const x0 = Math.max(1, Math.floor(cx - R)), x1 = Math.min(W - 2, Math.ceil(cx + R)), y0 = Math.max(1, Math.floor(cy - R)), y1 = Math.min(H - 2, Math.ceil(cy + R));
+    const g = GLYPHS.settleTarget(cx, cy, R);
+    const mask = g ? g.maskThick : null, dk = g ? (g.state === 'WISP' ? dW : g.slot === 0 ? d0 : d1) : null;
+    let sumD = 0, sumM = 0;
+    const R06 = K.RECALL_PLATEAU * R, span = R - R06;
+    for (let y = y0; y <= y1; y++) {
+      const dy = y - cy;
+      for (let x = x0; x <= x1; x++) {
+        const dx = x - cx, dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist >= R) continue;
+        const i = x + y * W;
+        let t = (dist - R06) / span; t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const sm = 1 - t * t * (3 - 2 * t);
+        const spd = sp[i], w = sm * s * (1 - (spd > vres ? 1 : spd / vres));
+        if (idx > 0 && wbuf[i] >= w) continue;
+        wbuf[i] = w;
+        if (w <= 0.001) continue;
+        if (valid) {
+          const h0 = (dyH[a3 + i] * fa + dyH[b3 + i] * fr) / 128, h1 = (dyH[a3 + N + i] * fa + dyH[b3 + N + i] * fr) / 128, hW = (dyH[a3 + 2 * N + i] * fa + dyH[b3 + 2 * N + i] * fr) / 128;
+          const e0 = h0 - d0[i], e1 = h1 - d1[i], eW = hW - dW[i];
+          d0[i] += w * kd * e0; d1[i] += w * kd * e1; dW[i] += w * kd * eW;
+          let m = Math.abs(e0); const m1 = Math.abs(e1), mW = Math.abs(eW); if (m1 > m) m = m1; if (mW > m) m = mW;
+          m *= 3; if (m > 1) m = 1; m *= w; if (m > rc[i]) rc[i] = m;
+          const hu = (veH[a2 + i] * fa + veH[b2 + i] * fr) / 3, hv = (veH[a2 + N + i] * fa + veH[b2 + N + i] * fr) / 3;
+          u[i] += (-kvk * hu - u[i]) * w * kv; v[i] += (-kvk * hv - v[i]) * w * kv;
+        }
+        if (mask) { sumD += dk[i]; sumM += mask[i]; }
+      }
+    }
+    if (!mask || sumM < 1e-4 || sumD < 1e-3) return;
+    const gain = sumD / Math.max(1e-4, sumM), ks = K.SETTLE;
+    for (let y = y0; y <= y1; y++) {
+      const dy = y - cy;
+      for (let x = x0; x <= x1; x++) {
+        const dx = x - cx, dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist >= R) continue;
+        const i = x + y * W, w = wbuf[i];
+        if (w <= 0.001) continue;
+        dk[i] += w * ks * (mask[i] * gain - dk[i]);
+      }
+    }
+  },
+  close(p) {
+    if (!p.inSky) FOSSIL.circle(p.x, p.y, p.R);
+    for (let k = 0; k < K.SPARKS; k++) {
+      if (this.sparkN >= K.SPARK_POOL) break;
+      const j = this.sparkN++ * 5, a = k / K.SPARKS * Math.PI * 2 + rnd() * 0.2, sp = 60 + rnd() * 90;
+      this.sparks[j] = p.x + Math.cos(a) * p.R; this.sparks[j + 1] = p.y + Math.sin(a) * p.R;
+      this.sparks[j + 2] = Math.cos(a) * sp + Math.sin(a) * 40; this.sparks[j + 3] = Math.sin(a) * sp - Math.cos(a) * 40; this.sparks[j + 4] = 0.5;
+    }
+    p.d = 0; p.holdT = 0;
+  },
+  stepSparks() {
+    const s = this.sparks;
+    for (let i = 0; i < this.sparkN; i++) {
+      const j = i * 5; s[j + 4] -= K.DT;
+      if (s[j + 4] <= 0) { const l = --this.sparkN * 5; s[j] = s[l]; s[j + 1] = s[l + 1]; s[j + 2] = s[l + 2]; s[j + 3] = s[l + 3]; s[j + 4] = s[l + 4]; i--; continue; }
+      s[j + 2] *= 0.9; s[j + 3] *= 0.9; s[j] += s[j + 2] * K.DT * 6; s[j + 1] += s[j + 3] * K.DT * 6;
+    }
+  }
+};
+
+// ---------------------------------------------------------------- GLYPHS
+function arcPts(cx, cy, r, a0, a1, n) { const o = []; for (let i = 0; i <= n; i++) { const a = (a0 + (a1 - a0) * i / n) * Math.PI / 180; o.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } return o; }
+function glyphStrokes(id, sc, ox, oy) {
+  let st;
+  if (id === 'G1') { const s = []; for (let i = 0; i <= 72; i++) { const t = i / 72, a = 4 * Math.PI * t, r = 0.5 * (0.12 + 0.88 * t); s.push([r * Math.cos(a), r * Math.sin(a)]); } st = [s]; }
+  else if (id === 'G2') st = [arcPts(-0.12, 0, 0.42, 110, 250, 36), arcPts(0.12, 0, 0.42, -70, 70, 36)];
+  else if (id === 'G3') { const sn = Math.sin(35 * Math.PI / 180), cs = Math.cos(35 * Math.PI / 180); st = [[[0, 0.5], [0, -0.15]]]; for (const [y, d, len] of [[0.15, -1, 0.28], [0, 1, 0.24], [-0.15, -1, 0.20]]) st.push([[0, y], [d * sn * len, y - cs * len]]); }
+  else if (id === 'G4') st = [arcPts(0, 0, 0.5, 45, 315, 54)];
+  else if (id === 'G5') { const s = []; for (let i = 0; i <= 56; i++) { const t = i / 56; s.push([t - 0.5, 0.22 * Math.sin(3 * Math.PI * t)]); } st = [s]; }
+  else return glyphStrokes('G1', 0.45, 0, 0).concat(glyphStrokes('G2', 0.9, 0, 0), glyphStrokes('G3', 0.5, 0, -0.30));
+  return st.map(s => s.map(p => [p[0] * sc + ox, p[1] * sc + oy]));
+}
+const GLYPHS = {
+  list: [], ghostDirty: true, slotCol: [K.COL.amber, K.COL.rose], slotFade: [0, 0], slotGlyph: [null, null],
+  init() {
+    this.list.length = 0;
+    for (let i = 0; i < K.GLYPHS.length; i++) {
+      const d = K.GLYPHS[i];
+      this.list.push({ def: d, id: d.id, slot: d.slot, idx: i, state: 'PENDING', stateT: 0, prog: 0, total: 0, nextSub: 0, segs: null, cum: null,
+        maskThick: new Float32Array(K.MAX), maskThin: new Float32Array(K.MAX), bbox: new Int16Array(4), maskSum: 1, cohStamp: 1, coh: 0, cohN: 0,
+        eligible: false, setT: 0, lowT: 0, wispT: 0, relitT: 0, fade: 0, ghostA: 1, sinceStamp: 0, snapAtStamp: 0, dim: false, needMask: false, hx: 0, hy: 0, hvx: 0, hvy: 0, cxc: 0, cyc: 0, Ec: 1, wx: 0, wy: 0 });
+    }
+  },
+  reset() { for (const g of this.list) { g.state = 'PENDING'; g.stateT = 0; g.prog = 0; g.eligible = false; g.setT = g.lowT = g.wispT = g.relitT = 0; g.fade = 0; g.ghostA = 1; g.dim = false; g.coh = g.cohN = 0; g.maskThick.fill(0); g.maskThin.fill(0); } this.ghostDirty = true; },
+  byId(id) { for (const g of this.list) if (g.id === id) return g; return null; },
+  geometry(g) {
+    const d = g.def, W = G.W, H = G.H, kx = d.E * L.lmin / L.ww, ky = d.E * L.lmin / L.wh;
+    g.cxc = d.cx * W; g.cyc = d.cy * H; g.Ec = d.E * L.lmin / L.cellW; g.wx = d.cx; g.wy = d.cy;
+    const strokes = glyphStrokes(d.id, 1, 0, 0), segs = [];
+    let total = 0;
+    for (let s = 0; s < strokes.length; s++) {
+      const st = strokes[s];
+      for (let i = 0; i + 1 < st.length; i++) {
+        const ax = (d.cx + st[i][0] * kx) * W, ay = (d.cy + st[i][1] * ky) * H, bx = (d.cx + st[i + 1][0] * kx) * W, by = (d.cy + st[i + 1][1] * ky) * H;
+        const len = Math.hypot(bx - ax, by - ay); segs.push([ax, ay, bx, by, len, total]); total += len;
+      }
+    }
+    g.segs = segs; g.total = total;
+    g.maskThick.fill(0); g.maskThin.fill(0);
+    let x0 = W, y0 = H, x1 = 0, y1 = 0;
+    for (const sg of segs) {
+      const n = Math.max(1, Math.ceil(sg[4] / K.STAMP_SPACING));
+      for (let k = 0; k <= n; k++) { const t = k / n, x = sg[0] + (sg[2] - sg[0]) * t, y = sg[1] + (sg[3] - sg[1]) * t; splatMax(g.maskThick, x, y, K.STAMP_SIGMA); splatMax(g.maskThin, x, y, K.THIN_SIGMA); if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    g.bbox[0] = clamp(Math.floor(x0) - 8, 1, W - 2); g.bbox[1] = clamp(Math.floor(y0) - 8, 1, H - 2); g.bbox[2] = clamp(Math.ceil(x1) + 8, 1, W - 2); g.bbox[3] = clamp(Math.ceil(y1) + 8, 1, H - 2);
+    let sum = 0; for (let y = g.bbox[1]; y <= g.bbox[3]; y++) for (let x = g.bbox[0]; x <= g.bbox[2]; x++) sum += g.maskThick[x + y * W];
+    g.maskSum = Math.max(1e-4, sum); g.needMask = false;
+  },
+  pointAt(g, s, out) {
+    const segs = g.segs; let lo = 0, hi = segs.length - 1;
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (segs[mid][5] <= s) lo = mid; else hi = mid - 1; }
+    const sg = segs[lo], t = sg[4] > 0 ? clamp((s - sg[5]) / sg[4], 0, 1) : 0;
+    out[0] = sg[0] + (sg[2] - sg[0]) * t; out[1] = sg[1] + (sg[3] - sg[1]) * t;
+    const l = sg[4] || 1; out[2] = (sg[2] - sg[0]) / l; out[3] = (sg[3] - sg[1]) / l;
+  },
+  tmp: [0, 0, 0, 0],
+  stamp(g) {
+    this.geometry(g); g.state = 'STAMPING'; g.stateT = 0; g.prog = 0; g.nextSub = 0; g.eligible = false; g.setT = g.lowT = g.wispT = g.relitT = 0; g.fade = 0; g.ghostA = 1; g.dim = false; g.sinceStamp = 0;
+    this.pointAt(g, 0, this.tmp); g.hx = this.tmp[0]; g.hy = this.tmp[1];
+    if (g.slot === 0) this.slotCol[0] = K.COL[g.def.col]; else this.slotCol[1] = K.COL[g.def.col];
+    this.slotGlyph[g.slot] = g;
+    DIR.noteChange();
+  },
+  dyeOf(g) { return g.state === 'WISP' || g.state === 'PERMANENT' ? F.dW : g.slot === 0 ? F.d0 : F.d1; },
+  stampStep() {
+    const tmp = this.tmp;
+    for (const g of this.list) {
+      if (g.needMask && g.state !== 'PENDING') this.geometry(g);
+      g.stateT += K.DT;
+      if (g.state === 'STAMPING') {
+        const dye = this.dyeOf(g), speed = g.total / g.def.dur, p2 = Math.min(g.total, g.prog + speed * K.DT);
+        while (g.nextSub <= p2) { this.pointAt(g, g.nextSub, tmp); splatMax(dye, tmp[0], tmp[1], K.STAMP_SIGMA); g.nextSub += K.STAMP_SPACING; }
+        this.pointAt(g, p2, tmp); g.hx = tmp[0]; g.hy = tmp[1]; g.hvx = tmp[2] * speed; g.hvy = tmp[3] * speed;
+        splatToward(g.hx, g.hy, K.HAND_VEL * g.hvx, K.HAND_VEL * g.hvy, K.HAND_SIGMA, K.HAND_RELAX);
+        g.prog = p2;
+        if (p2 >= g.total) { g.state = 'LIVE'; g.stateT = 0; g.cohStamp = Math.max(0.3, this.measure(g)); g.sinceStamp = 0; g.snapAtStamp = HIST.total; this.ghostDirty = true; DIR.noteChange(); }
+      } else if (g.state === 'LIFTING') {
+        if (g.stateT < K.DRAIN_TIME) {
+          const dye = g.dim ? F.dW : this.dyeOf(g), W = G.W, b = g.bbox, k = 1 - 4 * K.DT;
+          for (let y = b[1]; y <= b[3]; y++) for (let x = b[0]; x <= b[2]; x++) { const i = x + y * W; if (g.maskThick[i] > 0.02) dye[i] *= k; }
+        }
+        if (g.stateT >= K.LIFT_TIME) { g.state = g.dim ? 'DIM' : 'STAR'; g.stateT = 0; SKY.settle(g); AUDIO.partial(g); DIR.noteChange(); }
+      } else if (g.state === 'FADING') g.fade = Math.min(K.FADE_MAX, g.fade + K.FADE_RATE * K.DT);
+      else if (g.state === 'LIVE') g.fade = Math.max(0, g.fade - 3 * K.FADE_RATE * K.DT);
+    }
+    this.slotFade[0] = this.slotGlyph[0] ? this.slotGlyph[0].fade : 0; this.slotFade[1] = this.slotGlyph[1] ? this.slotGlyph[1].fade : 0;
+  },
+  wispSources() { for (const g of this.list) if (g.state === 'PERMANENT') splatAdd(F.dW, g.cxc, g.cyc, K.WISP_SIGMA, K.WISP_SRC); },
+  measure(g) {
+    const dye = this.dyeOf(g), m = g.maskThick, W = G.W, b = g.bbox; let s = 0;
+    for (let y = b[1]; y <= b[3]; y++) for (let x = b[0]; x <= b[2]; x++) { const i = x + y * W, a = dye[i], c = m[i]; s += a < c ? a : c; }
+    return s / g.maskSum;
+  },
+  coherence() {
+    const dt = K.COH_EVERY * K.DT, noFade = DIR.act ? DIR.act.noFade : true, warn = DIR.capWarn;
+    for (const g of this.list) {
+      const st = g.state;
+      if (st !== 'LIVE' && st !== 'FADING' && st !== 'WISP' && st !== 'STAMPING') continue;
+      g.coh = this.measure(g); g.cohN = g.coh / g.cohStamp;
+      if (st === 'STAMPING') continue;
+      if (st === 'LIVE') {
+        g.sinceStamp += dt;
+        if (g.cohN < K.ELIG_COH || g.sinceStamp >= K.ELIG_TIME) g.eligible = true;
+        if (g.eligible && g.cohN >= K.SET_COH) g.setT += dt; else g.setT = 0;
+        if (g.setT >= K.SET_TIME) { this.lift(g, false); continue; }
+        if (!noFade) {
+          if (g.cohN < K.FADE_COH) g.lowT += dt; else g.lowT = 0;
+          if (g.lowT >= K.FADE_TIME || warn) { g.state = 'FADING'; g.stateT = 0; g.wispT = 0; g.ghostA = 0.6; this.ghostDirty = true; AUDIO.padRootDown(); DIR.noteChange(); }
+        }
+      } else if (st === 'FADING') {
+        if (g.eligible && g.cohN >= K.SET_COH) g.setT += dt; else g.setT = 0;
+        if (g.setT >= K.SET_TIME) { this.lift(g, false); continue; }
+        if (g.cohN >= K.RECOVER_COH && !warn) { g.state = 'LIVE'; g.stateT = 0; g.lowT = 0; g.ghostA = 1; this.ghostDirty = true; DIR.noteChange(); continue; }
+        if (g.cohN < K.WISP_COH) g.wispT += dt; else g.wispT = Math.max(0, g.wispT - dt);
+        if (g.wispT >= K.WISP_TIME) this.wisp(g);
+      } else if (st === 'WISP') {
+        if (g.cohN >= K.RELIT_COH) g.relitT += dt; else g.relitT = 0;
+        if (g.relitT >= K.RELIT_TIME) this.lift(g, true);
+      }
+    }
+    if (this.ghostDirty) this.rebuildGhost();
+  },
+  lift(g, dim) {
+    g.state = 'LIFTING'; g.stateT = 0; g.dim = dim; g.ghostA = 0; this.ghostDirty = true;
+    SKY.launch(g); AUDIO.setChord(g, dim); DIR.setFx(g); DIR.noteChange();
+  },
+  wisp(g) {
+    const N = G.N, dye = g.slot === 0 ? F.d0 : F.d1, dW = F.dW;
+    for (let i = 0; i < N; i++) { dW[i] += dye[i]; dye[i] = 0; }
+    g.state = 'WISP'; g.stateT = 0; g.ghostA = 0.3; g.relitT = 0; g.fade = 0; g.cohStamp = Math.max(0.3, g.cohStamp); this.ghostDirty = true;
+    AUDIO.lost(); DIR.lostFx(g); DIR.noteChange();
+  },
+  permanent(g) { g.state = 'PERMANENT'; g.stateT = 0; g.ghostA = 0; this.ghostDirty = true; AUDIO.partial(g); DIR.noteChange(); },
+  rebuildGhost() {
+    const gh = F.ghost, N = G.N; gh.fill(0, 0, N); this.ghostDirty = false;
+    for (const g of this.list) {
+      if (g.state !== 'LIVE' && g.state !== 'FADING' && g.state !== 'WISP') continue;
+      const m = g.maskThin, a = g.ghostA, W = G.W, b = g.bbox;
+      for (let y = b[1]; y <= b[3]; y++) for (let x = b[0]; x <= b[2]; x++) { const i = x + y * W; gh[i] += m[i] * a; }
+    }
+  },
+  settleTarget(cx, cy, R) {
+    let best = null, bs = 0;
+    for (const g of this.list) {
+      if (g.state !== 'LIVE' && g.state !== 'FADING' && g.state !== 'WISP') continue;
+      const s = 1 - Math.hypot(g.cxc - cx, g.cyc - cy) / (0.5 * g.Ec + R);
+      if (s <= 0) continue;
+      if (!best || s > bs + 0.05 || (Math.abs(s - bs) <= 0.05 && g.cohN < best.cohN)) { best = g; bs = s; }
+    }
+    return best;
+  },
+  centerCss(g) { return { x: L.wx + g.def.cx * L.ww, y: L.wy + g.def.cy * L.wh }; }
+};
+GLYPHS.init();
+
+// ---------------------------------------------------------------- WEATHER
+const WEATHER = {
+  cur: { A: 0, P: 40, v: [0, 0, 0] }, from: { A: 0, P: 40, v: [0, 0, 0] }, to: { A: 0, P: 40, v: [0, 0, 0] }, rampT: 99,
+  vort: [], tideScale: 1, pair: false, midX: 0, midY: 0, nudgeT: -1, nudgeX: 0, nudgeY: 0, nudgeR: 0, tideTold: -1, vx: new Float32Array(3), vy: new Float32Array(3), vp: new Float32Array(3), told: new Uint8Array(18),
+  init() { this.vort.length = 0; for (let k = 0; k < 3; k++) this.vort.push({ phi: K.VORT_PHI * k, psi: K.VORT_PSI * k, spin: k % 2 === 0 ? 1 : -1, tOff: 0 }); },
+  set(A, P, n, vpk, ramp) {
+    this.from.A = this.cur.A; this.from.P = this.cur.P; for (let k = 0; k < 3; k++) this.from.v[k] = this.cur.v[k];
+    this.to.A = A; this.to.P = P; for (let k = 0; k < 3; k++) this.to.v[k] = k < n ? vpk : 0;
+    this.rampT = ramp ? 0 : K.WEATHER_RAMP;
+  },
+  update(dt) {
+    this.rampT += dt; const e = easeInOutSine(Math.min(1, this.rampT / K.WEATHER_RAMP));
+    this.cur.A = lerp(this.from.A, this.to.A, e); this.cur.P = lerp(this.from.P, this.to.P, e);
+    for (let k = 0; k < 3; k++) this.cur.v[k] = lerp(this.from.v[k], this.to.v[k], e);
+    if (this.nudgeT >= 0) { this.nudgeT += dt; if (this.nudgeT > K.NUDGE_DUR) this.nudgeT = -1; }
+  },
+  pos(k, t, out) {
+    const vo = this.vort[k], tt = t + vo.tOff;
+    let x = G.W * (0.5 + K.VORT_AX * Math.sin(K.VORT_W1 * tt + vo.phi)), y = G.H * (0.5 + K.VORT_AY * Math.sin(K.VORT_W2 * tt + vo.psi));
+    if (this.pair) { x = this.midX + (x - G.W * 0.5) * K.VORT_PAIR_SHRINK; y = this.midY + (y - G.H * 0.5) * K.VORT_PAIR_SHRINK; }
+    out[0] = x; out[1] = y;
+  },
+  tmp: [0, 0],
+  solveCross(k, gx, gy, when) {
+    const vo = this.vort[k]; vo.tOff = 0; let best = 1e9, bt = 0;
+    for (let tau = 0; tau < 400; tau += 0.25) { this.pos(k, tau, this.tmp); const d = Math.hypot(this.tmp[0] - gx, this.tmp[1] - gy); if (d < best) { best = d; bt = tau; } if (best < 3) break; }
+    vo.tOff = bt - when;
+  },
+  targets() {
+    const W = G.W, H = G.H, uT = F.uT, vT = F.vT, t = T, A = this.cur.A * this.tideScale, P = this.cur.P, rc = K.VORTEX_RC, ra = K.RESID_AMP;
+    const tide = A * Math.sin(2 * Math.PI * t / P), vx = this.vx, vy = this.vy, vp = this.vp;
+    let nv = 0;
+    for (let k = 0; k < 3; k++) { if (this.cur.v[k] < 0.01) continue; this.pos(k, t, this.tmp); vx[nv] = this.tmp[0]; vy[nv] = this.tmp[1]; vp[nv] = this.cur.v[k] * this.vort[k].spin; nv++; }
+    const nud = this.nudgeT >= 0, nx = this.nudgeX, ny = this.nudgeY, nr2 = this.nudgeR * this.nudgeR, nk = K.NUDGE_WEATHER;
+    for (let y = 0; y < H; y++) {
+      const rowTide = tide * (0.6 + 0.4 * Math.sin(Math.PI * y / H)), resV = ra * Math.cos(0.013 * y + 0.5 * t);
+      for (let x = 0; x < W; x++) {
+        let ut = rowTide + ra * Math.sin(0.011 * x + 0.7 * t), vt = resV;
+        for (let k = 0; k < nv; k++) {
+          const dx = x - vx[k], dy = y - vy[k], r = Math.sqrt(dx * dx + dy * dy) + 1e-6, m = vp[k] * (r < rc ? r / rc : rc / r) / r;
+          ut -= dy * m; vt += dx * m;
+        }
+        if (nud) { const dx = x - nx, dy = y - ny; if (dx * dx + dy * dy < nr2) { ut *= nk; vt *= nk; } }
+        const i = x + y * W; uT[i] = ut; vT[i] = vt;
+      }
+    }
+  },
+  tells() {
+    const P = this.cur.P;
+    if (this.cur.A * this.tideScale > 0.5) { const cyc = Math.floor((T + 0.5) / P); if (cyc !== this.tideTold && (T + 0.5) % P < 0.2) { this.tideTold = cyc; AUDIO.tell(); } }
+    for (let k = 0; k < 3; k++) {
+      if (this.cur.v[k] < 0.3) continue;
+      this.pos(k, T + 0.5, this.tmp);
+      for (const g of GLYPHS.list) {
+        if (g.state !== 'LIVE' && g.state !== 'FADING') continue;
+        const d = Math.hypot(this.tmp[0] - g.cxc, this.tmp[1] - g.cyc), j = k * 6 + g.idx;
+        if (d < 1.5 * g.Ec) { if (!this.told[j]) { this.told[j] = 1; AUDIO.swell(); } } else if (d > 2 * g.Ec) this.told[j] = 0;
+      }
+    }
+  },
+  nudge(g) { this.nudgeT = 0; this.nudgeX = g.cxc; this.nudgeY = g.cyc; this.nudgeR = 2 * K.R_MAX * L.kScale / L.cellW; }
+};
+WEATHER.init();
+
+// ---------------------------------------------------------------- MOTES
+const MOTES = {
+  x: new Float32Array(K.MOTES), y: new Float32Array(K.MOTES), age: new Float32Array(K.MOTES), tag: new Uint8Array(K.MOTES), spd: new Float32Array(K.MOTES), stall: new Float32Array(K.MOTES),
+  rx: new Float32Array(2), ry: new Float32Array(2), rr: new Float32Array(2), rd: new Float32Array(2), mist: false,
+  reseed() { for (let i = 0; i < K.MOTES; i++) { this.x[i] = 1 + rnd() * (G.W - 2); this.y[i] = 1 + rnd() * (G.H - 2); this.age[i] = rnd() * K.MOTE_AGE; this.tag[i] = 0; this.stall[i] = 0; } },
+  respawn(i) {
+    const m = K.MOTE_MARGIN; this.x[i] = m + rnd() * (G.W - 2 * m); this.y[i] = m + rnd() * (G.H - 2 * m);
+    this.age[i] = 0; this.tag[i] = 0; this.stall[i] = 0;
+  },
+  puff(cx, cy, n) { for (let k = 0; k < n; k++) { const i = (rnd() * K.MOTES) | 0, a = rnd() * 6.283, r = rnd() * 3; this.x[i] = clamp(cx + Math.cos(a) * r, 1, G.W - 2); this.y[i] = clamp(cy + Math.sin(a) * r, 1, G.H - 2); this.age[i] = 0; } },
+  step() {
+    const n = Q.motes, W = G.W, H = G.H, u = F.u, v = F.v, x = this.x, y = this.y, age = this.age, tag = this.tag, spd = this.spd, dt = K.DT;
+    let nr = 0;
+    for (let i = 0; i < PTR.length && nr < 2; i++) {
+      const p = PTR[i]; if (!p.alive || p.s <= K.S_OPEN || DIR.phase === 'epilogue') continue;
+      this.rx[nr] = (p.x - L.wx) / L.cellW; this.ry[nr] = (p.y - L.wy) / L.cellH; this.rr[nr] = K.MOTE_BACK_R * p.Reff / L.cellW; this.rd[nr] = p.d; nr++;
+    }
+    const hv = HIST.vel, N = G.N, mist = this.mist, s0 = K.MOTE_SPEEDS[0], s1 = K.MOTE_SPEEDS[1];
+    for (let i = 0; i < n; i++) {
+      if (mist && i < K.MIST) { y[i] -= K.MIST_RISE * dt * (0.6 + 0.4 * ((i * 7) % 5) / 4); x[i] += Math.sin(T * 0.8 + i) * 0.4 * dt; tag[i] = 4; if (y[i] < 1) { y[i] = H - 2; x[i] = 1 + rnd() * (W - 2); } continue; }
+      let px = x[i], py = y[i], vx, vy, back = false;
+      for (let k = 0; k < nr; k++) {
+        const dx = px - this.rx[k], dy = py - this.ry[k];
+        if (dx * dx + dy * dy < this.rr[k] * this.rr[k]) {
+          HIST.seek(this.rd[k]);
+          if (HIST.valid) { const ci = (px | 0) + (py | 0) * W, b = HIST.slotA * N * 2; vx = -K.MOTE_BACK * hv[b + ci] / 3; vy = -K.MOTE_BACK * hv[b + N + ci] / 3; back = true; }
+          break;
+        }
+      }
+      if (!back) { vx = sampleBilinear(u, px, py); vy = sampleBilinear(v, px, py); }
+      px += vx * dt; py += vy * dt; age[i] += dt;
+      const sp = Math.sqrt(vx * vx + vy * vy); spd[i] = sp;
+      if (back !== (tag[i] === 3)) AUDIO.plink();
+      tag[i] = back ? 3 : sp < s0 ? 0 : sp < s1 ? 1 : 2;
+      const st = sp < K.MOTE_STALL ? this.stall[i] + dt : 0; this.stall[i] = st;
+      if (px < 1 || py < 1 || px >= W - 1 || py >= H - 1 || age[i] > K.MOTE_AGE || st > K.MOTE_STALL_T) this.respawn(i); else { x[i] = px; y[i] = py; }
+    }
+  },
+  draw() {
+    const g = OFF.motesCtx, mw = OFF.mw, mh = OFF.mh, sx = mw / G.W, sy = mh / G.H, n = Q.motes, x = this.x, y = this.y, tag = this.tag;
+    g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000';
+    g.globalAlpha = K.MOTE_FADE + ((frameNo & 7) === 0 ? K.MOTE_FADE8 : 0); g.fillRect(0, 0, mw, mh);
+    g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+    const cols = DIR.phase === 'epilogue' ? MOTE_COLS_EPI : MOTE_COLS;
+    for (let b = 0; b < 5; b++) {
+      g.fillStyle = cols[b]; g.beginPath(); let any = false;
+      for (let i = 0; i < n; i++) { if (tag[i] !== b) continue; g.rect(x[i] * sx - 1, y[i] * sy - 1, 2, 2); any = true; }
+      if (any) g.fill();
+    }
+  }
+};
+
+// ---------------------------------------------------------------- SKY
+const SKY = {
+  col: hexRgb('#02030a'), inv: 0, pcol: hexRgb('#02030a'), pinv: 0, fadeT: 99, gradCur: null, gradPrev: null, light: 0, dark: 0, predawn: 0, predawnGrad: null,
+  stars: [], flights: new Float32Array(K.FLIGHT_POOL * 9), flightN: 0, alpha: 1,
+  set(hex, inv, fade) { this.pcol = this.col; this.pinv = this.inv; this.col = hexRgb(hex); this.inv = inv || 0; this.fadeT = fade ? 0 : 99; this.rebuild(); },
+  setRgb(rgb, inv) { this.col = rgb; this.inv = inv; this.gradCur = this.grad(rgb, inv); this.reflect(); },
+  grad(col, inv) {
+    const gr = ctx.createLinearGradient(0, 0, 0, L.hx), dark = scaleRgb(col, 1 - K.SKY_HORIZON_DARK);
+    const top = mixRgb(dark, col, 1 - inv), bot = mixRgb(col, dark, 1 - inv);
+    gr.addColorStop(0, rgbStr(top, 1)); gr.addColorStop(1, rgbStr(bot, 1)); return gr;
+  },
+  rebuild() {
+    this.gradCur = this.grad(this.col, this.inv); this.gradPrev = this.grad(this.pcol, this.pinv);
+    const pg = ctx.createLinearGradient(0, L.hx * 0.45, 0, L.hx); pg.addColorStop(0, 'rgba(242,178,122,0)'); pg.addColorStop(1, 'rgba(242,178,122,0.28)'); this.predawnGrad = pg;
+    this.reflect();
+  },
+  reflect() {
+    const g = OFF.reflCtx, h = K.REFL_H, gr = g.createLinearGradient(0, 0, 0, h), col = this.col, inv = this.inv, dark = scaleRgb(col, 1 - K.SKY_HORIZON_DARK);
+    const top = mixRgb(dark, col, 1 - inv), bot = mixRgb(col, dark, 1 - inv);
+    gr.addColorStop(0, rgbStr(bot, 1)); gr.addColorStop(1, rgbStr(top, 1)); g.fillStyle = gr; g.fillRect(0, 0, K.REFL_W, h);
+  },
+  layout(g) {
+    const i = g.idx, ax = 0.10 + 0.16 * i, ay = 0.28 + 0.34 * (((i * 2) % 3) / 2), sc = 0.055, pts = [];
+    const strokes = glyphStrokes(g.id, 1, 0, 0), all = [];
+    for (const s of strokes) for (const p of s) all.push(p);
+    for (let k = 0; k < 5; k++) { const p = all[Math.min(all.length - 1, Math.floor((k + 0.5) / 5 * all.length))]; pts.push([ax + p[0] * sc, ay + p[1] * sc * L.cssW / L.hx]); }
+    return pts;
+  },
+  launch(g) {
+    let st = this.stars[g.idx];
+    if (!st) { st = { pts: null, bright: 0, target: 0, dim: false, on: false, phase: g.idx * 1.7 }; this.stars[g.idx] = st; }
+    st.pts = this.layout(g); st.dim = g.dim; st.target = g.dim ? K.DIM_BRIGHT : 1; st.bright = 0; st.on = true;
+    const b = g.bbox, W = G.W, m = g.maskThick, fl = this.flights;
+    for (let k = 0; k < K.STAR_FLIGHTS; k++) {
+      if (this.flightN >= K.FLIGHT_POOL) break;
+      let cx = g.cxc, cy = g.cyc;
+      for (let tries = 0; tries < 8; tries++) { const x = b[0] + rnd() * (b[2] - b[0]), y = b[1] + rnd() * (b[3] - b[1]); if (m[(x | 0) + (y | 0) * W] > 0.3) { cx = x; cy = y; break; } }
+      const j = this.flightN++ * 9, p = st.pts[k % 5];
+      fl[j] = L.wx + cx * L.cellW; fl[j + 1] = L.wy + cy * L.cellH;
+      fl[j + 4] = p[0] * L.cssW + (rnd() - 0.5) * 6; fl[j + 5] = p[1] * L.hx + (rnd() - 0.5) * 6;
+      fl[j + 2] = (fl[j] + fl[j + 4]) * 0.5 + (rnd() - 0.5) * 0.2 * L.cssW; fl[j + 3] = lerp(fl[j + 1], fl[j + 5], 0.35);
+      fl[j + 6] = 0; fl[j + 7] = 1.4 + rnd() * 0.9; fl[j + 8] = rnd() * 0.7;
+    }
+  },
+  settle(g) { const st = this.stars[g.idx]; if (st) st.on = true; },
+  reset() { this.stars.length = 0; this.flightN = 0; this.alpha = 1; },
+  step(dt) {
+    const fl = this.flights;
+    for (let i = 0; i < this.flightN; i++) {
+      const j = i * 9; fl[j + 6] += dt;
+      if (fl[j + 6] > fl[j + 7] + fl[j + 8]) { const l = --this.flightN * 9; for (let k = 0; k < 9; k++) fl[j + k] = fl[l + k]; i--; }
+    }
+    for (let i = 0; i < this.stars.length; i++) { const st = this.stars[i]; if (!st || !st.on) continue; const g = GLYPHS.list[i]; if (g.state === 'STAR' || g.state === 'DIM') st.bright = Math.min(st.target, st.bright + dt * 0.5); }
+  },
+  counts(out) { out.stars = 0; out.dim = 0; out.wisps = 0; for (const g of GLYPHS.list) { if (g.state === 'STAR') out.stars++; else if (g.state === 'DIM') out.dim++; else if (g.state === 'WISP' || g.state === 'PERMANENT') out.wisps++; } return out; },
+  draw() {
+    if (this.alpha <= 0.001) return;
+    ctx.globalCompositeOperation = 'lighter';
+    const W = L.cssW, hx = L.hx, t = T;
+    for (let i = 0; i < this.stars.length; i++) {
+      const st = this.stars[i]; if (!st || !st.pts || st.bright <= 0) continue;
+      const spr = st.dim ? SPR.starDim : SPR.star, sz = st.dim ? 18 : 24;
+      ctx.strokeStyle = st.dim ? 'rgba(154,166,192,0.18)' : 'rgba(255,233,176,0.18)'; ctx.lineWidth = 1.5; ctx.globalAlpha = st.bright * this.alpha;
+      ctx.beginPath();
+      for (let k = 0; k < 5; k++) { const p = st.pts[k]; if (k === 0) ctx.moveTo(p[0] * W, p[1] * hx); else ctx.lineTo(p[0] * W, p[1] * hx); }
+      ctx.stroke();
+      for (let k = 0; k < 5; k++) { const p = st.pts[k]; ctx.globalAlpha = st.bright * this.alpha * (0.7 + 0.3 * Math.sin(0.7 * t + st.phase + k)); ctx.drawImage(spr, p[0] * W - sz / 2, p[1] * hx - sz / 2, sz, sz); }
+    }
+    const fl = this.flights;
+    for (let i = 0; i < this.flightN; i++) {
+      const j = i * 9, tt = fl[j + 6] - fl[j + 8]; if (tt <= 0) continue;
+      const e = easeInOutCubic(Math.min(1, tt / fl[j + 7])), q = 1 - e;
+      const x = q * q * fl[j] + 2 * q * e * fl[j + 2] + e * e * fl[j + 4], y = q * q * fl[j + 1] + 2 * q * e * fl[j + 3] + e * e * fl[j + 5];
+      ctx.globalAlpha = (0.5 + 0.5 * Math.sin(e * Math.PI)) * this.alpha; ctx.drawImage(SPR.star, x - 6, y - 6, 12, 12);
+    }
+    ctx.globalAlpha = 1;
+  }
+};
+
+// ---------------------------------------------------------------- FOSSIL
+const FOSSIL = {
+  alpha: K.FOSSIL_ALPHA,
+  fx(x) { return (x - L.wx) / L.ww * OFF.mw; }, fy(y) { return (y - L.wy) / L.wh * OFF.mh; },
+  stroke(x0, y0, x1, y1) {
+    const g = OFF.fossilCtx; if (!g) return;
+    g.globalAlpha = K.FOSSIL_STROKE; g.strokeStyle = '#ffe9b0'; g.lineWidth = 2; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(this.fx(x0), this.fy(y0)); g.lineTo(this.fx(x1), this.fy(y1)); g.stroke();
+  },
+  circle(x, y, R) {
+    const g = OFF.fossilCtx; if (!g) return;
+    const r = R / L.ww * OFF.mw;
+    g.globalAlpha = K.FOSSIL_DISC; g.fillStyle = '#ffe9b0'; g.beginPath(); g.arc(this.fx(x), this.fy(y), r, 0, 6.2832); g.fill();
+    g.globalAlpha = K.FOSSIL_RING; g.strokeStyle = '#ffe9b0'; g.lineWidth = 2; g.beginPath(); g.arc(this.fx(x), this.fy(y), r, 0, 6.2832); g.stroke();
+  },
+  clear() { if (OFF.fossilCtx) OFF.fossilCtx.clearRect(0, 0, OFF.mw, OFF.mh); this.alpha = K.FOSSIL_ALPHA; }
+};
+
+// ---------------------------------------------------------------- RENDER
+const RENDER = {
+  waterGrad: null, vigGrad: null, fontPx: 24, waterMix: 0, ghostBreath: 1,
+  rebuildStatic() {
+    this.rebuildWater(this.waterMix);
+    const cx = L.cssW / 2, cy = L.cssH / 2, r = Math.hypot(cx, cy);
+    const vg = ctx.createRadialGradient(cx, cy, r * K.VIGNETTE_R0, cx, cy, r);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,' + K.VIGNETTE + ')'); this.vigGrad = vg;
+    this.fontPx = clamp(2.4 * Math.min(L.cssW, L.cssH) / 100, 18, 34);
+  },
+  rebuildWater(mix) {
+    this.waterMix = mix;
+    const a = mixRgb(hexRgb(K.WATER[0]), hexRgb(K.WATER_EPI[0]), mix), b = mixRgb(hexRgb(K.WATER[1]), hexRgb(K.WATER_EPI[1]), mix);
+    const g = ctx.createLinearGradient(0, L.wy, 0, L.wy + L.wh); g.addColorStop(0, rgbStr(a, 1)); g.addColorStop(1, rgbStr(b, 1)); this.waterGrad = g;
+  },
+  toneMap() {
+    const N = G.N, d0 = F.d0, d1 = F.d1, dW = F.dW, rc = F.recall, cu = F.curl, sp = F.speed, gh = F.ghost, pix = OFF.pix;
+    const grey = K.COL.grey, cA = GLYPHS.slotCol[0], cB = GLYPHS.slotCol[1], fA = GLYPHS.slotFade[0], fB = GLYPHS.slotFade[1];
+    const ar = lerp(cA[0], grey[0], fA), ag = lerp(cA[1], grey[1], fA), ab = lerp(cA[2], grey[2], fA);
+    const br = lerp(cB[0], grey[0], fB), bg = lerp(cB[1], grey[1], fB), bb = lerp(cB[2], grey[2], fB);
+    const gr = grey[0], gg = grey[1], gb = grey[2], cr = K.CALM_COL[0], cg = K.CALM_COL[1], cb = K.CALM_COL[2];
+    const rr = K.RECALL_COL[0], rg = K.RECALL_COL[1], rb = K.RECALL_COL[2], gk = K.GHOST_K * this.ghostBreath;
+    const hr = K.GHOST_COL[0] * gk, hg = K.GHOST_COL[1] * gk, hb = K.GHOST_COL[2] * gk, sk = K.SHEEN_K, invCalm = 1 / K.CALM_SPEED, calmSp = K.CALM_SPEED;
+    for (let i = 0; i < N; i++) {
+      const a = d0[i], b = d1[i], g = dW[i], r = rc[i], c = cu[i], s = sp[i];
+      const calm = s < calmSp ? 1 - s * invCalm : 0, ghost = gh[i] * calm;
+      let R = ar * a + br * b + gr * g + cr * calm + rr * r + ghost * hr;
+      let Gc = ag * a + bg * b + gg * g + cg * calm + rg * r + ghost * hg;
+      let B = ab * a + bb * b + gb * g + cb * calm + rb * r + ghost * hb;
+      let sh = (c < 0 ? -c : c) * sk; if (sh > 1) sh = 1; sh *= (a + b + g) * 0.5;
+      if (c > 0) { Gc += 0.6 * sh; B += sh; } else { R += sh; Gc += 0.3 * sh; B += 0.7 * sh; }
+      let ri = (R * 512) | 0, gi = (Gc * 512) | 0, bi = (B * 512) | 0;
+      if (ri > 1023) ri = 1023; if (gi > 1023) gi = 1023; if (bi > 1023) bi = 1023;
+      pix[i] = 0xFF000000 | (KNEE[bi] << 16) | (KNEE[gi] << 8) | KNEE[ri];
+    }
+  },
+  frame() {
+    const W = L.cssW, H = L.cssH, hx = L.hx, wx = L.wx, wy = L.wy, ww = L.ww, wh = L.wh, t = T;
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = true;
+    // 1 sky (+ 6 s crossfade)
+    if (SKY.fadeT < K.SKY_FADE) { ctx.fillStyle = SKY.gradPrev; ctx.fillRect(0, 0, W, hx + 1); ctx.globalAlpha = easeInOutSine(SKY.fadeT / K.SKY_FADE); }
+    ctx.fillStyle = SKY.gradCur; ctx.fillRect(0, 0, W, hx + 1); ctx.globalAlpha = 1;
+    if (SKY.predawn > 0) { ctx.globalAlpha = SKY.predawn; ctx.fillStyle = SKY.predawnGrad; ctx.fillRect(0, 0, W, hx + 1); ctx.globalAlpha = 1; }
+    if (SKY.light > 0) { ctx.fillStyle = 'rgba(255,255,255,' + SKY.light.toFixed(3) + ')'; ctx.fillRect(0, 0, W, hx + 1); }
+    if (SKY.dark > 0) { ctx.fillStyle = 'rgba(0,0,0,' + SKY.dark.toFixed(3) + ')'; ctx.fillRect(0, 0, W, hx + 1); }
+    // 2 horizon
+    const hc = scaleRgb(SKY.col, SKY.inv ? 1.0 : 0.55), hl = mixRgb(hc, WHITE, 0.3);
+    ctx.fillStyle = rgbStr(hl, 0.9); ctx.fillRect(0, hx - 1, W, 2);
+    // 3 water
+    ctx.fillStyle = this.waterGrad; ctx.fillRect(wx, wy, ww, wh);
+    // 4 reflection slices
+    const depth = wh * K.REFL_DEPTH, sh = depth / K.REFL_SLICES, srcH = K.REFL_H / K.REFL_SLICES;
+    for (let k = 0; k < K.REFL_SLICES; k++) {
+      const f = 1 - k / K.REFL_SLICES, dx = K.REFL_WOBBLE * Math.sin(1.3 * t + 0.4 * k);
+      ctx.globalAlpha = K.REFL_ALPHA * f * f;
+      ctx.drawImage(OFF.refl, 0, k * srcH, K.REFL_W, srcH, wx + dx, wy + k * sh, ww, sh + 1);
+    }
+    ctx.globalAlpha = 1;
+    // 5 ink
+    if (G.N > 0) {
+      this.toneMap(); OFF.inkCtx.putImageData(OFF.img, 0, 0);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(OFF.ink, wx, wy, ww, wh);
+      // 6 bloom: resampling pyramid, no ctx.filter
+      const a = OFF.bloomA, b = OFF.bloomB, c = OFF.bloomC, ga = a.getContext('2d'), gb = b.getContext('2d'), gc = c.getContext('2d');
+      ga.imageSmoothingEnabled = true; gb.imageSmoothingEnabled = true; gc.imageSmoothingEnabled = true;
+      ga.drawImage(OFF.ink, 0, 0, a.width, a.height); gb.drawImage(a, 0, 0, b.width, b.height); gc.drawImage(b, 0, 0, c.width, c.height);
+      ctx.globalAlpha = K.BLOOM_C; ctx.drawImage(c, wx, wy, ww, wh);
+      ctx.globalAlpha = K.BLOOM_B; ctx.drawImage(b, wx, wy, ww, wh);
+      if (Q.bloomA) { ctx.globalAlpha = K.BLOOM_A; ctx.drawImage(a, wx, wy, ww, wh); }
+      // 7 motes
+      MOTES.draw(); ctx.globalAlpha = 1; ctx.drawImage(OFF.motes, wx, wy, ww, wh);
+      // 8 fossil
+      if (FOSSIL.alpha > 0.001) { ctx.globalAlpha = FOSSIL.alpha; ctx.drawImage(OFF.fossil, wx, wy, ww, wh); ctx.globalAlpha = 1; }
+    }
+    // 9 rims
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < PTR.length; i++) { const p = PTR[i]; if (p.alive && p.s > K.S_OPEN) this.rim(p); }
+    // 10 constellations + flights
+    SKY.draw();
+    // 11 hand glow, pointer ring, sparks, ripples, flash
+    this.effects();
+    // 12 vignette
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.fillStyle = this.vigGrad; ctx.fillRect(0, 0, W, H);
+    // 13 grain
+    if (Q.grain && OFF.grainPat) { ctx.globalAlpha = K.GRAIN; ctx.fillStyle = OFF.grainPat; const o = ((frameNo >> 2) * 37) % 256; ctx.translate(o, o); ctx.fillRect(-o, -o, W + 256, H + 256); ctx.translate(-o, -o); ctx.globalAlpha = 1; }
+    // 14 text + restart fade
+    DIR.drawText();
+    if (DIR.fadeAlpha > 0) { ctx.fillStyle = 'rgba(0,0,0,' + DIR.fadeAlpha.toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); }
+  },
+  rim(p) {
+    const x = p.x, y = p.y, R = p.Reff, s = p.s, win = DIR.windowNow(), dt = frameNo === 0 ? 0 : 1 / 60;
+    p.dash -= K.RIM_DASH_SPEED * dt;
+    ctx.globalAlpha = 0.12 * s; ctx.drawImage(SPR.disc, x - R, y - R, 2 * R, 2 * R);
+    ctx.globalAlpha = 0.35 * s; ctx.strokeStyle = 'rgba(127,227,255,1)'; ctx.lineWidth = 1.5; ctx.setLineDash(RIM_DASH); ctx.lineDashOffset = p.dash;
+    ctx.beginPath(); ctx.arc(x, y, p.R * 1.05, 0, 6.2832); ctx.stroke(); ctx.setLineDash(RIM_NODASH);
+    ctx.lineCap = 'round';
+    const seg = 6.2832 / K.RIM_SEG, gap = seg * 0.12;
+    for (let pass = 0; pass < 2; pass++) {
+      ctx.lineWidth = pass === 0 ? 7 : 2.5;
+      for (let k = 0; k < K.RIM_SEG; k++) {
+        const st = p.strain[k];
+        if (st > K.RIM_FLICKER && ((frameNo * 7 + k * 13) % 10) < 3) continue;
+        const broke = frameNo - p.breakFrame[k] < 2 && p.breakFrame[k] > 0;
+        ctx.strokeStyle = broke ? '#ffffff' : RIM_COLS[Math.round(st * 32)]; ctx.globalAlpha = s * (pass === 0 ? 0.22 : 1);
+        ctx.beginPath(); ctx.arc(x, y, R, k * seg + gap, (k + 1) * seg - gap); ctx.stroke();
+      }
+    }
+    const litN = K.BEADS * p.d / win, br = K.BEAD_R * R;
+    for (let k = 0; k < K.BEADS; k++) {
+      if (p.openT < k * 0.04) break;
+      const a = -Math.PI / 2 + 6.2832 * k / K.BEADS * (win / K.WINDOW), lit = k < litN;
+      ctx.globalAlpha = s * (lit ? 0.9 : 0.25); const bs = lit ? 7 : 5;
+      ctx.drawImage(SPR.bead, x + Math.cos(a) * br - bs / 2, y + Math.sin(a) * br - bs / 2, bs, bs);
+    }
+    ctx.globalAlpha = 1;
+  },
+  effects() {
+    ctx.globalCompositeOperation = 'lighter';
+    for (const g of GLYPHS.list) {
+      if (g.state !== 'STAMPING') continue;
+      const x = L.wx + g.hx * L.cellW + (rnd() - 0.5) * K.HAND_JITTER, y = L.wy + g.hy * L.cellH + (rnd() - 0.5) * K.HAND_JITTER;
+      ctx.globalAlpha = 0.9; ctx.drawImage(SPR.glow, x - 32, y - 32, 64, 64);
+    }
+    for (let i = 0; i < PTR.length; i++) {
+      const p = PTR[i]; if (!p.alive) continue;
+      if (p.kind === 'demo') { ctx.globalAlpha = 0.8; ctx.drawImage(SPR.glow, p.x - 32, p.y - 32, 64, 64); continue; }
+      if (p.kind !== 'real' || (p.type !== 'mouse' && !p.down && p.s <= 0)) continue;
+      const still = p.down && p.speed < K.STILL_SPEED && !p.inSky;
+      const r = (still ? K.RING_STILL_R : K.RING_R) + Math.sin(3.1416 * T);
+      ctx.globalAlpha = 0.5; ctx.strokeStyle = 'rgba(220,235,255,1)'; ctx.fillStyle = 'rgba(220,235,255,0.6)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 6.2832); if (p.down) ctx.fill(); else ctx.stroke();
+    }
+    const s = REMANSO.sparks;
+    for (let i = 0; i < REMANSO.sparkN; i++) { const j = i * 5; ctx.globalAlpha = s[j + 4] * 1.6; ctx.drawImage(SPR.spark, s[j] - 6, s[j + 1] - 6, 12, 12); }
+    if (DIR.flashT >= 0 && DIR.flashT < K.SET_FLASH_T) { ctx.globalAlpha = K.SET_FLASH * (1 - DIR.flashT / K.SET_FLASH_T); ctx.fillStyle = '#fff'; ctx.fillRect(L.wx, L.wy, L.ww, L.wh); }
+    const rp = DIR.ripples;
+    for (let i = 0; i < DIR.rippleN; i++) {
+      const j = i * 3, e = rp[j + 2] / K.SET_RING_T, r = easeOutQuad(e) * K.SET_RING_R * L.lmin;
+      ctx.globalAlpha = 0.5 * (1 - e); ctx.strokeStyle = 'rgba(255,240,210,1)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(rp[j], rp[j + 1], Math.max(1, r), 0, 6.2832); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  },
+  text(pt, en, alpha, y) {
+    const S = this.fontPx, W = L.cssW;
+    ctx.globalCompositeOperation = 'source-over'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = FONT.replace('{S}', S.toFixed(1)); ctx.fillStyle = 'rgba(242,232,213,' + (alpha * K.TEXT_PT).toFixed(3) + ')';
+    this.spaced(pt, W / 2, y, S * 0.08);
+    ctx.font = FONT.replace('{S}', (S * 0.72).toFixed(1)); ctx.fillStyle = 'rgba(242,232,213,' + (alpha * K.TEXT_EN).toFixed(3) + ')';
+    this.spaced(en, W / 2, y + S * 1.4, S * 0.72 * 0.08);
+  },
+  spaced(str, cx, y, sp) {
+    if ('letterSpacing' in ctx) { ctx.letterSpacing = sp.toFixed(2) + 'px'; ctx.fillText(str, cx, y); ctx.letterSpacing = '0px'; return; }
+    let w = 0; for (let i = 0; i < str.length; i++) w += ctx.measureText(str[i]).width + sp;
+    let x = cx - w / 2; const ta = ctx.textAlign; ctx.textAlign = 'left';
+    for (let i = 0; i < str.length; i++) { ctx.fillText(str[i], x, y); x += ctx.measureText(str[i]).width + sp; }
+    ctx.textAlign = ta;
+  }
+};
+const RIM_DASH = [3, 9], RIM_NODASH = [];
+
+// ---------------------------------------------------------------- AUDIO
+const NOTE = { D2: 73.42, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00, A3: 220.00, C4: 261.63, D4: 293.66, F4: 349.23, G4: 392.00, A4: 440.00, C5: 523.25, D5: 587.33, F5: 698.46, G5: 783.99, A5: 880.00, C6: 1046.50 };
+const PAD_NOTES = [NOTE.D4, NOTE.C4, NOTE.A3, NOTE.G3, NOTE.F3, NOTE.E3, NOTE.D3];
+const PLINK_NOTES = [NOTE.D5, NOTE.F5, NOTE.G5, NOTE.A5, NOTE.C6];
+const DRONE_NOTES = [NOTE.D3, NOTE.F3, NOTE.G3, NOTE.A3, NOTE.C4, NOTE.D4];
+const DAWN_TONES = [73.42, 92.5, 110, 138.59, 146.83, 185, 220, 277.18, 293.66, 370, 440, 554.37, 587.33];
+const AUDIO = {
+  ok: false, failed: false, ctx: null, master: null, comp: null, bus: null, stirSpeed: 0, muted: false, alive: 0, keAcc: 0,
+  bp1: null, bp2: null, bed2Gain: null, padGain: null, padOsc: null, triGain: null, padLp: null, padRoot: 0, lastNote: -1, partials: [], noise: null, plinkBudget: 0, dawnStarted: false,
+  init() {
+    if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); return; }
+    if (this.failed) return;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) { this.failed = true; return; }
+      this.ctx = new AC(); this.build(); this.ok = true; this.ctx.resume().catch(() => {});
+    } catch (e) { this.failed = true; this.ok = false; this.ctx = null; }
+  },
+  build() {
+    const c = this.ctx, A = K.AU;
+    this.master = c.createGain(); this.master.gain.value = A.master; this.master.connect(c.destination);
+    this.comp = c.createDynamicsCompressor(); this.comp.threshold.value = -18; this.comp.knee.value = 12; this.comp.ratio.value = 4; this.comp.attack.value = 0.01; this.comp.release.value = 0.25; this.comp.connect(this.master);
+    this.bus = c.createGain(); this.bus.gain.value = A.bus; this.bus.connect(this.comp);
+    const rev = c.createGain(); rev.gain.value = A.reverb; this.bus.connect(rev);
+    const conv = c.createConvolver(); conv.buffer = this.ir(); rev.connect(conv); conv.connect(this.comp);
+    this.noise = c.createBuffer(1, c.sampleRate >> 1, c.sampleRate); { const d = this.noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = rnd() * 2 - 1; }
+    const bed = (f, q, g) => { const s = c.createBufferSource(); s.buffer = this.pink(); s.loop = true; const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q; const gn = c.createGain(); gn.gain.value = 0; gn.gain.setTargetAtTime(g, c.currentTime, 0.7); s.connect(bp); bp.connect(gn); gn.connect(this.bus); s.start(); return [bp, gn]; };
+    const b1 = bed(180, 0.9, A.bed1), b2 = bed(900, 1.2, A.bed2); this.bp1 = b1[0]; this.bp2 = b2[0]; this.bed2Gain = b2[1];
+    this.padGain = c.createGain(); this.padGain.gain.value = 0;
+    this.padLp = c.createBiquadFilter(); this.padLp.type = 'lowpass'; this.padLp.frequency.value = 900; this.padLp.Q.value = 0.7;
+    this.padGain.connect(this.padLp); this.padLp.connect(this.bus);
+    const lfo = c.createOscillator(); lfo.frequency.value = 0.3; const lg = c.createGain(); lg.gain.value = 250; lfo.connect(lg); lg.connect(this.padLp.frequency); lfo.start();
+    this.padOsc = [];
+    for (let i = 0; i < 3; i++) { const o = c.createOscillator(); o.type = 'sine'; o.frequency.value = NOTE.D4; o.connect(this.padGain); o.start(); this.padOsc.push(o); }
+    const tri = c.createOscillator(); tri.type = 'triangle'; tri.frequency.value = NOTE.D4; this.triGain = c.createGain(); this.triGain.gain.value = 0; tri.connect(this.triGain); this.triGain.connect(this.padGain); tri.start(); this.padOsc.push(tri);
+    this.setPadNote(0, 0);
+  },
+  ir() {
+    const c = this.ctx, r = c.sampleRate, n = Math.floor(2.5 * r), b = c.createBuffer(2, n, r);
+    for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); let lp = 0; for (let i = 0; i < n; i++) { const t = i / r; lp += 0.35 * ((rnd() * 2 - 1) - lp); d[i] = lp * Math.exp(-2.4 * t) * (1 - 0.6 * t / 2.5); } }
+    return b;
+  },
+  pink() {
+    const c = this.ctx, r = c.sampleRate, n = 4 * r, b = c.createBuffer(1, n, r), d = b.getChannelData(0), rows = new Float32Array(8);
+    for (let i = 0; i < n; i++) { let s = rnd() * 2 - 1; for (let k = 0; k < 8; k++) { if ((i & ((1 << k) - 1)) === 0) rows[k] = rnd() * 2 - 1; s += rows[k]; } d[i] = s / 9 * 0.8; }
+    return b;
+  },
+  setPadNote(idx, strain) {
+    if (!this.ok) return; const c = this.ctx, root = PAD_NOTES[clamp(idx + this.padRoot, 0, 6)], t = c.currentTime, det = 35 * strain;
+    const o = this.padOsc;
+    o[0].frequency.setTargetAtTime(root, t, 0.05); o[1].frequency.setTargetAtTime(root * Math.pow(2, 3 / 12) * Math.pow(2, 5 / 1200), t, 0.05); o[2].frequency.setTargetAtTime(root * Math.pow(2, 7 / 12) * Math.pow(2, -5 / 1200), t, 0.05); o[3].frequency.setTargetAtTime(root, t, 0.05);
+    for (let i = 0; i < 4; i++) o[i].detune.setTargetAtTime(det, t, 0.1);
+    this.triGain.gain.setTargetAtTime(0.06 * strain, t, 0.1);
+  },
+  padOn() { if (!this.ok) return; const g = this.padGain.gain, t = this.ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(K.AU.pad, t + K.AU.padAttack); },
+  padOff() { if (!this.ok) return; const g = this.padGain.gain, t = this.ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.setTargetAtTime(0, t, K.AU.padRelease / 3); },
+  padRootDown() { this.padRoot = Math.min(2, this.padRoot + 1); },
+  voice(type, freq, gain, attack, dur, decay, dest) {
+    if (!this.ok || this.alive >= 8) return null;
+    const c = this.ctx, t = c.currentTime + 0.02, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.value = freq; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(gain, t + Math.max(0.015, attack)); g.gain.setTargetAtTime(0.0001, t + attack + dur, decay);
+    o.connect(g); g.connect(dest || this.bus); o.start(t); o.stop(t + attack + dur + decay * 5); this.alive++;
+    o.onended = () => { this.alive--; o.disconnect(); g.disconnect(); };
+    return o;
+  },
+  noiseVoice(f0, f1, q, gain, dur) {
+    if (!this.ok || this.alive >= 8) return;
+    const c = this.ctx, t = c.currentTime + 0.02, s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = this.noise; s.loop = true; bp.type = 'bandpass'; bp.Q.value = q; bp.frequency.setValueAtTime(f0, t); bp.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(gain, t + 0.015); g.gain.setTargetAtTime(0.0001, t + dur * 0.6, dur * 0.15);
+    s.connect(bp); bp.connect(g); g.connect(this.bus); s.start(t); s.stop(t + dur + 0.3); this.alive++;
+    s.onended = () => { this.alive--; s.disconnect(); bp.disconnect(); g.disconnect(); };
+  },
+  tick() { this.noiseVoice(3000, 3000, 8, K.AU.tick, 0.04); },
+  plink() { if (this.plinkBudget <= 0) return; this.plinkBudget--; this.voice('sine', PLINK_NOTES[(rnd() * 5) | 0], K.AU.plink, 0.015, 0.02, 0.08); },
+  tell() { this.noiseVoice(1200, 300, 3, K.AU.tell, 0.6); },
+  swell() { this.voice('sine', 55, K.AU.swell, 0.6, 0.1, 0.25); },
+  setChord(g, dim) {
+    if (!this.ok) return; const c = this.ctx, root = DRONE_NOTES[(g.idx) % 6] * (dim ? 1 : 2), lp = c.createBiquadFilter(), t = c.currentTime;
+    lp.type = 'lowpass'; lp.frequency.setValueAtTime(400, t); lp.frequency.linearRampToValueAtTime(2500, t + 1.5); lp.connect(this.bus);
+    const gk = dim ? 0.5 : 1, ratios = [1, 1.5, 2.25, 2];
+    for (let i = 0; i < 4; i++) this.voice('sine', root * ratios[i], K.AU.chord * gk / 2, 0.4, 1.5, 1.2, lp);
+    setTimeout(() => { try { lp.disconnect(); } catch (e) { /* already gone */ } }, 9000);
+    const car = this.voice('sine', root * 2, 0.08 * gk, 0.015, 0.5, 0.6);
+    if (car) { const m = c.createOscillator(), mg = c.createGain(); m.frequency.value = root * 2 * 2.4; mg.gain.setValueAtTime(root * 2 * 3, t); mg.gain.linearRampToValueAtTime(0, t + 2); m.connect(mg); mg.connect(car.frequency); m.start(t); m.stop(t + 2.2); }
+    if (!dim) this.bells.push(root * 2);
+  },
+  bells: [],
+  lost() {
+    if (!this.ok) return; const c = this.ctx, t = c.currentTime;
+    this.bp1.frequency.setTargetAtTime(this.bp1.frequency.value * 0.5, t, 0.3); this.bp1.frequency.setTargetAtTime(180, t + 5, 1.5);
+    this.voice('sine', 45, K.AU.thud, 0.015, 0.2, 0.08);
+    for (let i = 0; i < 3; i++) { const o = this.voice('sine', PAD_NOTES[2] * [1, 1.189, 1.498][i], 0.05, 0.3, 1.5, 0.4); if (o) o.detune.value = (i % 2 ? 40 : -40); }
+  },
+  partial(g) {
+    if (!this.ok) return; const c = this.ctx, st = g.state; let f, gain, det;
+    if (st === 'STAR') { let n = 0; for (const o of GLYPHS.list) if (o.state === 'STAR' && o.idx < g.idx) n++; f = DRONE_NOTES[n % 6]; gain = K.AU.partial; det = 0; }
+    else if (st === 'DIM') { f = DRONE_NOTES[g.idx % 6] / 2; gain = K.AU.partialDim; det = -12; }
+    else { f = NOTE.D2; gain = K.AU.partialWisp; det = -18; }
+    const o = c.createOscillator(), gn = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+    o.frequency.value = f; o.detune.value = det; gn.gain.value = 0; gn.gain.setTargetAtTime(gain, c.currentTime, 1); lfo.frequency.value = 0.05; lg.gain.value = 4; lfo.connect(lg); lg.connect(o.detune);
+    o.connect(gn); gn.connect(this.bus); o.start(); lfo.start(); this.partials.push({ o, gn, lfo, f });
+  },
+  dawn() {
+    if (!this.ok || this.dawnStarted) return; this.dawnStarted = true; const c = this.ctx, t = c.currentTime;
+    for (const p of this.partials) { let best = DAWN_TONES[0]; for (const d of DAWN_TONES) if (Math.abs(Math.log(d / p.f)) < Math.abs(Math.log(best / p.f))) best = d; p.o.frequency.setTargetAtTime(best, t, 2.5); p.gn.gain.setTargetAtTime(0, t + 12, 6); }
+    const pad = [NOTE.D3, 185, NOTE.A3, 277.18];
+    for (let i = 0; i < 4; i++) { const o = c.createOscillator(), g = c.createGain(); o.frequency.value = pad[i]; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.05, t + 10); g.gain.setTargetAtTime(0, t + 22, 6); o.connect(g); g.connect(this.bus); o.start(t); o.stop(t + 40); }
+    this.padGain.gain.setTargetAtTime(0, t + 12, 6);
+    const bells = this.bells.slice().reverse();
+    for (let i = 0; i < bells.length; i++) setTimeout(() => this.voice('sine', bells[i], 0.07, 0.015, 0.6, 0.8), 1500 * i + 200);
+  },
+  reset() { if (!this.ok) return; const t = this.ctx.currentTime; for (const p of this.partials) { p.gn.gain.setTargetAtTime(0, t, 0.3); p.o.stop(t + 2); p.lfo.stop(t + 2); } this.partials.length = 0; this.bells.length = 0; this.dawnStarted = false; this.padRoot = 0; this.padGain.gain.setTargetAtTime(0, t, 0.01); },
+  toggleMute() { this.muted = !this.muted; if (!this.ok) return; this.master.gain.setTargetAtTime(this.muted ? 0 : K.AU.master, this.ctx.currentTime, K.AU.mute / 3); },
+  suspend() { if (this.ok && this.ctx.state === 'running') this.ctx.suspend().catch(() => {}); },
+  resume() { if (this.ok && this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); },
+  update(dt) {
+    if (!this.ok) { this.stirSpeed = 0; return; }
+    this.keAcc += dt; this.plinkBudget = Math.min(3, this.plinkBudget + dt * 3);
+    if (this.keAcc < 0.1) return; this.keAcc = 0;
+    const N = G.N, u = F.u, v = F.v; let ke = 0, n = 0;
+    for (let i = 0; i < N; i += 7) { ke += u[i] * u[i] + v[i] * v[i]; n++; }
+    ke = clamp(ke / Math.max(1, n) / 400, 0, 1); const t = this.ctx.currentTime;
+    this.bp1.frequency.setTargetAtTime(180 + 220 * ke, t, 0.25); this.bp2.frequency.setTargetAtTime(900 + 1300 * ke, t, 0.25);
+    this.bed2Gain.gain.setTargetAtTime(K.AU.bed2 + 0.06 * clamp(this.stirSpeed / 1500, 0, 1), t, 0.1); this.stirSpeed = 0;
+    let open = null; for (let i = 0; i < PTR.length; i++) { const p = PTR[i]; if (p.alive && p.s > K.S_OPEN && (!open || p.s > open.s)) open = p; }
+    if (open) { const win = DIR.windowNow(), idx = Math.min(6, Math.floor(open.d / win * 6)); if (idx !== this.lastNote || open.strainAvg > 0.05) { this.lastNote = idx; this.setPadNote(idx, open.strainAvg); } }
+  }
+};
+
+// ---------------------------------------------------------------- DIRECTOR
+const DIR = {
+  phase: 'calibrate', act: null, actIdx: -1, actT: 0, capWarn: false, capT: -1, doneT: -1, lastChangeT: 0, nudgeNext: 0, demoNext: 0, idleNext: 0,
+  pendingSkip: null, dawnRewind: false, dawnD: 0, blendReady: false, dawnText: false, dawnAudio: false, fading: false, fadeT: 0, fadeAlpha: 0, flashT: -1,
+  ripples: new Float32Array(K.RIPPLES * 3), rippleN: 0, lostT: -1, textT: -1, textPT: '', textEN: '', textY: 0, skyHold: 0, sky2Done: false, g3Done: false, vortexOn: false, restarting: false,
+  windowNow() { return this.act ? this.act.window : K.WINDOW; },
+  rewindRate() { return this.dawnRewind ? K.REWIND_DAWN : K.REWIND_RATE; },
+  noteChange() { this.lastChangeT = this.actT; this.nudgeNext = this.actT + K.NUDGE_T; },
+  setFx(g) { this.flashT = 0; if (this.rippleN < K.RIPPLES) { const j = this.rippleN++ * 3; const c = GLYPHS.centerCss(g); this.ripples[j] = c.x; this.ripples[j + 1] = c.y; this.ripples[j + 2] = 0; } },
+  lostFx(g) { this.lostT = 0; MOTES.puff(g.cxc, g.cyc, K.LOST_PUFF); },
+  showText(pt, en, y) { this.textT = 0; this.textPT = pt; this.textEN = en; this.textY = y; },
+  actGlyphs() { return this.act ? this.act.glyphs : []; },
+  startAct(i) {
+    const act = K.ACTS[i];
+    this.act = act; this.actIdx = i; this.phase = act.id; this.actT = 0; this.capWarn = false; this.capT = -1; this.doneT = -1; this.lastChangeT = 0;
+    this.nudgeNext = K.NUDGE_T; this.demoNext = K.DEMO_T; this.idleNext = K.IDLE_T; this.sky2Done = false; this.g3Done = false; this.vortexOn = false; this.dawnRewind = false;
+    const aspect = L.ww / L.wh;
+    if (Math.abs(aspect - G.aspect) / G.aspect > 0.15 || (Q.step >= 6 && G.rung < 2)) deriveGrid(Math.min(2, G.rung + (Q.step >= 6 ? 1 : 0)));
+    WEATHER.tideScale = 1; WEATHER.pair = false; SKY.light = 0; SKY.predawn = 0; SKY.set(act.sky, 0, i > 0);
+    if (i === 0) WEATHER.set(0, act.tideP, 0, 0, false); else WEATHER.set(act.tideA, act.tideP, act.vort, act.vpk, true);
+    if (act.id === 'act2') { WEATHER.pair = true; WEATHER.midX = 0.5 * G.W; WEATHER.midY = 0.56 * G.H; }
+    HIST.count = 0; HIST.head = 0;
+  },
+  stampGlyph(id, crossAt) {
+    const g = GLYPHS.byId(id); if (!g || g.state !== 'PENDING') return;
+    GLYPHS.stamp(g);
+    if (crossAt > 0) WEATHER.solveCross(0, g.cxc, g.cyc, T + crossAt);
+  },
+  resolved(g) { return g.state === 'STAR' || g.state === 'DIM' || g.state === 'PERMANENT'; },
+  update(dt) {
+    if (this.flashT >= 0) { this.flashT += dt; if (this.flashT > K.SET_FLASH_T) this.flashT = -1; }
+    for (let i = 0; i < this.rippleN; i++) { const j = i * 3; this.ripples[j + 2] += dt; if (this.ripples[j + 2] > K.SET_RING_T) { const l = --this.rippleN * 3; this.ripples[j] = this.ripples[l]; this.ripples[j + 1] = this.ripples[l + 1]; this.ripples[j + 2] = this.ripples[l + 2]; i--; } }
+    if (this.lostT >= 0) { this.lostT += dt; SKY.dark = this.lostT < K.LOST_SKY_T ? K.LOST_SKY * (1 - easeOutQuad(this.lostT / K.LOST_SKY_T)) : 0; if (this.lostT > K.LOST_SKY_T) this.lostT = -1; }
+    if (this.textT >= 0) { this.textT += dt; if (this.textT > K.TEXT_IN + K.TEXT_HOLD + K.TEXT_OUT) this.textT = -1; }
+    if (SKY.fadeT < K.SKY_FADE) SKY.fadeT += dt;
+    RENDER.ghostBreath = 1 + 0.25 * Math.sin(2 * Math.PI * 0.2 * T);
+    if (INPUT.rDownAt >= 0 && realNow - INPUT.rDownAt > K.RESTART_KEY_HOLD * 1000 && !this.fading) this.restart();
+    if (this.fading) {
+      this.fadeT += dt;
+      if (!this.restarting) { this.fadeAlpha = Math.min(1, this.fadeT / K.RESTART_FADE); if (this.fadeT >= K.RESTART_FADE) { this.restarting = true; this.reset(); this.fadeT = 0; } }
+      else { this.fadeAlpha = Math.max(0, 1 - this.fadeT); if (this.fadeT >= 1) { this.fading = false; this.restarting = false; this.fadeAlpha = 0; } }
+    }
+    if (this.phase === 'calibrate') return;
+    this.actT += dt;
+    if (this.phase === 'dawn') { this.dawnStep(dt); return; }
+    if (this.phase === 'epilogue') { this.epilogueStep(dt); return; }
+    const act = this.act, t = this.actT;
+    // stamping schedule and per-act beats
+    if (act.id === 'act0') {
+      if (t >= K.TEXT_OPEN_AT && !this.openingShown) { this.openingShown = true; this.showText('O que a água leva, a mão parada lembra.', 'What the water takes, the still hand remembers.', L.hx - 0.12 * L.cssH); }
+      if (t >= 3) this.stampGlyph('G1', 0);
+      if (t >= K.ACT0_VORTEX_AT && !this.vortexOn) { this.vortexOn = true; WEATHER.set(0, act.tideP, 1, act.vpk, true); const g = GLYPHS.byId('G1'); WEATHER.solveCross(0, g.cxc, g.cyc, T + K.ACT0_VORTEX_LEAD); }
+      if (!INPUT.pressed && t >= this.demoNext) { this.demoNext = t + K.DEMO_REPEAT; this.demo(); }
+    } else if (act.id === 'act1') {
+      if (t >= 1) this.stampGlyph('G2', K.ACT1_CROSS);
+      const g2 = GLYPHS.byId('G2');
+      if (!this.g3Done && (t >= K.ACT1_G3_AT || (g2.state !== 'PENDING' && g2.state !== 'STAMPING' && g2.state !== 'LIVE' && g2.state !== 'FADING'))) { this.g3Done = true; this.stampGlyph('G3', K.ACT1_CROSS); }
+    } else if (act.id === 'act2') {
+      if (t >= 1) { this.stampGlyph('G4', 0); this.stampGlyph('G5', 0); }
+      if (!this.sky2Done && t >= act.cap * K.ACT2_SKY_AT) { this.sky2Done = true; SKY.set(act.sky2, 0, true); }
+    } else if (act.id === 'act3') {
+      if (t >= 1) this.stampGlyph('G6', 0);
+      SKY.predawn = Math.min(1, t / 20);
+    }
+    if (stepNo % 6 === 0) WEATHER.tells();
+    // cap: morning approaches
+    if (act.cap > 0) {
+      const warn = t >= act.cap - K.CAP_WARN;
+      if (warn && !this.capWarn) { this.capWarn = true; WEATHER.tideScale = K.CAP_TIDE; }
+      if (warn) SKY.light = Math.min(K.CAP_SKY, SKY.light + dt * K.CAP_SKY / 3);
+      if (t >= act.cap && this.capT < 0) {
+        this.capT = t;
+        for (const id of act.glyphs) { const g = GLYPHS.byId(id); if (g.state === 'LIVE' || g.state === 'FADING') GLYPHS.wisp(g); if (g.state === 'WISP') GLYPHS.permanent(g); }
+      }
+      if (this.capT >= 0 && t - this.capT >= K.CAP_PAUSE) { this.next(); return; }
+    }
+    // exit when every glyph of the act is resolved
+    let all = true; for (const id of act.glyphs) if (!this.resolved(GLYPHS.byId(id))) all = false;
+    if (all && this.doneT < 0) this.doneT = t;
+    if (this.doneT >= 0 && t - this.doneT >= K.ACT_MIN_LEN) { this.next(); return; }
+    // stuck nudge and idle demonstration
+    if (t - this.lastChangeT >= K.NUDGE_T && t >= this.nudgeNext) {
+      this.nudgeNext = t + K.NUDGE_REPEAT;
+      const g = this.target(); if (g) { WEATHER.nudge(g); g.nudgeUntil = t + K.NUDGE_DUR; g.ghostA *= K.NUDGE_GHOST; GLYPHS.ghostDirty = true; }
+    }
+    for (const g of GLYPHS.list) if (g.nudgeUntil && t > g.nudgeUntil) { g.nudgeUntil = 0; g.ghostA = g.state === 'LIVE' ? 1 : g.state === 'FADING' ? 0.6 : 0.3; GLYPHS.ghostDirty = true; }
+    if (T - INPUT.lastInputT >= K.IDLE_T && t >= this.idleNext) { this.idleNext = t + K.DEMO_REPEAT; this.demo(); }
+  },
+  target() {
+    let best = null; const pr = { FADING: 0, WISP: 1, LIVE: 2 };
+    for (const id of this.actGlyphs()) { const g = GLYPHS.byId(id); if (!(g.state in pr)) continue; if (!best || pr[g.state] < pr[best.state] || (pr[g.state] === pr[best.state] && g.cohN < best.cohN)) best = g; }
+    return best;
+  },
+  demo() {
+    const g = this.target(); if (!g || findPtr('demo')) return;
+    const p = allocPtr('demo', 'demo'); if (!p) return;
+    const c = GLYPHS.centerCss(g); p.x = p.lx = c.x; p.y = p.ly = c.y; p.down = true; p.demoT = 0;
+    this.demoP = p; this.demoHold = K.DEMO_HOLD + 0.4;
+  },
+  next() { if (this.actIdx < K.ACTS.length - 1) this.startAct(this.actIdx + 1); else this.startDawn(); },
+  startDawn() {
+    this.phase = 'dawn'; this.act = null; this.actT = 0; this.dawnD = 0; this.blendReady = false; this.dawnText = false; this.dawnAudio = false;
+    WEATHER.tideScale = 1; WEATHER.pair = false; WEATHER.set(0, 40, 0, 0, true); SKY.light = 0; SKY.predawn = 0; SKY.set(K.DAWN_SKY[0], 0, false);
+    for (const g of GLYPHS.list) { if (g.state === 'WISP') GLYPHS.permanent(g); else if (g.state === 'LIVE' || g.state === 'FADING') { GLYPHS.wisp(g); GLYPHS.permanent(g); } }
+    for (let i = 0; i < PTR.length; i++) { PTR[i].s = 0; PTR[i].d = 0; PTR[i].wasOpen = false; }
+    AUDIO.padOff();
+  },
+  dawnStep(dt) {
+    const t = this.actT, N = G.N;
+    this.dawnRewind = t < K.DAWN_REWIND;
+    if (this.dawnRewind) { this.dawnD += K.REWIND_DAWN * dt; this.globalRewind(this.dawnD); }
+    if (t >= K.DAWN_REWIND && !this.blendReady) { this.blendReady = true; this.buildDawnTargets(); }
+    if (this.blendReady && t < K.DAWN_BLEND) {
+      const d0 = F.d0, d1 = F.d1, dW = F.dW, a0 = F.dawn0, a1 = F.dawn1, aW = F.dawnW, k = K.DAWN_BLEND_K;
+      for (let i = 0; i < N; i++) { d0[i] += (a0[i] - d0[i]) * k; d1[i] += (a1[i] - d1[i]) * k; dW[i] += (aW[i] - dW[i]) * k; }
+    }
+    if (t >= K.DAWN_BLEND && !this.dawnAudio) { this.dawnAudio = true; AUDIO.dawn(); }
+    if (t < K.DAWN_BLEND) FOSSIL.alpha = K.FOSSIL_ALPHA;
+    else if (t < K.DAWN_FOSSIL) FOSSIL.alpha = lerp(K.FOSSIL_ALPHA, K.FOSSIL_DAWN, easeInOutSine((t - K.DAWN_BLEND) / (K.DAWN_FOSSIL - K.DAWN_BLEND)));
+    else FOSSIL.alpha = K.FOSSIL_DAWN * (1 - easeInOutSine(Math.min(1, (t - K.DAWN_BLEACH) / 10)));
+    if (t >= K.DAWN_BLEACH) {
+      const d0 = F.d0, d1 = F.d1, dW = F.dW, k = 0.99;
+      for (let i = 0; i < N; i++) { d0[i] *= k; d1[i] *= k; dW[i] *= k; }
+      MOTES.mist = true;
+    }
+    if (t >= K.DAWN_STARS_OUT) SKY.alpha = Math.max(0, 1 - (t - K.DAWN_STARS_OUT) / (K.DAWN_LEN - K.DAWN_STARS_OUT));
+    if (t >= K.DAWN_TEXT && !this.dawnText) { this.dawnText = true; this.showText('A manhã não devolve. Só ilumina.', 'Morning gives nothing back. It only lights.', 0.14 * L.cssH); }
+    if (stepNo % 4 === 0) {
+      if (t < K.DAWN_BLEACH) { const e = easeInOutSine(t / K.DAWN_BLEACH); SKY.setRgb(mixRgb(hexRgb(K.DAWN_SKY[0]), hexRgb(K.DAWN_SKY[1]), e), e); }
+      else { const e = Math.min(1, (t - K.DAWN_BLEACH) / 10); SKY.setRgb(mixRgb(hexRgb(K.DAWN_SKY[1]), hexRgb(K.DAWN_SKY[2]), e), 1); RENDER.rebuildWater(e); }
+    }
+    if (t >= K.DAWN_LEN) this.startEpilogue();
+  },
+  globalRewind(d) {
+    HIST.seek(d); if (!HIST.valid) return;
+    const N = G.N, dyH = HIST.dye, veH = HIST.vel, fr = HIST.frac, fa = 1 - fr, a3 = HIST.slotA * N * 3, b3 = HIST.slotB * N * 3, a2 = HIST.slotA * N * 2, b2 = HIST.slotB * N * 2;
+    const u = F.u, v = F.v, d0 = F.d0, d1 = F.d1, dW = F.dW, rc = F.recall, kd = K.RECALL_DYE, kv = K.RECALL_VEL, kvk = K.RECALL_VEL_K;
+    for (let i = 0; i < N; i++) {
+      const e0 = (dyH[a3 + i] * fa + dyH[b3 + i] * fr) / 128 - d0[i], e1 = (dyH[a3 + N + i] * fa + dyH[b3 + N + i] * fr) / 128 - d1[i], eW = (dyH[a3 + 2 * N + i] * fa + dyH[b3 + 2 * N + i] * fr) / 128 - dW[i];
+      d0[i] += kd * e0; d1[i] += kd * e1; dW[i] += kd * eW;
+      let m = Math.abs(e0) + Math.abs(e1) + Math.abs(eW); m *= 3; if (m > 1) m = 1; if (m > rc[i]) rc[i] = m;
+      const hu = (veH[a2 + i] * fa + veH[b2 + i] * fr) / 3, hv = (veH[a2 + N + i] * fa + veH[b2 + N + i] * fr) / 3;
+      u[i] += (-kvk * hu - u[i]) * kv; v[i] += (-kvk * hv - v[i]) * kv;
+    }
+  },
+  buildDawnTargets() {
+    const N = G.N, a0 = F.dawn0, a1 = F.dawn1, aW = F.dawnW; a0.fill(0, 0, N); a1.fill(0, 0, N); aW.fill(0, 0, N);
+    for (const g of GLYPHS.list) {
+      if (g.state === 'PENDING') continue;
+      GLYPHS.geometry(g);
+      const k = g.state === 'STAR' ? 1 : g.state === 'DIM' ? K.DIM_BRIGHT : 0, dst = g.state === 'STAR' || g.state === 'DIM' ? (g.slot === 0 ? a0 : a1) : aW, m = g.maskThick, kk = k > 0 ? k : 0.8;
+      for (let i = 0; i < N; i++) { const t = m[i] * kk; if (t > dst[i]) dst[i] = t; }
+    }
+  },
+  startEpilogue() {
+    this.phase = 'epilogue'; this.actT = 0; this.act = null; this.dawnRewind = false; MOTES.mist = false; this.skyHold = 0;
+    F.d0.fill(0); F.d1.fill(0); F.dW.fill(0); F.recall.fill(0); F.ghost.fill(0); HIST.count = 0;
+    WEATHER.set(K.EPI_TIDE, 40, 1, K.EPI_VPK, true); SKY.setRgb(hexRgb(K.EPI_SKY), 1); SKY.alpha = 0; SKY.light = 0; SKY.dark = 0; RENDER.rebuildWater(1); FOSSIL.alpha = 0;
+  },
+  epilogueStep(dt) {
+    let hold = false;
+    for (let i = 0; i < PTR.length; i++) { const p = PTR[i]; if (p.alive && p.down && p.inSky && p.speed < K.STILL_SPEED) hold = true; }
+    this.skyHold = hold ? this.skyHold + dt : 0;
+    if (this.skyHold >= K.EPI_RESTART_HOLD && !this.fading) this.restart();
+  },
+  restart() { this.fading = true; this.restarting = false; this.fadeT = 0; },
+  reset() {
+    clearFields(); HIST.count = 0; HIST.head = 0; GLYPHS.reset(); GLYPHS.slotCol[0] = K.COL.amber; GLYPHS.slotCol[1] = K.COL.rose; GLYPHS.slotGlyph[0] = GLYPHS.slotGlyph[1] = null;
+    SKY.reset(); SKY.light = 0; SKY.dark = 0; SKY.predawn = 0; SKY.set('#02030a', 0, false); FOSSIL.clear(); MOTES.reseed(); MOTES.mist = false;
+    WEATHER.init(); WEATHER.set(0, 40, 0, 0, false); WEATHER.rampT = 99; WEATHER.update(0); RENDER.rebuildWater(0); RENDER.ghostBreath = 1;
+    for (let i = 0; i < PTR.length; i++) { const p = PTR[i]; p.s = 0; p.d = 0; p.holdT = 0; p.wasOpen = false; if (p.kind !== 'real') p.alive = false; }
+    AUDIO.reset(); INPUT.pressed = false; this.openingShown = false; this.textT = -1; this.flashT = -1; this.rippleN = 0; this.lostT = -1; this.dawnRewind = false; this.skyHold = 0;
+    this.startAct(0);
+  },
+  skipTo(name) {
+    const order = ['act0', 'act1', 'act2', 'act3', 'dawn', 'epilogue'], idx = order.indexOf(name);
+    if (idx < 0) return;
+    if (this.phase === 'calibrate') { this.pendingSkip = name; return; }
+    this.fading = false; this.restarting = false; this.fadeAlpha = 0;
+    this.reset();
+    const actN = idx < 4 ? idx : 4;
+    for (const g of GLYPHS.list) { if (g.def.act < actN) { GLYPHS.geometry(g); g.state = 'STAR'; g.dim = false; SKY.launch(g); SKY.stars[g.idx].bright = 1; SKY.flightN = 0; } }
+    if (idx < 4) { this.startAct(idx); if (idx > 0) { SKY.fadeT = 99; WEATHER.rampT = 99; WEATHER.update(0); SKY.rebuild(); } }
+    else { this.startAct(3); this.startDawn(); if (idx === 5) this.startEpilogue(); }
+  },
+  demoStep(dt) {
+    const p = this.demoP; if (!p || !p.alive) { this.demoP = null; return; }
+    p.demoT += dt;
+    if (p.demoT >= this.demoHold) { p.down = false; this.demoP = null; }
+  },
+  drawText() {
+    if (this.textT < 0) return;
+    const t = this.textT, tin = K.TEXT_IN, hold = K.TEXT_HOLD, tout = K.TEXT_OUT;
+    const a = t < tin ? easeInOutSine(t / tin) : t < tin + hold ? 1 : 1 - easeInOutSine((t - tin - hold) / tout);
+    if (a <= 0.001) return;
+    RENDER.text(this.textPT, this.textEN, a, this.textY);
+  }
+};
+
+// ---------------------------------------------------------------- LOOP
+const Q = {
+  step: 0, forced: -1, grain: true, bloomA: true, motes: K.MOTES, gs: K.GS_SWEEPS, scaleMul: 1, name: 'high', acc: 0, cnt: 0, restoreN: 0, calRung: 0,
+  apply() {
+    const s = this.step; this.grain = s < 1; this.bloomA = s < 2; this.motes = s < 3 ? K.MOTES : K.MOTES_DEG; this.gs = s < 4 ? K.GS_SWEEPS : K.GS_SWEEPS_DEG;
+    const sm = s < 5 ? 1 : K.SCALE_MIN / K.SCALE_MAX; if (sm !== this.scaleMul) { this.scaleMul = sm; L.dirty = true; }
+    this.name = s === 0 ? 'high' : s <= 2 ? 'medium' : s <= 4 ? 'low' : 'lowest';
+  },
+  sample(jsNorm) {
+    if (this.forced >= 0) return;
+    this.acc += jsNorm; this.cnt++;
+    if (this.cnt < K.LADDER_FRAMES) return;
+    const mean = this.acc / this.cnt; this.acc = 0; this.cnt = 0;
+    if (mean > K.LADDER_JS && this.step < 6) { this.step++; this.restoreN = 0; this.apply(); }
+    else if (mean < K.LADDER_JS * 0.66) { this.restoreN += K.LADDER_FRAMES; if (this.restoreN >= K.LADDER_RESTORE_FRAMES && this.step > 0) { this.step--; this.restoreN = 0; this.apply(); } }
+    else this.restoreN = 0;
+  },
+  force(q) {
+    const map = { auto: -1, high: 0, medium: 2, low: 4, lowest: 5 };
+    const v = typeof q === 'number' ? clamp(q | 0, 0, 6) : (q in map ? map[q] : -1);
+    this.forced = v; if (v >= 0) this.step = v; this.acc = 0; this.cnt = 0; this.apply();
+  }
+};
+const STATS = { frame: new Float32Array(120), step: new Float32Array(120), render: new Float32Array(120), i: 0, n: 0, steps: 0 };
+const CAL = { samples: [], drops: 0 };
+let lastNow = 0, acc = 0, rafId = 0, timeScale = 1;
+function stepOnce() {
+  fluidStep(); REMANSO.stepSparks(); SKY.step(K.DT); WEATHER.update(K.DT); DIR.demoStep(K.DT); DIR.update(K.DT); T += K.DT;
+}
+function pct(arr, n, q) { const a = Array.from(arr.subarray(0, n)).sort((x, y) => x - y); return a.length ? a[Math.min(a.length - 1, Math.floor(q * a.length))] : 0; }
+function summary(arr, n) { let s = 0, m = 0; for (let i = 0; i < n; i++) { s += arr[i]; if (arr[i] > m) m = arr[i]; } return { avg: +(s / Math.max(1, n)).toFixed(2), p95: +pct(arr, n, 0.95).toFixed(2), max: +m.toFixed(2) }; }
+function tick(now) {
+  rafId = requestAnimationFrame(tick);
+  frameNo++; realNow = now;
+  let resized = false; if (L.dirty) { applyResize(); resized = true; }
+  const frameDt = lastNow ? now - lastNow : 16.7;
+  const dtReal = lastNow ? Math.min(frameDt / 1000, K.ACC_CLAMP * Math.max(1, timeScale)) : 0;
+  lastNow = now; acc += dtReal * timeScale;
+  INPUT.frame(now);
+  const maxSteps = timeScale > 1 ? K.MAX_STEPS_FAST : K.MAX_STEPS;
+  const t0 = performance.now(); let steps = 0;
+  while (acc >= K.DT && steps < maxSteps) { stepOnce(); acc -= K.DT; steps++; }
+  if (acc > 2 * K.DT) acc = 0;
+  const t1 = performance.now();
+  if (steps > 0 || resized) RENDER.frame();
+  const t2 = performance.now();
+  if (steps > 0) {
+    const i = STATS.i; STATS.frame[i] = frameDt; STATS.step[i] = (t1 - t0) / steps; STATS.render[i] = t2 - t1; STATS.i = (i + 1) % 120; if (STATS.n < 120) STATS.n++; STATS.steps += steps;
+    if (!G.calibrated) {
+      if (stepNo >= K.CAL_START) CAL.samples.push((t1 - t0) / steps);
+      if (CAL.samples.length >= K.CAL_END - K.CAL_START) {
+        const sorted = CAL.samples.slice().sort((a, b) => a - b), p75 = sorted[Math.floor(sorted.length * 0.75)];
+        if (p75 > K.CAL_MS && CAL.drops < K.CAL_MAX_DROPS && G.rung < 2) { CAL.drops++; deriveGrid(G.rung + 1); CAL.samples.length = 0; }
+        else { G.calibrated = true; Q.calRung = G.rung; CAL.samples.length = 0; DIR.startAct(0); if (DIR.pendingSkip) { const ps = DIR.pendingSkip; DIR.pendingSkip = null; DIR.skipTo(ps); } }
+      }
+    } else Q.sample((t1 - t0) / steps + (t2 - t1));
+  }
+  AUDIO.update(dtReal);
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { if (rafId) cancelAnimationFrame(rafId); rafId = 0; AUDIO.suspend(); releaseAll(); }
+  else if (!rafId) { lastNow = 0; acc = 0; AUDIO.resume(); rafId = requestAnimationFrame(tick); }
+});
+
+// ---------------------------------------------------------------- BOOT
+function boot() {
+  const m = /seed=(\d+)/.exec(location.hash || ''); seedRng(m ? +m[1] : 20240901);
+  buildGrain(); applyResize();
+  deriveGrid((navigator.hardwareConcurrency || 4) <= 2 ? 1 : 0);
+  SKY.set('#02030a', 0, false); WEATHER.set(0, 40, 0, 0, false); WEATHER.rampT = 99;
+  const skyOut = { stars: 0, dim: 0, wisps: 0 };
+  window.__game = {
+    version: '1.0',
+    snapshot() {
+      const glyphs = [];
+      for (const g of GLYPHS.list) { if (g.state === 'PENDING') continue; glyphs.push({ id: g.id, state: g.state, coh: +g.coh.toFixed(3), cohN: +g.cohN.toFixed(3), eligible: g.eligible, center: GLYPHS.centerCss(g), extentPx: Math.round(g.def.E * L.lmin) }); }
+      const remansos = []; let pointers = 0;
+      for (let i = 0; i < PTR.length; i++) { const p = PTR[i]; if (!p.alive) continue; if (p.kind === 'real') pointers++; if (p.s > K.S_OPEN) remansos.push({ x: Math.round(p.x), y: Math.round(p.y), r: Math.round(p.Reff), s: +p.s.toFixed(2), d: +p.d.toFixed(2), strain: +p.strainAvg.toFixed(2) }); }
+      const fr = summary(STATS.frame, STATS.n);
+      return { phase: DIR.phase, t: +T.toFixed(2), actT: +DIR.actT.toFixed(2), rung: G.rung, quality: Q.name, fps: Math.round(1000 / Math.max(1, fr.avg)),
+        water: { x: L.wx, y: L.wy, w: L.ww, h: L.wh }, glyphs, remansos, pointers, sky: SKY.counts(skyOut),
+        audio: { ok: AUDIO.ok, running: !!(AUDIO.ctx && AUDIO.ctx.state === 'running'), muted: AUDIO.muted } };
+    },
+    flowAt(x, y) { return flowAtCss(+x || 0, +y || 0); },
+    setTimeScale(k) { timeScale = clamp(+k || 1, 0.1, 4); acc = 0; },
+    skipToPhase(name) { DIR.skipTo(String(name)); },
+    setSeed(n) { seedRng(+n || 1); },
+    setQuality(q) { Q.force(q); },
+    stats() {
+      const heap = (performance.memory && performance.memory.usedJSHeapSize) ? +(performance.memory.usedJSHeapSize / 1048576).toFixed(1) : -1;
+      return { frameMs: summary(STATS.frame, STATS.n), stepMs: summary(STATS.step, STATS.n), renderMs: summary(STATS.render, STATS.n), heapMB: heap, quality: Q.name, rung: G.rung, steps: STATS.steps };
+    }
+  };
+  rafId = requestAnimationFrame(tick);
+}
+boot();
+</script>
+</body>
+</html>

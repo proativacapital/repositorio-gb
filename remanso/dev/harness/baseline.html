@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta name=viewport content="width=device-width,initial-scale=1"><style>html,body{margin:0;height:100%;overflow:hidden;background:#000}canvas{display:block}</style></head><body><canvas id=c></canvas><script>
+// Acceptance-criterion baseline: one full-rect fillRect + six full-rect drawImage composites per frame at the main canvas scale rule.
+const c=document.getElementById('c'),x=c.getContext('2d');let W,H,S;const offs=[];
+function rs(){const cw=innerWidth,ch=innerHeight;S=Math.min(Math.max(Math.min(devicePixelRatio,1.5,Math.sqrt(2.6e6/(cw*ch))),.75),1.5);c.width=cw*S|0;c.height=ch*S|0;c.style.width=cw+'px';c.style.height=ch+'px';x.setTransform(S,0,0,S,0,0);W=cw;H=ch;
+offs.length=0;const sizes=[[192,108],[96,54],[48,27],[960,540],[960,540],[256,64]];for(const [w,h] of sizes){const o=document.createElement('canvas');o.width=w;o.height=h;const g=o.getContext('2d');g.fillStyle='rgba(40,60,120,0.5)';g.fillRect(0,0,w,h);offs.push(o)}}
+rs();addEventListener('resize',rs);
+function loop(){x.globalCompositeOperation='source-over';x.fillStyle='#070a18';x.fillRect(0,0,W,H);x.globalCompositeOperation='lighter';x.imageSmoothingEnabled=true;for(const o of offs)x.drawImage(o,0,H*.25,W,H*.75);requestAnimationFrame(loop)}loop();
+window.__game={snapshot(){return{phase:'baseline'}},flowAt(){return{u:0,v:0,speed:0}},setTimeScale(){},skipToPhase(){},setSeed(){},setQuality(){},stats(){return{}}};
+</script></body></html>
