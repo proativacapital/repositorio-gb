@@ -1575,8 +1575,9 @@ function dcSend(obj) { if (NET.dc && NET.dc.readyState === 'open') NET.dc.send(J
 function netKeepalive() { if (NET.state === 'connected') dcSend({ t: 'k' }); }   // 1 Hz liveness, sent even from a hidden tab (rAF stops there, timers do not): a hidden hand stalls the other, it never loses it (GDD-ONLINE: do not disconnect on hide)
 function netCreate() {
   return new Promise(async (res, rej) => {
+    let gen = -1;   // the attempt's generation, captured after netLeave; visible to the catch below
     try {
-      netLeave(true); const gen = NET.gen; NET.role = 'host'; NET.mode = 'host'; NET.state = 'signaling'; NET.code = roomCode(); NET.id = clientId(); NET.topic = 'remanso/1/' + NET.code; NET.roomMs = nowMs();
+      netLeave(true); gen = NET.gen; NET.role = 'host'; NET.mode = 'host'; NET.state = 'signaling'; NET.code = roomCode(); NET.id = clientId(); NET.topic = 'remanso/1/' + NET.code; NET.roomMs = nowMs();
       const m = await brokerConnect();
       if (gen !== NET.gen || NET.state !== 'signaling') { m.close(); rej(new Error('cancelled')); return; }   // Escape / outside click / a newer attempt while the relay was answering: the socket closes, nothing subscribes, no zombie room
       NET.mqtt = m; m.subscribe(NET.topic); m.onclose = netRelayClosed(m); lobbyStatus('esperando a outra mão…');
@@ -1600,9 +1601,10 @@ function netCreate() {
 }
 function netJoin(code) {
   return new Promise(async (res, rej) => {
+    let gen = -1;
     try {
       code = code.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6); if (code.length !== 6) throw new Error('code');
-      netLeave(true); const gen = NET.gen; NET.role = 'guest'; NET.mode = 'guest'; NET.state = 'signaling'; NET.code = code; NET.id = clientId(); NET.topic = 'remanso/1/' + code; NET.pending = { res, rej };
+      netLeave(true); gen = NET.gen; NET.role = 'guest'; NET.mode = 'guest'; NET.state = 'signaling'; NET.code = code; NET.id = clientId(); NET.topic = 'remanso/1/' + code; NET.pending = { res, rej };
       const m = await brokerConnect();
       if (gen !== NET.gen || NET.state !== 'signaling') { m.close(); rej(new Error('cancelled')); return; }
       NET.mqtt = m; m.subscribe(NET.topic); m.onclose = netRelayClosed(m); lobbyStatus('procurando…');
@@ -1623,7 +1625,7 @@ function netJoin(code) {
         }
       };
       join();
-    } catch (e) { if (gen === NET.gen) netFail(); rej(e); }
+    } catch (e) { if (gen < 0 || gen === NET.gen) netFail(); rej(e); }   // gen < 0: nothing was started yet (a malformed code) — the old visible failure
   });
 }
 // --- manual handshake: RM1. + 'z' deflate-raw base64url | 'p' plain base64url ---
