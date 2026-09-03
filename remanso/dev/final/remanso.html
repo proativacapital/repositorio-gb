@@ -106,7 +106,7 @@ const C = Object.freeze({
   NET: { BROKERS: ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081'],
     ICE: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
       { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turns:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }],   // public free relay; if it is down ICE simply ignores it
-    BROKER_TIMEOUT: 4000, GATHER_MS: 2500, CONNECT_TIMEOUT: 15000, ROOM_TIMEOUT: 600000, LOST_MS: 10000, CHUNK: 15000, CONS: 'BDFGJKLMNPRSTVZ', VOW: 'AEIOU', STALL_MS: 400 },
+    BROKER_TIMEOUT: 4000, GATHER_MS: 2500, CONNECT_TIMEOUT: 15000, ROOM_TIMEOUT: 600000, LOST_MS: 10000, CHUNK: 15000, CONS: 'BDFGJKLMNPRSTVZ', VOW: 'AEIOU', STALL_MS: 400, KEEP_MS: 1000 },
   AUDIO: { BUS: 0.8, MASTER: 0.5, REVERB: 0.3, IR_T: 2.5, BED1: 0.10, BED2: 0.05, PAD: 0.12, PAD_ATTACK: 1.2, PAD_RELEASE: 0.03,
     PLINK: 0.04, TICK: 0.03, TELL: 0.05, SWELL: 0.08, THUD: 0.15, PARTIAL: 0.02, PARTIAL_DIM: 0.015, PARTIAL_WISP: 0.012, LPF: 900, LFO: 0.3, LFO_DEPTH: 250 }
 });
@@ -1466,7 +1466,7 @@ const RING_N = 1024;
 const NET = { mode: 'solo', state: 'idle', code: null, delay: 0, stalls: 0, resyncs: 0, rtt: 0, lastHash: 0, role: '', id: '', mqtt: null, pc: null, dc: null, seed: 0,
   lIn: new Uint16Array(RING_N * 2), lF: new Uint8Array(RING_N), lT: new Int32Array(RING_N).fill(-1), rIn: new Uint16Array(RING_N * 2), rF: new Uint8Array(RING_N), rT: new Int32Array(RING_N).fill(-1),
   remoteLatest: -1, lastRemoteMs: 0, stallMs: -1, stallCounted: false, rHashT: new Int32Array(8).fill(-1), rHashV: new Uint32Array(8), rHashI: 0,
-  syncAt: -1, syncSent: false, syncApplied: true, syncMeta: null, syncChunks: null, syncGot: 0, lastSyncAt: -1, pingTs: 0, rtts: [], pkt: new ArrayBuffer(10), joinTimer: 0, roomTimer: 0, pending: null,
+  syncAt: -1, syncSent: false, syncApplied: true, syncMeta: null, syncChunks: null, syncGot: 0, lastSyncAt: -1, pingTs: 0, rtts: [], pkt: new ArrayBuffer(10), joinTimer: 0, roomTimer: 0, keepTimer: 0, pending: null,
   aDoisT: -1e9, hoverADois: false, discT: -1, lostLine: false, topic: '', peerId: '' };
 NET.pv = new DataView(NET.pkt);
 const LOBBY = { open: false, el: null, view: '', status: null, timer: 0, built: false, code: '', manualRole: '', openMs: -1e9 };
@@ -1519,10 +1519,11 @@ function mkPC() {
 function gather(pc) { return new Promise(r => { if (pc.iceGatheringState === 'complete') return r(); const t = setTimeout(r, C.NET.GATHER_MS); pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete') { clearTimeout(t); r(); } }); }); }
 function bindDC(dc) {
   dc.binaryType = 'arraybuffer'; NET.dc = dc;
-  dc.onopen = () => { NET.state = 'connected'; NET.lastRemoteMs = nowMs(); if (NET.mqtt) { NET.mqtt.unsubscribe(NET.topic); NET.mqtt.close(); NET.mqtt = null; } if (NET.pending) { NET.pending.res(); NET.pending = null; } lobbyStatus('conectado'); lobbyFade(); if (NET.role === 'guest') dcSend({ t: 'hi', v: 1, rung: G.rung }); };
+  dc.onopen = () => { NET.state = 'connected'; NET.lastRemoteMs = nowMs(); clearInterval(NET.keepTimer); NET.keepTimer = setInterval(netKeepalive, C.NET.KEEP_MS); if (NET.mqtt) { NET.mqtt.unsubscribe(NET.topic); NET.mqtt.close(); NET.mqtt = null; } if (NET.pending) { NET.pending.res(); NET.pending = null; } lobbyStatus('conectado'); lobbyFade(); if (NET.role === 'guest') dcSend({ t: 'hi', v: 1, rung: G.rung }); };
   dc.onmessage = onDcMessage; dc.onclose = () => netLost(); dc.onerror = () => netLost();
 }
 function dcSend(obj) { if (NET.dc && NET.dc.readyState === 'open') NET.dc.send(JSON.stringify(obj)); }
+function netKeepalive() { if (NET.state === 'connected') dcSend({ t: 'k' }); }   // 1 Hz liveness, sent even from a hidden tab (rAF stops there, timers do not): a hidden hand stalls the other, it never loses it (GDD-ONLINE: do not disconnect on hide)
 function netCreate() {
   return new Promise(async (res, rej) => {
     try {
@@ -1598,7 +1599,7 @@ function netManualAccept(answerStr) {
 }
 function netFail() { if (NET.state === 'connected') return; lobbyStatus('o mar não respondeu'); lobbyShowManualLink(); if (NET.pending) { NET.pending.rej(new Error('connect failed')); NET.pending = null; } netTeardown(); NET.state = 'idle'; NET.mode = 'solo'; }
 function netTeardown() {
-  clearTimeout(NET.joinTimer); clearTimeout(NET.roomTimer);
+  clearTimeout(NET.joinTimer); clearTimeout(NET.roomTimer); clearInterval(NET.keepTimer); NET.keepTimer = 0;
   if (NET.mqtt) { try { NET.mqtt.close(); } catch (e) { /* closed */ } NET.mqtt = null; }
   if (NET.dc) { NET.dc.onclose = null; NET.dc.onerror = null; try { NET.dc.close(); } catch (e) { /* closed */ } NET.dc = null; }
   if (NET.pc) { NET.pc.onconnectionstatechange = null; try { NET.pc.close(); } catch (e) { /* closed */ } NET.pc = null; }
@@ -1649,9 +1650,9 @@ function netFrame() {           // once per frame: disconnect watchdog, pings
   if (NET.discT >= 0 && nowMs() - NET.discT > C.NET.LOST_MS) netLost();
 }
 function onDcMessage(e) {
-  NET.lastRemoteMs = nowMs(); NET.stallMs = -1;
+  NET.lastRemoteMs = nowMs();                                        // any message is liveness (keepalives included)
   if (typeof e.data === 'string') { let m; try { m = JSON.parse(e.data); } catch (err) { return; } netControl(m); return; }
-  const buf = e.data; if (!(buf instanceof ArrayBuffer)) return;
+  const buf = e.data; if (!(buf instanceof ArrayBuffer)) return; NET.stallMs = -1;   // only an input or sync packet ends a stall (the pulsing dot means 'no inputs', not 'no packets')
   if (buf.byteLength === 10) {
     const v = new DataView(buf), tick = v.getUint32(0, true), i = tick % RING_N;
     NET.rIn[i * 2] = v.getUint16(5, true); NET.rIn[i * 2 + 1] = v.getUint16(7, true); NET.rF[i] = v.getUint8(9); NET.rT[i] = tick; if (tick > NET.remoteLatest) NET.remoteLatest = tick;
