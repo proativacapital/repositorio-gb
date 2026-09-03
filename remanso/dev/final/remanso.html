@@ -1659,7 +1659,7 @@ async function netManualAnswer(offerStr) {
     const pc = mkPC(); pc.ondatachannel = (e) => bindDC(e.channel);
     await pc.setRemoteDescription({ type: 'offer', sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); await gather(pc);
     if (NET.pc !== pc) throw new Error('cancelled');
-    netConnectTimeout(pc, netFail);
+    clearTimeout(NET.connTimer); NET.connTimer = setTimeout(() => { NET.connTimer = 0; if (NET.pc === pc && NET.state === 'connecting') { netFail(); lobbyStatus('o mar adormeceu'); } }, C.NET.ROOM_TIMEOUT);   // no CONNECT_TIMEOUT here: the guest cannot know when the host will paste the answer (a human round trip is often longer than 15 s), so the attempt lives as long as a room does; a real ICE failure still ends it (pc 'failed' -> netLost -> netFail) and netTeardown clears this guard like the connect timer
     return packSdp(pc.localDescription.sdp);
   } catch (e) { if (gen === NET.gen) netFail(); throw e; }   // an offer the browser refuses restores solo; a cancelled attempt is already solo
 }
