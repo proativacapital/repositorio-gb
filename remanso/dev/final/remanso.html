@@ -403,7 +403,7 @@ function releaseAll() { for (let i = 0; i < 2; i++) { const r = RAW.p[i]; r.down
 function onKey(e, down) {
   const k = e.code || e.key;
   if (k === 'Escape') { if (down) lobbyClose(); return; }
-  if (LOBBY.open) return;
+  if (LOBBY.open && down) return;   // the panel swallows presses, never releases: a key held into 'a dois' must not stay down after the panel closes
   if (k === 'Space' || k === ' ') { if (down) { audioInit(); RAW.lastInputT = G.t; } RAW.space = down; e.preventDefault(); }
   else if (k === 'KeyM' || k === 'm' || k === 'M') { if (down && !e.repeat) RAW.muteReq = true; }
   else if (k === 'KeyR' || k === 'r' || k === 'R') { RAW.rDown = down; if (!down) RAW.rHold = 0; }
@@ -1794,7 +1794,7 @@ function lobbyStatus(s) { if (LOBBY.status) LOBBY.status.innerHTML = (s.endsWith
 function lobbyShowManualLink() { if (LOBBY.status && LOBBY.open) LOBBY.status.innerHTML += ' &nbsp;<a tabindex="0" role="button" data-act="manual">trocar código à mão</a>'; }
 function lobbyFade() { if (!LOBBY.open) return; const el = LOBBY.el; el.style.transition = 'opacity 0.6s'; el.style.opacity = '0'; setTimeout(() => { lobbyClose(); el.style.opacity = '1'; el.style.transition = ''; }, 650); }
 function lobbyOpen() {
-  lobbyBuild(); LOBBY.open = true; LOBBY.openMs = nowMs(); LOBBY.el.hidden = false; lobbyView('menu');   // the canvas keeps cursor:none (the panel has its own arrow): one cursor at a time
+  lobbyBuild(); releaseAll(); LOBBY.open = true; LOBBY.openMs = nowMs(); LOBBY.el.hidden = false; lobbyView('menu');   // no pointer or key state survives the panel opening; the canvas keeps cursor:none (the panel has its own arrow): one cursor at a time
   setTimeout(() => { const el = LOBBY.el; if (LOBBY.open && !el.contains(document.activeElement)) { const f = el.querySelector('button,a[tabindex],input,textarea'); if (f) f.focus(); } }, 0);   // the opening pointerdown's default moves focus to the body afterwards: bring it back into the panel
 }
 function lobbyClose() { if (!LOBBY.open) return; LOBBY.open = false; LOBBY.el.hidden = true; if (NET.state === 'signaling' || NET.state === 'connecting') netLeave(true); }
