@@ -1555,7 +1555,7 @@ function netCreate() {
       netLeave(true); const gen = NET.gen; NET.role = 'host'; NET.mode = 'host'; NET.state = 'signaling'; NET.code = roomCode(); NET.id = clientId(); NET.topic = 'remanso/1/' + NET.code; NET.roomMs = nowMs();
       const m = await brokerConnect();
       if (gen !== NET.gen || NET.state !== 'signaling') { m.close(); rej(new Error('cancelled')); return; }   // Escape / outside click / a newer attempt while the relay was answering: the socket closes, nothing subscribes, no zombie room
-      NET.mqtt = m; m.subscribe(NET.topic);
+      NET.mqtt = m; m.subscribe(NET.topic); m.onclose = netRelayClosed(m);
       m.onmessage = async (topic, payload) => {
         if (m.closed || NET.mqtt !== m) return;
         let msg; try { msg = JSON.parse(payload); } catch (e) { return; } if (!msg || msg.id === NET.id) return;
@@ -1581,7 +1581,7 @@ function netJoin(code) {
       netLeave(true); const gen = NET.gen; NET.role = 'guest'; NET.mode = 'guest'; NET.state = 'signaling'; NET.code = code; NET.id = clientId(); NET.topic = 'remanso/1/' + code; NET.pending = { res, rej };
       const m = await brokerConnect();
       if (gen !== NET.gen || NET.state !== 'signaling') { m.close(); rej(new Error('cancelled')); return; }
-      NET.mqtt = m; m.subscribe(NET.topic); lobbyStatus('procurando…');
+      NET.mqtt = m; m.subscribe(NET.topic); m.onclose = netRelayClosed(m); lobbyStatus('procurando…');
       let tries = 0; const join = () => { if (NET.mqtt !== m || NET.state !== 'signaling') return; if (tries++ >= 5) { lobbyStatus('ninguém nesse mar'); NET.state = 'idle'; NET.mode = 'solo'; m.close(); NET.mqtt = null; if (NET.pending) { NET.pending.rej(new Error('no room')); NET.pending = null; } return; } m.send(NET.topic, JSON.stringify({ t: 'join', id: NET.id })); NET.joinTimer = setTimeout(join, 2000); };
       m.onmessage = async (topic, payload) => {
         if (m.closed || NET.mqtt !== m) return;
@@ -1642,6 +1642,9 @@ function netManualAccept(answerStr) {
     try { await NET.pc.setRemoteDescription({ type: 'answer', sdp }); } catch (e) { lobbyStatus('resposta inválida'); return rej(new Error('invalid')); }   // a failed setRemoteDescription is atomic: the offer stands
     NET.pending = { res, rej }; setTimeout(() => { if (NET.state === 'connecting') { netFail(); rej(new Error('timeout')); } }, C.NET.CONNECT_TIMEOUT);
   });
+}
+function netRelayClosed(m) {              // the relay dropped the socket on its own while the room was still waiting (or a join was still asking): fail visibly ('o mar não respondeu' + the manual link) instead of showing a dead code for ten minutes; an intentional close (bindDC, netTeardown, the join retry limit) is silent
+  return () => { if (m.closed || NET.mqtt !== m) return; NET.mqtt = null; if (NET.state === 'signaling' || (NET.state === 'connecting' && !NET.pc)) netFail(); };
 }
 function netHostRetry() {                 // the guest vanished during the handshake: keep the room (same code) and wait for another hand, unless the relay is gone or the room is too old
   if (NET.role === 'host' && NET.mqtt && NET.mqtt.ws && NET.mqtt.ws.readyState === 1 && nowMs() - NET.roomMs < C.NET.ROOM_TIMEOUT) {
