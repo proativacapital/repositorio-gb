@@ -20,6 +20,7 @@
 #lobby a{display:inline-block;min-height:44px;line-height:44px;padding:0 4px;cursor:pointer;opacity:.7;font-size:13px;letter-spacing:.16em;text-decoration:underline;text-decoration-color:rgba(242,232,213,.35);text-decoration-thickness:1px;text-underline-offset:4px;transition:opacity .2s}
 #lobby a:hover{opacity:1}
 #lobby a:focus-visible,#lobby button:focus-visible,#lobby input:focus-visible,#lobby textarea:focus-visible{outline:1px solid rgba(191,239,255,.7);outline-offset:2px}
+#lobby:focus{outline:none}
 #lobby input{width:6.5em;margin:6px 0 8px;padding:2px 0 4px;font:inherit;font-size:34px;line-height:1.1;letter-spacing:.3em;text-transform:uppercase;background:none;border:0;border-bottom:1px solid rgba(242,232,213,.4);color:#fff6e6;outline:none;caret-color:#bfefff;transition:border-color .2s}
 #lobby input:focus{border-bottom-color:rgba(191,239,255,.8)}
 #lobby textarea{width:100%;box-sizing:border-box;height:64px;margin:6px 0 8px;background:rgba(255,255,255,.05);color:#f2e8d5;border:1px solid rgba(242,232,213,.2);border-radius:8px;font:12px monospace;padding:6px}
@@ -1812,14 +1813,14 @@ function glyphRebuildMask(g) {           // masks are a pure function of geometr
 // --- lobby (DOM overlay) and the "a dois" affordance ---
 function lobbyBuild() {
   if (LOBBY.built) return; LOBBY.built = true;
-  const el = document.createElement('div'); el.id = 'lobby'; el.hidden = true;
+  const el = document.createElement('div'); el.id = 'lobby'; el.hidden = true; el.tabIndex = -1;   // focusable by script only: focus starts on the panel after a pointer open (no ring), Tab then enters it
   document.body.appendChild(el); LOBBY.el = el;
   el.addEventListener('click', (e) => { const a = e.target.getAttribute && e.target.getAttribute('data-act'); if (a) lobbyAct(a); e.stopPropagation(); });
   el.addEventListener('pointerdown', e => e.stopPropagation());
   el.addEventListener('keydown', e => {                 // keyboard: Escape closes, Enter/Space press a link, Tab stays inside the panel
     if (e.key === 'Escape') lobbyClose();
     else if ((e.key === 'Enter' || e.key === ' ') && e.target.tagName === 'A' && e.target.dataset.act) { e.preventDefault(); lobbyAct(e.target.dataset.act); }
-    else if (e.key === 'Tab') { const f = el.querySelectorAll('button,a[tabindex],input,textarea'); if (f.length) { const first = f[0], last = f[f.length - 1], cur = document.activeElement; if (e.shiftKey && (cur === first || !el.contains(cur))) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && (cur === last || !el.contains(cur))) { e.preventDefault(); first.focus(); } } }
+    else if (e.key === 'Tab') { const f = el.querySelectorAll('button,a[tabindex],input,textarea'); if (f.length) { const first = f[0], last = f[f.length - 1], cur = document.activeElement, outside = cur === el || !el.contains(cur); if (e.shiftKey && (cur === first || outside)) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && (cur === last || outside)) { e.preventDefault(); first.focus(); } } }
     e.stopPropagation();
   });
   document.addEventListener('pointerdown', (e) => { if (LOBBY.open && !el.contains(e.target) && nowMs() - LOBBY.openMs > 150) lobbyClose(); });   // the pointerdown that opened the lobby also bubbles here: ignore it
@@ -1833,7 +1834,7 @@ function lobbyView(v) {
   else if (v === 'manualHost') h += '<div class="lbl">convite</div><textarea id="taOffer" readonly></textarea><a tabindex="0" role="button" data-act="copyOffer">copiar</a><div class="lbl" style="margin-top:16px">cole a resposta aqui</div><textarea id="taAnswer"></textarea><button data-act="accept">conectar</button><div id="lobbyStatus" class="st"></div>';
   else if (v === 'manualGuest') h += '<div class="lbl">cole o convite aqui</div><textarea id="taOffer"></textarea><button data-act="answer">responder</button><div class="lbl" style="margin-top:16px">resposta</div><textarea id="taAnswer" readonly></textarea><a tabindex="0" role="button" data-act="copyAnswer">copiar</a><div id="lobbyStatus" class="st"></div>';
   el.innerHTML = h; LOBBY.status = el.querySelector('#lobbyStatus');
-  const inp = el.querySelector('#lobbyInput'), first = inp || el.querySelector('button,a[tabindex],textarea'); if (first) first.focus();   // focus starts inside the panel (a ring shows only for keyboard focus)
+  const inp = el.querySelector('#lobbyInput') || (v === 'manualGuest' ? el.querySelector('#taOffer') : null); if (inp) inp.focus(); else el.focus();   // a field that wants typing takes focus; otherwise the panel itself does, so a pointer open paints no keyboard ring and Tab still starts inside
   if (inp) { inp.addEventListener('input', () => { inp.value = inp.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6); }); inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') lobbyAct('enter'); }); }
 }
 function lobbyStatus(s) { if (LOBBY.status) LOBBY.status.innerHTML = (s.endsWith('…') ? '<span class="dot"></span>' : '') + s; }
@@ -1841,7 +1842,7 @@ function lobbyShowManualLink() { if (LOBBY.status && LOBBY.open) LOBBY.status.in
 function lobbyFade() { if (!LOBBY.open) return; const el = LOBBY.el; el.style.transition = 'opacity 0.6s'; el.style.opacity = '0'; setTimeout(() => { lobbyClose(); el.style.opacity = '1'; el.style.transition = ''; }, 650); }
 function lobbyOpen() {
   lobbyBuild(); releaseAll(); LOBBY.open = true; LOBBY.openMs = nowMs(); LOBBY.el.hidden = false; lobbyView('menu');   // no pointer or key state survives the panel opening; the canvas keeps cursor:none (the panel has its own arrow): one cursor at a time
-  setTimeout(() => { const el = LOBBY.el; if (LOBBY.open && !el.contains(document.activeElement)) { const f = el.querySelector('button,a[tabindex],input,textarea'); if (f) f.focus(); } }, 0);   // the opening pointerdown's default moves focus to the body afterwards: bring it back into the panel
+  setTimeout(() => { const el = LOBBY.el; if (LOBBY.open && !el.contains(document.activeElement)) el.focus(); }, 0);   // the opening pointerdown's default moves focus to the body afterwards: bring it back to the panel
 }
 function lobbyClose() { if (!LOBBY.open) return; LOBBY.open = false; LOBBY.el.hidden = true; if (NET.state === 'signaling' || NET.state === 'connecting') netLeave(true); }
 function lobbyFlash(txt) {                 // a line for a moment ('copiado', 'ainda não'), then the status it replaced comes back (the create view keeps its breathing 'esperando')
