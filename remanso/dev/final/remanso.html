@@ -107,7 +107,7 @@ const C = Object.freeze({
   NET: { BROKERS: ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081'],
     ICE: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
       { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turns:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }],   // public free relay; if it is down ICE simply ignores it
-    BROKER_TIMEOUT: 4000, GATHER_MS: 2500, CONNECT_TIMEOUT: 15000, ROOM_TIMEOUT: 600000, LOST_MS: 10000, CHUNK: 15000, CONS: 'BDFGJKLMNPRSTVZ', VOW: 'AEIOU', STALL_MS: 400, KEEP_MS: 1000 },
+    BROKER_TIMEOUT: 4000, GATHER_MS: 2500, CONNECT_TIMEOUT: 15000, ROOM_TIMEOUT: 600000, LOST_MS: 10000, CHUNK: 15000, CONS: 'BDFGJKLMNPRSTVZ', VOW: 'AEIOU', STALL_MS: 400, KEEP_MS: 1000, COPIED_MS: 1500 },
   AUDIO: { BUS: 0.8, MASTER: 0.5, REVERB: 0.3, IR_T: 2.5, BED1: 0.10, BED2: 0.05, PAD: 0.12, PAD_ATTACK: 1.2, PAD_RELEASE: 0.03,
     PLINK: 0.04, TICK: 0.03, TELL: 0.05, SWELL: 0.08, THUD: 0.15, PARTIAL: 0.02, PARTIAL_DIM: 0.015, PARTIAL_WISP: 0.012, LPF: 900, LFO: 0.3, LFO_DEPTH: 250 }
 });
@@ -1473,7 +1473,7 @@ const NET = { mode: 'solo', state: 'idle', code: null, delay: 0, stalls: 0, resy
   syncAt: -1, syncSent: false, syncApplied: true, syncMeta: null, syncChunks: null, syncGot: 0, lastSyncAt: -1, pingTs: 0, rtts: [], pkt: new ArrayBuffer(10), joinTimer: 0, roomTimer: 0, keepTimer: 0, pending: null,
   aDoisT: -1e9, hoverADois: false, discT: -1, lostLine: false, topic: '', peerId: '' };
 NET.pv = new DataView(NET.pkt);
-const LOBBY = { open: false, el: null, view: '', status: null, timer: 0, built: false, code: '', manualRole: '', openMs: -1e9 };
+const LOBBY = { open: false, el: null, view: '', status: null, timer: 0, built: false, code: '', manualRole: '', openMs: -1e9, copyPrev: '', copyTimer: 0 };
 function netPublic() { return { mode: NET.mode, state: NET.state, code: NET.code, tick: G.steps, delay: NET.delay, stalls: NET.stalls, resyncs: NET.resyncs, rtt: NET.rtt, lastHash: NET.lastHash }; }
 function randBytes(n) { const a = new Uint8Array(n); crypto.getRandomValues(a); return a; }
 function roomCode() { const b = randBytes(6), cs = C.NET.CONS, vs = C.NET.VOW; let s = ''; for (let i = 0; i < 6; i++) s += (i & 1) ? vs[b[i] % vs.length] : cs[b[i] % cs.length]; return s; }
@@ -1757,15 +1757,31 @@ function lobbyShowManualLink() { if (LOBBY.status && LOBBY.open) LOBBY.status.in
 function lobbyFade() { if (!LOBBY.open) return; const el = LOBBY.el; el.style.transition = 'opacity 0.6s'; el.style.opacity = '0'; setTimeout(() => { lobbyClose(); el.style.opacity = '1'; el.style.transition = ''; }, 650); }
 function lobbyOpen() { lobbyBuild(); LOBBY.open = true; LOBBY.openMs = nowMs(); LOBBY.el.hidden = false; lobbyView('menu'); cv.style.cursor = 'auto'; }
 function lobbyClose() { if (!LOBBY.open) return; LOBBY.open = false; LOBBY.el.hidden = true; cv.style.cursor = 'none'; if (NET.state === 'signaling' || NET.state === 'connecting') netLeave(true); }
+function lobbyCopied() {                   // 'copiado' for a moment, then the status line it replaced comes back (the create view keeps its breathing 'esperando')
+  const st = LOBBY.status; if (!st) return; if (st.textContent !== 'copiado') LOBBY.copyPrev = st.innerHTML; st.textContent = 'copiado';
+  clearTimeout(LOBBY.copyTimer); LOBBY.copyTimer = setTimeout(() => { if (st.textContent === 'copiado') st.innerHTML = LOBBY.copyPrev; }, C.NET.COPIED_MS);
+}
+function lobbyCopy(s, src) {               // clipboard with feedback and a fallback: writeText when it works; else select the text (src: textarea, input or the code div) and execCommand('copy') — the text stays selected for Ctrl+C either way
+  if (!s) return;
+  const fallback = () => {
+    try {
+      let el = src; if (!el) { el = document.createElement('textarea'); el.value = s; el.setAttribute('readonly', ''); el.style.position = 'fixed'; el.style.opacity = '0'; LOBBY.el.appendChild(el); }
+      if (el.select) { el.focus(); el.select(); el.setSelectionRange(0, el.value.length); } else { const r = document.createRange(); r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+      const ok = document.execCommand('copy'); if (el !== src) el.remove(); if (ok) lobbyCopied();
+    } catch (e) { /* the text stays selected for a manual copy */ }
+  };
+  let p = null; try { p = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(s) : null; } catch (e) { p = null; }
+  if (p && typeof p.then === 'function') p.then(lobbyCopied, fallback); else fallback();
+}
 function lobbyAct(a) {
-  const el = LOBBY.el, copy = (s) => { try { navigator.clipboard.writeText(s); } catch (e) { /* clipboard unavailable */ } };
+  const el = LOBBY.el;
   if (a === 'create') { LOBBY.code = ''; lobbyView('create'); netCreate().then(code => { LOBBY.code = code; const c = el.querySelector('#lobbyCode'); if (c) c.textContent = code; }).catch(() => { }); }
   else if (a === 'join') lobbyView('join');
   else if (a === 'enter') { const inp = el.querySelector('#lobbyInput'); if (inp && inp.value.length === 6) netJoin(inp.value).catch(() => { }); }
-  else if (a === 'copyCode') copy(LOBBY.code);
+  else if (a === 'copyCode') lobbyCopy(LOBBY.code, el.querySelector('#lobbyCode'));
   else if (a === 'manual') { const host = NET.role !== 'guest'; lobbyView(host ? 'manualHost' : 'manualGuest'); if (host) netManualOffer().then(s => { const ta = el.querySelector('#taOffer'); if (ta) ta.value = s; }).catch(() => lobbyStatus('o mar não respondeu')); }
-  else if (a === 'copyOffer') { const ta = el.querySelector('#taOffer'); if (ta) copy(ta.value); }
-  else if (a === 'copyAnswer') { const ta = el.querySelector('#taAnswer'); if (ta) copy(ta.value); }
+  else if (a === 'copyOffer') { const ta = el.querySelector('#taOffer'); if (ta) lobbyCopy(ta.value, ta); }   // an empty invite (still gathering) copies nothing
+  else if (a === 'copyAnswer') { const ta = el.querySelector('#taAnswer'); if (ta) lobbyCopy(ta.value, ta); }
   else if (a === 'accept') { const ta = el.querySelector('#taAnswer'); if (ta) { lobbyStatus('conectando…'); netManualAccept(ta.value).catch(e => { if (!(e && e.message === 'invalid')) lobbyStatus('o mar não respondeu'); }); } }
   else if (a === 'answer') { const ta = el.querySelector('#taOffer'); if (ta) { lobbyStatus('conectando…'); netManualAnswer(ta.value).then(s => { const tb = el.querySelector('#taAnswer'); if (tb) tb.value = s; }).catch(e => { if (!(e && e.message === 'invalid')) lobbyStatus('o mar não respondeu'); }); } }
 }
