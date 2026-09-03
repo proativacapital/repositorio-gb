@@ -2,7 +2,31 @@
 <html lang="pt"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>REMANSO</title>
-<style>html,body{margin:0;height:100%;background:#02030a;overflow:hidden}canvas{display:block;position:fixed;left:0;top:0;touch-action:none;cursor:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}#lobby .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#7fe3ff;margin-right:8px;vertical-align:middle;animation:breathe 2s ease-in-out infinite}@keyframes breathe{0%,100%{opacity:.25}50%{opacity:1}}#lobby button:hover{border-color:rgba(242,232,213,.6)}</style>
+<style>html,body{margin:0;height:100%;background:#02030a;overflow:hidden}canvas{display:block;position:fixed;left:0;top:0;touch-action:none;cursor:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+/* lobby (GDD-ONLINE): the game's palette and serif stack, radius 14, 1-px border, no backdrop-filter; buttons >= 44 px tall for touch */
+#lobby{position:fixed;left:50%;top:4%;transform:translateX(-50%);width:min(92vw,440px);box-sizing:border-box;background:rgba(5,8,20,.78);border:1px solid rgba(242,232,213,.18);border-radius:14px;color:#f2e8d5;padding:20px 26px 20px;font:500 16px 'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif;letter-spacing:.04em;cursor:auto;user-select:text;-webkit-user-select:text;z-index:2;box-shadow:0 24px 70px rgba(0,0,0,.4)}
+#lobby .ttl{display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.24em;opacity:.62;padding-bottom:12px;margin-bottom:18px;border-bottom:1px solid rgba(242,232,213,.12)}
+#lobby .link{display:inline-flex;align-items:center}
+#lobby .link i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#bfefff;box-shadow:0 0 7px rgba(191,239,255,.8)}
+#lobby .link i+i{background:#ffc0d0;box-shadow:0 0 7px rgba(255,192,208,.8)}
+#lobby .link b{display:inline-block;width:18px;height:1px;background:rgba(242,232,213,.5)}
+#lobby .lbl{font-size:12px;letter-spacing:.22em;opacity:.55;margin:2px 0 8px}
+#lobby .code{font-size:46px;line-height:1.1;letter-spacing:.3em;text-indent:.15em;margin:8px 0 6px;color:#fff6e6;text-shadow:0 0 18px rgba(191,239,255,.25)}
+#lobby .verbs{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+#lobby .row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+#lobby button{flex:1 1 auto;min-height:44px;padding:10px 18px;border:1px solid rgba(242,232,213,.3);border-radius:10px;cursor:pointer;background:rgba(255,255,255,.03);color:#f2e8d5;font:inherit;letter-spacing:.08em;transition:border-color .2s,background .2s}
+#lobby button:hover{border-color:rgba(242,232,213,.65);background:rgba(255,255,255,.07)}
+#lobby a{cursor:pointer;opacity:.7;text-decoration:none;border-bottom:1px solid rgba(242,232,213,.35);font-size:13px;letter-spacing:.16em;padding-bottom:1px;transition:opacity .2s}
+#lobby a:hover{opacity:1}
+#lobby input{width:7.4ch;margin:6px 0 8px;padding:2px 0 4px;font:inherit;font-size:34px;line-height:1.1;letter-spacing:.3em;text-transform:uppercase;background:none;border:0;border-bottom:1px solid rgba(242,232,213,.4);color:#fff6e6;outline:none;caret-color:#bfefff;transition:border-color .2s}
+#lobby input:focus{border-bottom-color:rgba(191,239,255,.8)}
+#lobby textarea{width:100%;box-sizing:border-box;height:64px;margin:6px 0 8px;background:rgba(255,255,255,.05);color:#f2e8d5;border:1px solid rgba(242,232,213,.2);border-radius:8px;font:12px monospace;padding:6px}
+#lobby .st{margin-top:14px;opacity:.85;min-height:1.4em}
+#lobby .st:empty{display:none}
+#lobby .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#7fe3ff;box-shadow:0 0 8px rgba(127,227,255,.8);margin-right:10px;vertical-align:middle;animation:breathe 2s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.25}50%{opacity:1}}
+@media (max-width:480px){#lobby{top:7%;padding:16px 20px 16px}#lobby .verbs{flex-direction:column}#lobby .code{font-size:40px}#lobby input{font-size:30px}}
+</style>
 </head><body><canvas id="c"></canvas><script>
 'use strict';
 /* REMANSO — Onde a água para, ela lembra. (Where the water stills, it remembers.)
@@ -42,16 +66,16 @@ const C = Object.freeze({
   ART: {   // render-only look (art pass): nothing here is read by the sim
     NOISE_SEED: 0x2545f491, NOISE_P0: 64, NOISE_P1: 32, NOISE_BASE: 0.4, NOISE_AMP: 1.0, NOISE_DRIFT: 0.6, NOISE_FLOW: 0.6,
     SHEEN_K: 0.55, SHEEN_INK: 0.8, SHEEN_BARE: 0.22, SHEEN_EDGE: 8, WET_K: 4, WET_A: 0.85, WET_COL: '#040616', WET_ALPHA: 0.3, INK_GAIN: 1.45, INK_SAT: 1.45,
-    MOTE_DRAW: 1100, MOTE_DRAW_LOW: 800, MOTE_SPEEDS: [0.8, 2, 4, 8], MOTE_SIZES: [1.0, 1.1, 1.25, 1.4, 1.5, 1.5, 1.6],
-    RIM_W: 2, RIM_HALO_W: 6, RIM_HALO_A: 0.22, RIM_GAP: 0.1, RIM_OUTER: 6, RIM_OUTER_A: 0.55, RIM_GLOW_A: 0.14,
-    BEAD_LIT_R: 4, BEAD_DIM_R: 2.5, BEAD_LIT_A: 0.95, BEAD_DIM_A: 0.22,
+    MOTE_DRAW: 1100, MOTE_DRAW_LOW: 800, MOTE_SPEEDS: [0.8, 2, 4, 8], MOTE_BACK_SPLIT: 2.5, MOTE_SEG_MAX: 24, MOTE_SIZES: [1.0, 1.1, 1.25, 1.4, 1.55, 1.3, 1.7, 1.5],
+    RIM_W: 2, RIM_HALO_W: 6, RIM_HALO_A: 0.22, RIM_GAP: 0.12, RIM_OUTER: 6, RIM_OUTER_A: 0.75, RIM_GLOW_A: 0.16, DIAL_W: 1.5, DIAL_A: 0.09,
+    BEAD_LIT_R: 3.2, BEAD_DIM_R: 2.2, BEAD_LIT_A: 1.0, BEAD_DIM_A: 0.3, BEAD_GLOW_R: 10, BEAD_GLOW_A: 0.5, BEAD_BLOOM: 3, SPARK_R: 3.5,
     STARS: 220, STAR_PHASES: 6, STAR_A: [0.16, 0.28, 0.42], STAR_SIZE: 1.6, STAR_TWINKLE: 0.2, HERO_STARS: 8, HERO_R: 3.5, HERO_A: 0.4,
     HGLOW_A: 0.10, HGLOW_A_DAWN: 0.34, HGLOW_R: 0.62, HORIZON_BAND: 4, HORIZON_A: 0.5, HORIZON_LIFT: [20, 24, 48], SUN_PATH_W: 0.2, SUN_PATH_H: 0.3, SUN_A: 0.4, SUN_NIGHT: 0.3, SUN_HAND_R: 26, SUN_HAND_A: 0.55, EPI_LIGHT_A: 0.45,
     CONST_K: 0.10, CONST_LINE_A: 0.18, CONST_STAR_R: 6, CONST_HALO_R: 18, CONST_HALO_A: 0.35,
     DAWN_SKY_TOP: '#1b1f5c', DAWN_ROSE: '#b84a78', DAWN_HORIZON: '#ffe6b4', DAWN_TOP_MIX: 0.85, DAWN_ROSE_MIX: 0.55, DAWN_ROSE_MORNING: 0.25, DAWN_HORIZON_MIX: 0.7, MORNING_TOP: '#5a74b8', MORNING_TOP_MIX: 0.75,
     DAWN_FIRST: '#c8607a', DAWN_FIRST_T: 9, DAWN_GOLD_T: 20, DAWN_GOLD_FADE: 15, DAWN_WATER_T: 26, DAWN_WATER_DUR: 12, PREDAWN_OUT: 3,
     FOSSIL_STROKE_A: 0.09, FOSSIL_STROKE_W: 2.2, FOSSIL_RING_A: 0.11, FOSSIL_RING_W: 1.3, FOSSIL_DISC_A: 0.035, FOSSIL_GLOW_A: 1.0,
-    CURSOR_HALO_R: 16, CURSOR_HALO_A: 0.16, ADOIS_LS: 0.14, HAIRLINE: 1.5 },
+    CURSOR_HALO_R: 15, CURSOR_HALO_A: 0.16, CURSOR_BREATH: 1, CURSOR_FILL_K: 1.9, CURSOR_FILL_A: 0.9, CURSOR_REMOTE_A: 0.85, ADOIS_LS: 0.14, ADOIS_DOT_R: 2.8, ADOIS_LINE: 18, ADOIS_GLOW_R: 7, HAIRLINE: 1.5 },
   VIGNETTE_IN: 0.55, VIGNETTE_A: 0.55, CURSOR_R: 7, CURSOR_STILL_R: 4, CURSOR_A: 0.5,
   CAL_FRAME0: 10, CAL_FRAME1: 70, CAL_P75_MS: 5.5, CAL_MAX_DROPS: 2,
   LADDER_DELTA_MS: 17.5, LADDER_JS_MS: 9, LADDER_JS_CAUSE_MS: 6, LADDER_FRAMES: 30, LADDER_RESTORE_FRAMES: 600, LADDER_RESTORE_MS: 11,
@@ -167,8 +191,8 @@ for (let i = 0; i <= 32; i++) {
   RIM_STR2[i] = rgbStr(r, g, b);
 }
 const PLAYER_TINT = ['#bfefff', '#ffc0d0'], PLAYER_DASH = ['rgba(180,235,255,0.6)', 'rgba(255,180,200,0.6)'];
-// motes: 5 speed buckets (warm white in calm water → cyan-white in fast water), backward (bright cyan), mist (grey)
-const MOTE_STR = ['rgba(232,226,214,0.13)', 'rgba(226,226,222,0.24)', 'rgba(214,228,238,0.38)', 'rgba(198,236,255,0.52)', 'rgba(190,238,255,0.66)', 'rgba(191,233,255,0.85)', 'rgba(154,163,176,0.3)'];
+// motes: 5 speed buckets (warm white in calm water → cyan-white in fast water), backward slow (dim cyan) / backward fast (bright cyan: visibly counter-flowing), mist (grey)
+const MOTE_STR = ['rgba(232,226,214,0.12)', 'rgba(228,226,220,0.20)', 'rgba(214,230,240,0.34)', 'rgba(196,236,255,0.50)', 'rgba(186,240,255,0.66)', 'rgba(170,226,255,0.42)', 'rgba(191,233,255,0.88)', 'rgba(154,163,176,0.32)'];
 const nowMs = () => performance.now();
 
 // ───────────────────────────── CANVAS ─────────────────────────────
@@ -844,7 +868,8 @@ function weatherTargets() {                // every 3rd step
 }
 
 // ───────────────────────────── MOTES ─────────────────────────────
-const MO = { x: new Float32Array(C.MOTES), y: new Float32Array(C.MOTES), age: new Float32Array(C.MOTES), tag: new Uint8Array(C.MOTES), inside: new Uint8Array(C.MOTES), sp: new Float32Array(C.MOTES), n: C.MOTES, mist: 0 };
+const MO = { x: new Float32Array(C.MOTES), y: new Float32Array(C.MOTES), age: new Float32Array(C.MOTES), tag: new Uint8Array(C.MOTES), inside: new Uint8Array(C.MOTES), sp: new Float32Array(C.MOTES), n: C.MOTES, mist: 0,
+  px: new Float32Array(C.MOTES), py: new Float32Array(C.MOTES), bk: new Uint8Array(C.MOTES) };   // px/py/bk: render-only (last drawn position in layer px, colour bucket)
 function moteRespawn(i) {
   MO.x[i] = 1 + rnd() * (GW - 2); MO.y[i] = 1 + rnd() * (GH - 2);
   MO.age[i] = 0; MO.tag[i] = 0; MO.inside[i] = 0;
@@ -999,15 +1024,23 @@ function drawSprite(sp, x, y, r, alpha) { ctx.globalAlpha = alpha; ctx.drawImage
 function renderMotes() {
   const mc = motesCtx; mc.globalCompositeOperation = 'destination-out'; mc.fillStyle = '#000000'; mc.globalAlpha = (G.frame & 7) === 0 ? C.MOTE_FADE + C.MOTE_FADE_8 : C.MOTE_FADE;
   mc.fillRect(0, 0, layerW, layerH); mc.globalAlpha = 1; mc.globalCompositeOperation = 'source-over';
-  const n = Math.min(DIR.moteCount, Q.moteDraw), sx = layerSx, sy = layerSy, ok = DIR.moteK, sp = C.ART.MOTE_SPEEDS, s0 = sp[0], s1 = sp[1], s2 = sp[2], s3 = sp[3], sz = C.ART.MOTE_SIZES;
-  for (let b = 0; b < 7; b++) {                    // 5 speed buckets, backward (cyan), mist (grey): one fill each
-    mc.fillStyle = MOTE_STR[b]; mc.beginPath(); let any = false; const w = sz[b], h = w * 0.5;
-    for (let i = 0; i < n; i++) {
-      const tag = MO.tag[i]; let bk; if (tag === 2) bk = 6; else if (tag === 1) bk = 5; else { const s = MO.sp[i]; bk = s < s0 ? 0 : s < s1 ? 1 : s < s2 ? 2 : s < s3 ? 3 : 4; }
-      if (bk !== b) continue; if (MO.age[i] >= C.MOTE_LIFE) continue; mc.rect(MO.x[i] * sx - h, MO.y[i] * sy - h, w, w); any = true;
-    }
-    if (any) { mc.globalAlpha = b < 5 ? ok : 1; mc.fill(); }
+  const n = Math.min(DIR.moteCount, Q.moteDraw), sx = layerSx, sy = layerSy, ok = DIR.moteK, A = C.ART, sp = A.MOTE_SPEEDS, s0 = sp[0], s1 = sp[1], s2 = sp[2], s3 = sp[3], bs = A.MOTE_BACK_SPLIT, sz = A.MOTE_SIZES, segMax = A.MOTE_SEG_MAX;
+  const mx = MO.x, my = MO.y, px = MO.px, py = MO.py, bk = MO.bk;
+  for (let i = 0; i < n; i++) {                    // class: colour bucket (5 by speed: warm white → cyan; backward slow / fast: cyan; mist: grey) + 8 when the mote is drawn as a dot; 255 = dead
+    const tag = MO.tag[i]; let b; if (MO.age[i] >= C.MOTE_LIFE) { bk[i] = 255; continue; } if (tag === 2) b = 7; else { const s = MO.sp[i]; b = tag === 1 ? (s < bs ? 5 : 6) : s < s0 ? 0 : s < s1 ? 1 : s < s2 ? 2 : s < s3 ? 3 : 4; }
+    const dx = mx[i] * sx - px[i], dy = my[i] * sy - py[i], w = sz[b] * 0.7;
+    if (dx > segMax || dx < -segMax || dy > segMax || dy < -segMax || dx * dx + dy * dy < w * w) b += 8;   // respawned, first frame or barely moving: a dot, never a line across the water
+    bk[i] = b;
   }
+  mc.lineCap = 'butt';                             // each moving mote is a streak from where it was drawn last frame, butt-capped so consecutive frames abut without doubling the alpha at the joints
+  for (let c = 0; c < 16; c++) {                   // (brushed silk in fast water); still motes are zero-length round-capped segments (dots); one stroke per class
+    const b = c & 7; if (c === 8) mc.lineCap = 'round';
+    mc.strokeStyle = MOTE_STR[b]; mc.lineWidth = sz[b]; mc.beginPath(); let any = false;
+    if (c < 8) { for (let i = 0; i < n; i++) { if (bk[i] !== c) continue; mc.moveTo(px[i], py[i]); mc.lineTo(mx[i] * sx, my[i] * sy); any = true; } }
+    else { for (let i = 0; i < n; i++) { if (bk[i] !== c) continue; const x = mx[i] * sx, y = my[i] * sy; mc.moveTo(x, y); mc.lineTo(x, y); any = true; } }
+    if (any) { mc.globalAlpha = b < 5 ? ok : 1; mc.stroke(); }
+  }
+  for (let i = 0; i < n; i++) { px[i] = mx[i] * sx; py[i] = my[i] * sy; }
   mc.globalAlpha = 1;
 }
 function renderRim(p) {
@@ -1017,7 +1050,10 @@ function renderRim(p) {
   ctx.lineCap = 'butt'; ctx.setLineDash(DASH); ctx.lineDashOffset = p.dash; ctx.lineWidth = A.RIM_W; ctx.strokeStyle = PLAYER_DASH[pi]; ctx.globalAlpha = A.RIM_OUTER_A * s;
   ctx.beginPath(); ctx.arc(x, y, R + A.RIM_OUTER, 0, TWO_PI); ctx.stroke();                            // counter-rotating dashed outer ring
   if (p.assist) { ctx.lineDashOffset = -p.dash; ctx.lineWidth = A.HAIRLINE; ctx.strokeStyle = PLAYER_DASH[1 - pi]; ctx.globalAlpha = 0.5 * s; ctx.beginPath(); ctx.arc(x, y, R + A.RIM_OUTER + 4, 0, TWO_PI); ctx.stroke(); }
-  ctx.setLineDash(NODASH); ctx.lineCap = 'round';
+  ctx.setLineDash(NODASH);
+  const Rb = R * C.RIM_BEAD_R;                                                                          // the dial: a faint ring through the beads, so the clock reads as a dial
+  ctx.lineWidth = A.DIAL_W; ctx.strokeStyle = PLAYER_TINT[pi]; ctx.globalAlpha = A.DIAL_A * s; ctx.beginPath(); ctx.arc(x, y, Rb, 0, TWO_PI); ctx.stroke();
+  ctx.lineCap = 'round';
   const seg = TWO_PI / C.RIM_SEGS, gap = seg * A.RIM_GAP, Re = p.Reff * cellPx, table = pi ? RIM_STR2 : RIM_STR;
   for (let pass = 0; pass < 2; pass++) {           // strain segments: a soft wide halo under a crisp core
     ctx.lineWidth = pass === 0 ? A.RIM_HALO_W : A.RIM_W; const pa = pass === 0 ? A.RIM_HALO_A : 0.85;
@@ -1028,10 +1064,11 @@ function renderRim(p) {
     }
   }
   ctx.lineCap = 'butt';
-  const bw = HI.window > 0 ? HI.window / C.WINDOW : 0.5, lit = HI.window > 0 ? C.RIM_BEADS * p.d / HI.window : 0, tb = G.t - p.openT, bead = pi ? SPR.beadRose : SPR.bead;
-  for (let k = 0; k < C.RIM_BEADS; k++) {          // the clock: beads light with depth
-    if (tb < k * 0.04) break; const an = -HALF_PI + TWO_PI * k / C.RIM_BEADS * bw, on = k < lit;
-    drawSprite(bead, x + Math.cos(an) * R * C.RIM_BEAD_R, y + Math.sin(an) * R * C.RIM_BEAD_R, on ? A.BEAD_LIT_R : A.BEAD_DIM_R, (on ? A.BEAD_LIT_A : A.BEAD_DIM_A) * s);
+  const bw = HI.window > 0 ? HI.window / C.WINDOW : 0.5, litF = HI.window > 0 ? C.RIM_BEADS * p.d / HI.window : 0, tb = G.t - p.openT, bead = pi ? SPR.beadRose : SPR.bead, halo = pi ? SPR.glowRose : SPR.glow, bl0 = A.BEAD_BLOOM;
+  for (let k = 0; k < C.RIM_BEADS; k++) {          // the clock: bead k lights when the depth passes k/12 of the window; a bead blooms as it appears and again as it lights, then settles
+    const ta = tb - k * 0.04; if (ta < 0) break; const an = -HALF_PI + TWO_PI * k / C.RIM_BEADS * bw, bx = x + Math.cos(an) * Rb, by = y + Math.sin(an) * Rb, f = litF - k;
+    if (f > 0) { const bl = f < 1 ? 1 - f : 0; drawSprite(halo, bx, by, A.BEAD_GLOW_R + 2 * bl0 * bl, A.BEAD_GLOW_A * s * (1 + bl)); drawSprite(bead, bx, by, A.BEAD_LIT_R + bl0 * bl, A.BEAD_LIT_A * s); }
+    else { const ap = ta < 0.3 ? 1 - ta / 0.3 : 0; drawSprite(bead, bx, by, A.BEAD_DIM_R + bl0 * ap, (A.BEAD_DIM_A + 0.5 * ap) * s); }
   }
   ctx.globalAlpha = 1;
 }
@@ -1122,22 +1159,23 @@ function render() {
   for (let i = 0; i < FL.n; i++) { if (!FL.on[i] || FL.t[i] < 0) continue; const k = easeInOutCubic(FL.t[i] / FL.dur[i]), mk = 1 - k; const x = mk * mk * FL.x0[i] + 2 * mk * k * FL.cx[i] + k * k * FL.x1[i], y = mk * mk * FL.y0[i] + 2 * mk * k * FL.cy[i] + k * k * FL.y1[i]; drawSprite(SPR.spark, x, y, 4, 0.9 * (1 - k * 0.5)); }
   // 11 hand, demo, sparks, pointer halo + breathing ring (P1 teal-white, P2 rose)
   for (let k = 0; k < GL.n; k++) { const g = GL.list[k]; if (g.state !== 'STAMPING') continue; const jx = Math.sin(G.frame * 12.9898) * 3, jy = Math.cos(G.frame * 7.233) * 3; drawSprite(SPR.hand, WR.x + g.handX * cellPx + jx, WR.y + g.handY * cellPy + jy, 32, 0.9); }
-  for (let i = 0; i < SPK.n; i++) if (SPK.life[i] > 0) drawSprite(SPR.spark, SPK.x[i], SPK.y[i], 3, SPK.life[i] * 2);
+  for (let i = 0; i < SPK.n; i++) if (SPK.life[i] > 0) drawSprite(SPR.spark, SPK.x[i], SPK.y[i], A.SPARK_R * (0.6 + SPK.life[i]), SPK.life[i] * 2);
   let epiK = 0;
   for (let k = 0; k < 2; k++) {
     const q = P[k]; let x, y, down, still = 0;
     if (q.local) { const r = RAW.p[k]; if (!r.active || !(r.down || (r.type === 'mouse' && RAW.everMoved))) continue; x = r.cx; y = r.cy; down = r.down || (k === 0 && RAW.space); still = r.stillT; }
     else { if (!q.present) continue; x = WR.x + q.x * cellPx; y = WR.y + q.y * cellPy; down = q.down; }
-    const pi = q.player - 1, r = q.open ? C.CURSOR_STILL_R : C.CURSOR_R + Math.sin(Math.PI * t) * 1;
+    const pi = q.player - 1, breath = Math.sin(Math.PI * t), r = lerp(C.CURSOR_R + breath * A.CURSOR_BREATH, C.CURSOR_STILL_R, q.s), spr = pi ? SPR.cursorB : SPR.cursorA, la = q.local ? 1 : A.CURSOR_REMOTE_A;   // breathes at 0.5 Hz, contracts to 4 px as the hand goes still
     if (DIR.actIdx === 5 && q.local && y < WR.y) {     // epilogue: the restart lives in the sky — a small sun follows the hand there and swells while it holds still; a dark arc counts the hold
       const hk = down ? clamp(still / C.EPI_RESTART_HOLD, 0, 1) : 0; if (hk > epiK) epiK = hk;
       ctx.globalCompositeOperation = 'source-over'; drawSprite(SPR.sun, x, y, A.SUN_HAND_R * (1 + 0.8 * hk), A.SUN_HAND_A + (down ? 0.2 + 0.25 * hk : 0));
       if (down) { ctx.globalAlpha = 0.55; ctx.strokeStyle = C.TEXT_COL_DAWN; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, C.CURSOR_R + 8, -HALF_PI, -HALF_PI + TWO_PI * hk); ctx.stroke(); }
       ctx.globalCompositeOperation = 'lighter';
     }
-    drawSprite(pi ? SPR.cursorB : SPR.cursorA, x, y, A.CURSOR_HALO_R, A.CURSOR_HALO_A * (q.local ? 1 : 0.8));
-    ctx.globalAlpha = C.CURSOR_A * (q.local ? 1 : 0.7); ctx.strokeStyle = PLAYER_TINT[pi]; ctx.fillStyle = PLAYER_TINT[pi]; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); if (down) ctx.fill(); else ctx.stroke(); ctx.globalAlpha = 1;
+    drawSprite(spr, x, y, A.CURSOR_HALO_R + 2 * breath, A.CURSOR_HALO_A * la);
+    if (down) drawSprite(spr, x, y, r * A.CURSOR_FILL_K, A.CURSOR_FILL_A * la);                        // pressed: a soft fill (no hard disc)
+    ctx.globalAlpha = C.CURSOR_A * la; ctx.strokeStyle = PLAYER_TINT[pi]; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TWO_PI); ctx.stroke(); ctx.globalAlpha = 1;
   }
   if (epiK > 0) { ctx.globalAlpha = A.EPI_LIGHT_A * epiK; ctx.fillStyle = GRAD.glow2; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }   // the horizon brightens as the hold completes (the radial fades out by itself: no clipped edge)
   // vignette, grain, text, restart fade
@@ -1378,7 +1416,7 @@ const NET = { mode: 'solo', state: 'idle', code: null, delay: 0, stalls: 0, resy
   syncAt: -1, syncSent: false, syncApplied: true, syncMeta: null, syncChunks: null, syncGot: 0, lastSyncAt: -1, pingTs: 0, rtts: [], pkt: new ArrayBuffer(10), joinTimer: 0, roomTimer: 0, pending: null,
   aDoisT: -1e9, hoverADois: false, discT: -1, lostLine: false, topic: '', peerId: '' };
 NET.pv = new DataView(NET.pkt);
-const LOBBY = { open: false, el: null, view: '', status: null, timer: 0, built: false, code: '', manualRole: '' };
+const LOBBY = { open: false, el: null, view: '', status: null, timer: 0, built: false, code: '', manualRole: '', openMs: -1e9 };
 function netPublic() { return { mode: NET.mode, state: NET.state, code: NET.code, tick: G.steps, delay: NET.delay, stalls: NET.stalls, resyncs: NET.resyncs, rtt: NET.rtt, lastHash: NET.lastHash }; }
 function randBytes(n) { const a = new Uint8Array(n); crypto.getRandomValues(a); return a; }
 function roomCode() { const b = randBytes(6), cs = C.NET.CONS, vs = C.NET.VOW; let s = ''; for (let i = 0; i < 6; i++) s += (i & 1) ? vs[b[i] % vs.length] : cs[b[i] % cs.length]; return s; }
@@ -1632,32 +1670,30 @@ function glyphRebuildMask(g) {           // masks are a pure function of geometr
 function lobbyBuild() {
   if (LOBBY.built) return; LOBBY.built = true;
   const el = document.createElement('div'); el.id = 'lobby'; el.hidden = true;
-  el.style.cssText = 'position:fixed;left:50%;top:12%;transform:translate(-50%,0);background:rgba(5,8,20,0.78);border:1px solid rgba(242,232,213,0.18);border-radius:14px;color:#f2e8d5;padding:22px 28px;min-width:280px;max-width:min(92vw,520px);font:500 16px "Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;letter-spacing:0.04em;cursor:auto;user-select:text;-webkit-user-select:text;z-index:2';
   document.body.appendChild(el); LOBBY.el = el;
   el.addEventListener('click', (e) => { const a = e.target.getAttribute && e.target.getAttribute('data-act'); if (a) lobbyAct(a); e.stopPropagation(); });
-  el.addEventListener('pointerdown', e => e.stopPropagation()); el.addEventListener('keydown', e => e.stopPropagation());
-  document.addEventListener('pointerdown', (e) => { if (LOBBY.open && !el.contains(e.target)) lobbyClose(); });
+  el.addEventListener('pointerdown', e => e.stopPropagation()); el.addEventListener('keydown', e => { if (e.key === 'Escape') lobbyClose(); e.stopPropagation(); });
+  document.addEventListener('pointerdown', (e) => { if (LOBBY.open && !el.contains(e.target) && nowMs() - LOBBY.openMs > 150) lobbyClose(); });   // the pointerdown that opened the lobby also bubbles here: ignore it
 }
-const LOBBY_CSS_BTN = 'display:inline-block;margin:6px 10px 6px 0;padding:8px 14px;border:1px solid rgba(242,232,213,0.3);border-radius:10px;cursor:pointer;background:none;color:#f2e8d5;font:inherit;letter-spacing:0.06em';
-const LOBBY_CSS_TA = 'width:100%;box-sizing:border-box;height:64px;margin:6px 0;background:rgba(255,255,255,0.05);color:#f2e8d5;border:1px solid rgba(242,232,213,0.2);border-radius:8px;font:12px monospace;padding:6px';
+const LOBBY_TTL = '<div class="ttl"><span>a dois</span><span class="link"><i></i><b></b><i></i></span></div>';
 function lobbyView(v) {
-  LOBBY.view = v; const el = LOBBY.el; let h = '';
-  if (v === 'menu') h = '<div style="opacity:.7;margin-bottom:10px">a dois</div><button style="' + LOBBY_CSS_BTN + '" data-act="create">Criar um mar</button><button style="' + LOBBY_CSS_BTN + '" data-act="join">Entrar num mar</button>';
-  else if (v === 'create') h = '<div style="opacity:.7">o código deste mar</div><div id="lobbyCode" style="font-size:34px;letter-spacing:0.35em;margin:10px 0 4px">' + LOBBY.code + '</div><a data-act="copyCode" style="cursor:pointer;opacity:.7;text-decoration:underline">copiar</a><div id="lobbyStatus" style="margin-top:14px;opacity:.85"><span class="dot"></span>esperando a outra mão…</div>';
-  else if (v === 'join') h = '<div style="opacity:.7">o código do mar</div><input id="lobbyInput" maxlength="6" autocomplete="off" spellcheck="false" style="width:9ch;margin:10px 8px 6px 0;font:inherit;font-size:28px;letter-spacing:0.3em;text-transform:uppercase;background:none;border:0;border-bottom:1px solid rgba(242,232,213,0.4);color:#f2e8d5;outline:none"><button style="' + LOBBY_CSS_BTN + '" data-act="enter">entrar</button><div id="lobbyStatus" style="margin-top:10px;opacity:.85"></div>';
-  else if (v === 'manualHost') h = '<div style="opacity:.7">convite</div><textarea id="taOffer" readonly style="' + LOBBY_CSS_TA + '"></textarea><a data-act="copyOffer" style="cursor:pointer;opacity:.7;text-decoration:underline">copiar</a><div style="opacity:.7;margin-top:10px">cole a resposta aqui</div><textarea id="taAnswer" style="' + LOBBY_CSS_TA + '"></textarea><button style="' + LOBBY_CSS_BTN + '" data-act="accept">conectar</button><div id="lobbyStatus" style="margin-top:8px;opacity:.85"></div>';
-  else if (v === 'manualGuest') h = '<div style="opacity:.7">cole o convite aqui</div><textarea id="taOffer" style="' + LOBBY_CSS_TA + '"></textarea><button style="' + LOBBY_CSS_BTN + '" data-act="answer">responder</button><div style="opacity:.7;margin-top:10px">resposta</div><textarea id="taAnswer" readonly style="' + LOBBY_CSS_TA + '"></textarea><a data-act="copyAnswer" style="cursor:pointer;opacity:.7;text-decoration:underline">copiar</a><div id="lobbyStatus" style="margin-top:8px;opacity:.85"></div>';
+  LOBBY.view = v; const el = LOBBY.el; let h = LOBBY_TTL;
+  if (v === 'menu') h += '<div class="lbl">a mesma água, em dois computadores</div><div class="verbs"><button data-act="create">Criar um mar</button><button data-act="join">Entrar num mar</button></div>';
+  else if (v === 'create') h += '<div class="lbl">o código deste mar</div><div id="lobbyCode" class="code">' + (LOBBY.code || '······') + '</div><a data-act="copyCode">copiar</a><div id="lobbyStatus" class="st"><span class="dot"></span>esperando a outra mão…</div>';
+  else if (v === 'join') h += '<div class="lbl">o código do mar</div><div class="row"><input id="lobbyInput" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false"><button data-act="enter">entrar</button></div><div id="lobbyStatus" class="st"></div>';
+  else if (v === 'manualHost') h += '<div class="lbl">convite</div><textarea id="taOffer" readonly></textarea><a data-act="copyOffer">copiar</a><div class="lbl" style="margin-top:16px">cole a resposta aqui</div><textarea id="taAnswer"></textarea><button data-act="accept">conectar</button><div id="lobbyStatus" class="st"></div>';
+  else if (v === 'manualGuest') h += '<div class="lbl">cole o convite aqui</div><textarea id="taOffer"></textarea><button data-act="answer">responder</button><div class="lbl" style="margin-top:16px">resposta</div><textarea id="taAnswer" readonly></textarea><a data-act="copyAnswer">copiar</a><div id="lobbyStatus" class="st"></div>';
   el.innerHTML = h; LOBBY.status = el.querySelector('#lobbyStatus');
   const inp = el.querySelector('#lobbyInput'); if (inp) { inp.focus(); inp.addEventListener('input', () => { inp.value = inp.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6); }); inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') lobbyAct('enter'); }); }
 }
 function lobbyStatus(s) { if (LOBBY.status) LOBBY.status.innerHTML = (s.endsWith('…') ? '<span class="dot"></span>' : '') + s; }
-function lobbyShowManualLink() { if (LOBBY.status && LOBBY.open) LOBBY.status.innerHTML += ' <a data-act="manual" style="cursor:pointer;text-decoration:underline">trocar código à mão</a>'; }
+function lobbyShowManualLink() { if (LOBBY.status && LOBBY.open) LOBBY.status.innerHTML += ' &nbsp;<a data-act="manual">trocar código à mão</a>'; }
 function lobbyFade() { if (!LOBBY.open) return; const el = LOBBY.el; el.style.transition = 'opacity 0.6s'; el.style.opacity = '0'; setTimeout(() => { lobbyClose(); el.style.opacity = '1'; el.style.transition = ''; }, 650); }
-function lobbyOpen() { lobbyBuild(); LOBBY.open = true; LOBBY.el.hidden = false; lobbyView('menu'); cv.style.cursor = 'auto'; }
+function lobbyOpen() { lobbyBuild(); LOBBY.open = true; LOBBY.openMs = nowMs(); LOBBY.el.hidden = false; lobbyView('menu'); cv.style.cursor = 'auto'; }
 function lobbyClose() { if (!LOBBY.open) return; LOBBY.open = false; LOBBY.el.hidden = true; cv.style.cursor = 'none'; if (NET.state === 'signaling' || NET.state === 'connecting') netLeave(true); }
 function lobbyAct(a) {
   const el = LOBBY.el, copy = (s) => { try { navigator.clipboard.writeText(s); } catch (e) { /* clipboard unavailable */ } };
-  if (a === 'create') { lobbyView('create'); netCreate().then(code => { LOBBY.code = code; const c = el.querySelector('#lobbyCode'); if (c) c.textContent = code; }).catch(() => { }); }
+  if (a === 'create') { LOBBY.code = ''; lobbyView('create'); netCreate().then(code => { LOBBY.code = code; const c = el.querySelector('#lobbyCode'); if (c) c.textContent = code; }).catch(() => { }); }
   else if (a === 'join') lobbyView('join');
   else if (a === 'enter') { const inp = el.querySelector('#lobbyInput'); if (inp && inp.value.length === 6) netJoin(inp.value).catch(() => { }); }
   else if (a === 'copyCode') copy(LOBBY.code);
@@ -1667,29 +1703,34 @@ function lobbyAct(a) {
   else if (a === 'accept') { const ta = el.querySelector('#taAnswer'); if (ta) { lobbyStatus('conectando…'); netManualAccept(ta.value).catch(() => lobbyStatus('o mar não respondeu')); } }
   else if (a === 'answer') { const ta = el.querySelector('#taOffer'); if (ta) { lobbyStatus('conectando…'); netManualAnswer(ta.value).then(s => { const tb = el.querySelector('#taAnswer'); if (tb) tb.value = s; }).catch(() => lobbyStatus('o mar não respondeu')); } }
 }
-function aDoisRect(out) { const w = 0.11 * Math.min(V.cssW, 900), h = 28; out.x = V.cssW - w - 18; out.y = 14; out.w = w + 10; out.h = h; }
+function aDoisRect(out) { const w = TXT.size * 0.72 * 4.2 + 44; out.x = V.cssW - w - 12; out.y = 6; out.w = w + 4; out.h = 44; }   // the word + the two-dot link, right-aligned 18 px from the edge; a 44-px-tall hit area (touch)
 const adTmp = { x: 0, y: 0, w: 0, h: 0 };
 function lobbyHitTest(x, y) {
   if (LOBBY.open) return true; if (NET.state === 'connected' || NET.state === 'signaling' || NET.state === 'connecting' || G.t < NET.aDoisT) return false;
   aDoisRect(adTmp); if (x >= adTmp.x && x <= adTmp.x + adTmp.w && y >= adTmp.y && y <= adTmp.y + adTmp.h) { lobbyOpen(); return true; }
   return false;
 }
-function renderNet() {                   // cosmetic: the "a dois" word, or the two-dot indicator while online
-  const t = G.t; ctx.globalCompositeOperation = 'source-over'; aDoisRect(adTmp);
+function netLink(x, y, len, a0, a1, aLine) {   // two dots (teal, rose) joined by a hairline, each dot over a soft glow; x = the teal dot, y = the line's height
+  const A = C.ART, dr = A.ADOIS_DOT_R, gr = A.ADOIS_GLOW_R;
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = aLine; ctx.strokeStyle = C.TEXT_COL; ctx.lineWidth = A.HAIRLINE; ctx.beginPath(); ctx.moveTo(x + dr, y); ctx.lineTo(x + len - dr, y); ctx.stroke();
+  ctx.globalCompositeOperation = 'lighter'; drawSprite(SPR.cursorA, x, y, gr, a0); drawSprite(SPR.cursorB, x + len, y, gr, a1);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = a0; ctx.fillStyle = PLAYER_TINT[0]; ctx.beginPath(); ctx.arc(x, y, dr, 0, TWO_PI); ctx.fill();
+  ctx.globalAlpha = a1; ctx.fillStyle = PLAYER_TINT[1]; ctx.beginPath(); ctx.arc(x + len, y, dr, 0, TWO_PI); ctx.fill(); ctx.globalAlpha = 1;
+}
+function renderNet() {                   // cosmetic: the "a dois" word with the two-dot link, or the two-dot indicator while online (local dot brighter, remote dot pulses on a stall)
+  const t = G.t, A = C.ART; ctx.globalCompositeOperation = 'source-over'; aDoisRect(adTmp);
+  const len = A.ADOIS_LINE, xe = adTmp.x + adTmp.w - 8, y = 28;
   if (NET.state === 'connected') {
-    const x = adTmp.x + adTmp.w - 30, y = adTmp.y + 14, stalled = NET.stallMs >= 0 && nowMs() - NET.stallMs > 400, host = NET.role === 'host';
-    ctx.globalAlpha = 0.45; ctx.strokeStyle = '#f2e8d5'; ctx.lineWidth = C.ART.HAIRLINE; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 22, y); ctx.stroke();
-    const pulse = stalled ? 0.5 + 0.5 * Math.sin(t * 8) : 1;
-    ctx.globalAlpha = host ? 1 : 0.5 * (host ? 1 : pulse); ctx.fillStyle = PLAYER_TINT[0]; ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = host ? 0.5 * pulse : 1; ctx.fillStyle = PLAYER_TINT[1]; ctx.beginPath(); ctx.arc(x + 22, y, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; return;
+    const stalled = NET.stallMs >= 0 && nowMs() - NET.stallMs > C.NET.STALL_MS, host = NET.role === 'host', pulse = stalled ? 0.5 + 0.5 * Math.sin(t * 8) : 1;
+    netLink(xe - len, y, len, host ? 1 : 0.5 * pulse, host ? 0.5 * pulse : 1, 0.45); return;
   }
   if (NET.state === 'signaling' || NET.state === 'connecting' || t < NET.aDoisT) return;
   const r = RAW.p[0], hover = r.active && r.cx >= adTmp.x && r.cx <= adTmp.x + adTmp.w && r.cy >= adTmp.y && r.cy <= adTmp.y + adTmp.h;
   const al = hover ? 0.8 : 0.35;
   ctx.font = TXT.fontEn; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillStyle = C.TEXT_COL; ctx.globalAlpha = al;
-  if (TXT.hasLS) ctx.letterSpacing = TXT.lsAd; ctx.fillText('a dois', adTmp.x + adTmp.w - 34, adTmp.y + 14); if (TXT.hasLS) ctx.letterSpacing = '0px';
-  const x = adTmp.x + adTmp.w - 24, y = adTmp.y + 14; ctx.strokeStyle = C.TEXT_COL; ctx.lineWidth = C.ART.HAIRLINE; ctx.globalAlpha = al * 0.6; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 16, y); ctx.stroke();
-  ctx.globalAlpha = al; ctx.fillStyle = PLAYER_TINT[0]; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = PLAYER_TINT[1]; ctx.beginPath(); ctx.arc(x + 16, y, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+  if (TXT.hasLS) ctx.letterSpacing = TXT.lsAd; ctx.fillText('a dois', xe - len - 16, y); if (TXT.hasLS) ctx.letterSpacing = '0px';
+  netLink(xe - len, y, len, al, al, al * 0.6);
 }
 
 // ───────────────────────────── LOOP ─────────────────────────────
