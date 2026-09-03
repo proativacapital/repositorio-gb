@@ -1246,7 +1246,7 @@ function render() {
   let epiK = 0;
   for (let k = 0; k < 2; k++) {
     const q = P[k]; let x, y, down, still = 0;
-    if (q.local) { const r = RAW.p[k]; if (!r.active || !(r.down || (r.type === 'mouse' && RAW.everMoved))) continue; x = r.cx; y = r.cy; down = r.down || (k === 0 && RAW.space); still = r.stillT; }
+    if (q.local) { const ri = k ^ NET.localSlot, r = RAW.p[ri]; if (!r.active || !(r.down || (r.type === 'mouse' && RAW.everMoved))) continue; x = r.cx; y = r.cy; down = r.down || (ri === 0 && RAW.space); still = r.stillT; }   // slot k is fed by raw pointer k ^ localSlot (gatherInputs)
     else { if (!q.present) continue; x = WR.x + q.x * cellPx; y = WR.y + q.y * cellPy; down = q.down; }
     const pi = q.player - 1, breath = Math.sin(Math.PI * t), r = lerp(C.CURSOR_R + breath * A.CURSOR_BREATH, C.CURSOR_STILL_R, q.s), spr = pi ? SPR.cursorB : SPR.cursorA, la = q.local ? 1 - LOBBY.k : A.CURSOR_REMOTE_A;   // breathes at 0.5 Hz, contracts to 4 px as the hand goes still; the local ring fades under the open lobby (the panel's arrow is the cursor there)
     if (la <= 0) continue;
@@ -1495,7 +1495,7 @@ function slotsReset() {
 function dirReset() { DIR.restarting = false; DIR.restartT = 0; DIR.flash = 0; DIR.ringT = -1; DIR.skyDip = 0; DIR.demoActive = false; DIR.demoT = 0; DIR.nudgeG = null; DIR.nudgeUntil = 0; DIR.epiHold = 0; DIR.textDawn = false; DIR.mistDone = false; DIR.dawnAudio = false; TXT.pt = ''; }
 function resetAll() {
   fieldsClear(); histReset(); glyphsResetAll(); fossilClear(); audioPartialsClear(); motesRespawnAll();
-  SPK.life.fill(0); FL.on.fill(0); slotsReset(); weatherInit(); dirReset(); DIR.fade = 1; RAW.rHold = RAW.rDown ? -1e9 : 0;   // a restart made with R still held needs a release before the key can arm again (keyup sets rHold back to 0)
+  SPK.life.fill(0); FL.on.fill(0); slotsReset(); NET.localSlot = 0; weatherInit(); dirReset(); DIR.fade = 1; RAW.rHold = RAW.rDown ? -1e9 : 0;   // a restart made with R still held needs a release before the key can arm again (keyup sets rHold back to 0)
   waterFrom = 0; waterTo = 0; waterT0 = -1e9; waterDur = C.SKY_FADE; skyTo = '#02030a'; skyFrom = '#02030a'; skyInvTo = 0; skyInvFrom = 0; skyT0 = -1e9; rebuildGradients();
   enterAct(0);
 }
@@ -1511,7 +1511,7 @@ function skipToPhase(name) {                 // harness: a clean slate at tick 0
 // Online two-player: MQTT-over-WebSocket signaling (hand-written), WebRTC DataChannel, deterministic lockstep.
 // Solo never touches the network: nothing here runs until netCreate/netJoin/netManual* is called.
 const RING_N = 1024;
-const NET = { mode: 'solo', state: 'idle', gen: 0, code: null, delay: 0, stalls: 0, resyncs: 0, rtt: 0, lastHash: 0, role: '', id: '', mqtt: null, pc: null, dc: null, seed: 0,
+const NET = { mode: 'solo', state: 'idle', gen: 0, code: null, delay: 0, stalls: 0, resyncs: 0, rtt: 0, lastHash: 0, role: '', localSlot: 0, id: '', mqtt: null, pc: null, dc: null, seed: 0,
   lIn: new Uint16Array(RING_N * 2), lF: new Uint8Array(RING_N), lT: new Int32Array(RING_N).fill(-1), rIn: new Uint16Array(RING_N * 2), rF: new Uint8Array(RING_N), rT: new Int32Array(RING_N).fill(-1),
   remoteLatest: -1, lastRemoteMs: 0, stallMs: -1, stallCounted: false, rHashT: new Int32Array(8).fill(-1), rHashV: new Uint32Array(8), rHashI: 0,
   syncAt: -1, syncSent: false, syncApplied: true, syncMeta: null, syncChunks: null, syncGot: 0, lastSyncAt: -1, pingTs: 0, rtts: [], pkt: new ArrayBuffer(10), joinTimer: 0, roomTimer: 0, keepTimer: 0, connTimer: 0, pending: null,
@@ -1696,7 +1696,7 @@ function netTeardown() {
   if (NET.pc) { NET.pc.onconnectionstatechange = null; try { NET.pc.close(); } catch (e) { /* closed */ } NET.pc = null; }
   NET.peerId = ''; NET.syncAt = -1; NET.syncApplied = true; NET.syncChunks = null; NET.remoteLatest = -1; NET.stallMs = -1; NET.lT.fill(-1); NET.rT.fill(-1); NET.rHashT.fill(-1); NET.discT = -1;
 }
-function netLeave(quiet) { netTeardown(); NET.role = ''; NET.mode = 'solo'; NET.state = 'idle'; NET.code = null; NET.delay = 0; P[0].local = true; P[1].local = true; if (!quiet) { lobbyClose(); } }
+function netLeave(quiet) { netTeardown(); NET.role = ''; NET.mode = 'solo'; NET.state = 'idle'; NET.code = null; NET.delay = 0; P[0].local = true; P[1].local = true; NET.localSlot = 0; if (!quiet) { lobbyClose(); } }
 function netLost() {
   if (NET.state !== 'connected') { if (NET.state === 'connecting') netFail(); return; }
   netTeardown(); NET.state = 'lost'; NET.mode = 'solo'; const remote = NET.role === 'host' ? P[1] : P[0]; tickInput(remote, NOPTR, NOPTR, 0);
@@ -1709,7 +1709,7 @@ function restartOnline(seedN, rung, delay, gw, gh) {   // gw/gh: the host's grid
   deriveGrid(rung, gw | 0, gh | 0); Q.gsLow = false; FS.gs = C.GS_SWEEPS; DIR.rungPending = false;
   NET.lT.fill(-1); NET.rT.fill(-1); NET.rHashT.fill(-1); HL.n = 0; HL.head = 0; NET.remoteLatest = -1; NET.stallMs = -1; NET.syncAt = -1; NET.syncApplied = true; NET.lastSyncAt = -1; NET.stalls = 0; NET.resyncs = 0;
   const host = NET.role === 'host'; P[0].local = host; P[1].local = !host; for (let k = 0; k < 2; k++) tickInput(P[k], NOPTR, NOPTR, 0);
-  resetAll(); DIR.textOpen = true; DIR.fade = 0.6; textShow(C.TEXT_DUAS_PT, C.TEXT_DUAS_EN, 0.5, -0.12, false); NET.lastRemoteMs = nowMs();   // both hands already read the opening line: the co-op line plays whole
+  resetAll(); NET.localSlot = host ? 0 : 1; DIR.textOpen = true; DIR.fade = 0.6; textShow(C.TEXT_DUAS_PT, C.TEXT_DUAS_EN, 0.5, -0.12, false); NET.lastRemoteMs = nowMs();   // both hands already read the opening line: the co-op line plays whole
   RAW.rDown = false; RAW.rHold = 0; RAW.p[0].stillT = 0; RAW.p[1].stillT = 0;   // a key or a sky-band hold carried through the handshake cannot arm a restart (keyup re-arms R)
 }
 function netSendInput(tick) {
@@ -1938,8 +1938,9 @@ function pointerSplats() {
 }
 function gatherInputs() {                 // one deterministic input record per player per tick
   if (NET.mode !== 'solo') { netInputsForTick(G.steps); return; }
-  if (SCRIPT.active) sampleScript(G.steps); else sampleRaw(0); tickInput(P[0], REC.x, REC.y, REC.f);
-  sampleRaw(1); tickInput(P[1], REC.x, REC.y, REC.f);
+  const a = NET.localSlot, b = 1 - a;     // solo: the hand keeps the slot it held online (a guest whose peer vanished stays player 2, its open remanso carried instead of collapsing and re-opening as player 1); the second touch takes the other slot
+  if (SCRIPT.active) sampleScript(G.steps); else sampleRaw(0); tickInput(P[a], REC.x, REC.y, REC.f);
+  sampleRaw(1); tickInput(P[b], REC.x, REC.y, REC.f);
 }
 function step() {                          // one tick; everything inside derives time from G.steps
   gatherInputs(); G.steps++; G.t = G.steps * C.DT; const dt = C.DT;
@@ -2023,7 +2024,7 @@ window.__game = {
     const gl = [];
     for (let k = 0; k < GL.n; k++) { const g = GL.list[k]; if (!g.everStamped) continue; const c = glyphCentreCss(g); gl.push({ id: g.id, state: g.state, coh: +g.coh.toFixed(3), cohN: +g.cohN.toFixed(3), eligible: g.eligible, center: { x: +c.x.toFixed(1), y: +c.y.toFixed(1) }, extentPx: +glyphExtentPx(g).toFixed(1) }); }
     const rm = []; for (let k = 0; k < NSLOT; k++) { const q = P[k]; if (q.open) rm.push({ x: +(WR.x + q.x * cellPx).toFixed(1), y: +(WR.y + q.y * cellPy).toFixed(1), r: +(q.R * cellPx).toFixed(1), s: +q.s.toFixed(3), d: +q.d.toFixed(2), strain: +q.strainAvg.toFixed(3) }); }
-    const np = []; for (let k = 0; k < 2; k++) { const q = P[k]; if (!q.present) continue; np.push({ player: q.player, local: q.local, kind: q.local ? RAW.p[k].type : 'remote', x: +(WR.x + q.x * cellPx).toFixed(1), y: +(WR.y + q.y * cellPy).toFixed(1), down: q.down, still: q.still, s: +q.s.toFixed(3), d: +q.d.toFixed(2) }); }
+    const np = []; for (let k = 0; k < 2; k++) { const q = P[k]; if (!q.present) continue; np.push({ player: q.player, local: q.local, kind: q.local ? RAW.p[k ^ NET.localSlot].type : 'remote', x: +(WR.x + q.x * cellPx).toFixed(1), y: +(WR.y + q.y * cellPy).toFixed(1), down: q.down, still: q.still, s: +q.s.toFixed(3), d: +q.d.toFixed(2) }); }
     let fs = 0; for (let i = 0; i < ST.fn; i++) fs += ST.frame[i]; const fa = ST.fn && fs > 0 ? 1000 / (fs / ST.fn) : 0;
     return { phase: DIR.phase, t: +G.t.toFixed(2), actT: +DIR.actT.toFixed(2), rung: G.rung, quality: Q.name, fps: +fa.toFixed(1), water: { x: WR.x, y: WR.y, w: WR.w, h: WR.h },
       glyphs: gl, remansos: rm, pointers: np, sky: { stars: GL.sky.stars, dim: GL.sky.dim, wisps: GL.sky.wisps }, audio: { ok: AU.ok, running: !!(AU.ctx && AU.ctx.state === 'running'), muted: AU.muted }, net: netPublic() };
