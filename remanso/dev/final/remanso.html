@@ -449,7 +449,7 @@ const colS = new Float32Array(1024), rowC = new Float32Array(1024), rowTide = ne
 const FS = { nanWarned: false, ke: 0, gs: C.GS_SWEEPS, splatBudget: 0 };
 function fieldsClear() {
   u.fill(0); v.fill(0); u0.fill(0); v0.fill(0); d0.fill(0); d1.fill(0); dW.fill(0); t0.fill(0); t1.fill(0); tW.fill(0);
-  p.fill(0); div.fill(0); curl.fill(0); speed.fill(0); recall.fill(0); uT.fill(0); vT.fill(0); ghost.fill(0);
+  p.fill(0); div.fill(0); curl.fill(0); speed.fill(0); recall.fill(0); uT.fill(0); vT.fill(0); ghost.fill(0); wk.fill(0);   // wk: the remanso weight scratch (declared with the kernel; first cleared at boot, after every declaration ran)
 }
 function dyeOf(ch) { return ch === 0 ? d0 : ch === 1 ? d1 : dW; }
 // Gaussian velocity splat, amplitude in cells/s, centre in cells
@@ -714,11 +714,11 @@ function glyphStrokes(kind) {                       // normalized to E = 1, cent
   }
   return S;
 }
-function mkGlyph(def, idx) {
-  return { def, id: def.id, idx, slot: def.slot, state: 'IDLE', maskThick: new Float32Array(MAXC), maskThin: new Float32Array(MAXC), maskSum: 1, bx0: 0, by0: 0, bx1: 0, by1: 0,
-    strokes: glyphStrokes(def.kind), segs: null, len: 1, pos: 0, emitPos: 0, stampDur: 2, handX: 0, handY: 0, tanX: 1, tanY: 0, cxC: 0, cyC: 0, Ec: 1,
-    cohStamp: 1, coh: 0, cohN: 0, eligible: false, tStamp: 0, tState: 0, setT: 0, fadeT: 0, fadingT: 0, wispT: 0, relitT: 0, liftT: 0, fade: 0, bright: 1,
-    settleable: false, ghostK: 0, nudged: false, stars: null, starCount: 0, skyX: 0, skyY: 0, gridId: 0, liftCh: 0, segIdx: 0, ch: 0, actIdx: def.act, everStamped: false, stampedThisAct: false, permanent: false, lostAt: -1, savedAt: -1 };
+function mkGlyph(def, idx) { const g = { def, id: def.id, idx, slot: def.slot, actIdx: def.act, strokes: glyphStrokes(def.kind), maskThick: new Float32Array(MAXC), maskThin: new Float32Array(MAXC) }; glyphInit(g); return g; }
+function glyphInit(g) {                    // the one source of a glyph's boot values, also applied at every restart: a coherence bucket or a timer from an earlier session must never reach the hash
+  g.state = 'IDLE'; g.maskSum = 1; g.bx0 = 0; g.by0 = 0; g.bx1 = 0; g.by1 = 0; g.segs = null; g.len = 1; g.pos = 0; g.emitPos = 0; g.stampDur = 2; g.handX = 0; g.handY = 0; g.tanX = 1; g.tanY = 0; g.cxC = 0; g.cyC = 0; g.Ec = 1;
+  g.cohStamp = 1; g.coh = 0; g.cohN = 0; g.eligible = false; g.tStamp = 0; g.tState = 0; g.setT = 0; g.fadeT = 0; g.fadingT = 0; g.wispT = 0; g.relitT = 0; g.liftT = 0; g.fade = 0; g.bright = 1;
+  g.settleable = false; g.ghostK = 0; g.nudged = false; g.stars = null; g.starCount = 0; g.skyX = 0; g.skyY = 0; g.gridId = 0; g.liftCh = 0; g.segIdx = 0; g.ch = 0; g.everStamped = false; g.stampedThisAct = false; g.permanent = false; g.lostAt = -1; g.savedAt = -1;
 }
 const GL = { list: [], n: 0, fadeSlot: new Float32Array(2), sky: { stars: 0, dim: 0, wisps: 0 }, lastChangeT: 0 };
 for (let i = 0; i < C.GLYPHS.length; i++) GL.list.push(mkGlyph(C.GLYPHS[i], i)); GL.n = GL.list.length;
@@ -827,13 +827,17 @@ function glyphsStep(dt) {
   GL.fadeSlot[0] = 0; GL.fadeSlot[1] = 0;
   for (let k = 0; k < GL.n; k++) { const g = GL.list[k]; if (g.state === 'IDLE') continue; glyphUpdate(g, dt, sampled); if (g.state === 'FADING' || (g.state === 'LIVE' && g.fade > 0)) GL.fadeSlot[g.slot] = Math.max(GL.fadeSlot[g.slot], g.fade); }
 }
-function glyphsResetAll() { for (let k = 0; k < GL.n; k++) { const g = GL.list[k]; g.state = 'IDLE'; g.everStamped = false; g.stampedThisAct = false; g.permanent = false; g.settleable = false; g.stars = null; g.nudged = false; g.fade = 0; } GL.sky.stars = 0; GL.sky.dim = 0; GL.sky.wisps = 0; ghost.fill(0); }
+function glyphsResetAll() { for (let k = 0; k < GL.n; k++) glyphInit(GL.list[k]); GL.sky.stars = 0; GL.sky.dim = 0; GL.sky.wisps = 0; GL.lastChangeT = 0; GL.fadeSlot[0] = 0; GL.fadeSlot[1] = 0; ghost.fill(0); }
 
 // ───────────────────────────── WEATHER ─────────────────────────────
 const WX = { A: 0, P: 40, A0: 0, A1: 0, P0: 40, P1: 40, ramp0: 0, rampT: 1e9, slack: 1, slackTarget: 1, cx: 0.5, cy: 0.5,
   vp: new Float32Array(3), vp0: new Float32Array(3), vp1: new Float32Array(3), phi: new Float32Array(3), psi: new Float32Array(3), phiTo: new Float32Array(3), psiTo: new Float32Array(3), glide: new Float32Array(3), spin: new Float32Array(3),
   vx: new Float32Array(3), vy: new Float32Array(3), vortexFrom: 0, nudgeX: 0, nudgeY: 0, nudgeR: 0, nudgeT: 0, tideTellArmed: true, vortexNear: new Uint8Array(3), aimed: null };
-for (let k = 0; k < 3; k++) { WX.phi[k] = C.VORTEX_PHI * k; WX.psi[k] = C.VORTEX_PSI * k; WX.phiTo[k] = WX.phi[k]; WX.psiTo[k] = WX.psi[k]; WX.spin[k] = k & 1 ? -1 : 1; WX.glide[k] = 1; }
+function weatherInit() {                  // boot values, also at every restart: a solo session's aimed vortex phases must not leak into an online restart
+  WX.A = 0; WX.P = C.ACTS[0].tideP; WX.A0 = 0; WX.A1 = 0; WX.P0 = WX.P; WX.P1 = WX.P; WX.ramp0 = 0; WX.rampT = 1e9; WX.slack = 1; WX.slackTarget = 1; WX.cx = 0.5; WX.cy = 0.5; WX.vortexFrom = 0; WX.nudgeX = 0; WX.nudgeY = 0; WX.nudgeR = 0; WX.nudgeT = 0; WX.tideTellArmed = true; WX.aimed = null;
+  for (let k = 0; k < 3; k++) { WX.vp[k] = 0; WX.vp0[k] = 0; WX.vp1[k] = 0; WX.phi[k] = C.VORTEX_PHI * k; WX.psi[k] = C.VORTEX_PSI * k; WX.phiTo[k] = WX.phi[k]; WX.psiTo[k] = WX.psi[k]; WX.spin[k] = k & 1 ? -1 : 1; WX.glide[k] = 1; WX.vx[k] = 0; WX.vy[k] = 0; WX.vortexNear[k] = 0; }
+}
+weatherInit();
 function weatherSet(act) {
   WX.A0 = WX.A; WX.P0 = WX.P; WX.A1 = act.tideA; WX.P1 = act.tideP; WX.ramp0 = G.t; WX.rampT = act.actIdx === 0 ? 0.01 : C.WEATHER_RAMP;
   for (let k = 0; k < 3; k++) { WX.vp0[k] = WX.vp[k]; WX.vp1[k] = k < act.nV ? act.vPeak : 0; }
@@ -1431,9 +1435,9 @@ function dawnStep(dt) {
 }
 function resetAll() {
   fieldsClear(); histReset(); glyphsResetAll(); fossilClear(); audioPartialsClear(); motesRespawnAll();
-  SPK.life.fill(0); FL.on.fill(0); for (let k = 0; k < NSLOT; k++) { const q = P[k]; q.s = 0; q.d = 0; q.holdT = 0; q.open = false; q.R = 0; q.rn = 0; q.hasSeg = false; } P[2].down = false; P[2].present = false;
-  WX.A = 0; WX.A0 = 0; WX.vp.fill(0); WX.vp0.fill(0); WX.nudgeT = 0; WX.aimed = null;
-  DIR.restarting = false; DIR.fade = 1; DIR.flash = 0; DIR.ringT = -1; DIR.skyDip = 0; DIR.demoActive = false; DIR.nudgeG = null; RAW.rHold = 0; TXT.pt = '';
+  SPK.life.fill(0); FL.on.fill(0); for (let k = 0; k < NSLOT; k++) { const q = P[k]; q.s = 0; q.d = 0; q.holdT = 0; q.open = false; q.still = false; q.assist = false; q.R = 0; q.Reff = 0; q.rn = 0; q.rh = 0; q.hasSeg = false; q.speed = 0; q.strainAvg = 0; q.openT = 0; q.strain.fill(0); q.flick.fill(0); } P[2].down = false; P[2].present = false;
+  weatherInit();
+  DIR.restarting = false; DIR.restartT = 0; DIR.fade = 1; DIR.flash = 0; DIR.ringT = -1; DIR.skyDip = 0; DIR.demoActive = false; DIR.demoT = 0; DIR.nudgeG = null; DIR.nudgeUntil = 0; DIR.epiHold = 0; DIR.textDawn = false; DIR.mistDone = false; DIR.dawnAudio = false; RAW.rHold = 0; TXT.pt = '';
   waterFrom = 0; waterTo = 0; waterT0 = -1e9; waterDur = C.SKY_FADE; skyTo = '#02030a'; skyFrom = '#02030a'; skyInvTo = 0; skyInvFrom = 0; skyT0 = -1e9; rebuildGradients();
   enterAct(0);
 }
@@ -1698,7 +1702,7 @@ function netSyncApply() {
   for (let k = 0; k < GL.n; k++) { const g = GL.list[k], f = st.glyphs[k]; for (const q in f) g[q] = f[q]; if (g.everStamped && g.gridId === gridGen) glyphRebuildMask(g); }
   for (let k = 0; k < NSLOT; k++) { const p = P[k], f = st.slots[k]; for (const q in f) { if (q === 'ring') { for (let i = 0; i < f.ring.length; i++) p.ring[i] = f.ring[i]; } else p[q] = f[q]; } }
   GL.lastChangeT = st.gl.lastChangeT; GL.sky.stars = st.gl.sky.stars; GL.sky.dim = st.gl.sky.dim; GL.sky.wisps = st.gl.sky.wisps;
-  histReset(); ghostRebuild(); weatherTargets(); NET.syncApplied = true; NET.syncChunks = null; NET.syncMeta = null; NET.lastSyncAt = S; NET.syncAt = -1; NET.resyncs++; DIR.flash = 1; recall.fill(0);
+  histReset(); ghostRebuild(); weatherTargets(); NET.syncApplied = true; NET.syncChunks = null; NET.syncMeta = null; NET.lastSyncAt = S; NET.syncAt = -1; NET.resyncs++; DIR.flash = 1; recall.fill(0); wk.fill(0, 0, N);
   console.warn('REMANSO: resynchronised at tick ' + S);
 }
 function glyphRebuildMask(g) {           // masks are a pure function of geometry + emitted length: regenerate instead of transferring 2 x 83 KB
