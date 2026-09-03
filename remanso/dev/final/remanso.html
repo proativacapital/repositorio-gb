@@ -200,7 +200,7 @@ const cv = document.getElementById('c'), ctx = cv.getContext('2d', { alpha: fals
 const V = { cssW: 1, cssH: 1, scale: 1, dpr: 1, dirty: true, portrait: false, forceScale: 0 };
 const WR = { x: 0, y: 0, w: 1, h: 1 };            // water rect, CSS px
 const G = { t: 0, frame: 0, steps: 0, rung: 0, ts: 1, hidden: false, rungForced: false };   // global clock
-let GW = 192, GH = 108, N = GW * GH, cellPx = 1, cellPy = 1, gridAspect = 16 / 9;
+let GW = 192, GH = 108, N = GW * GH, cellPx = 1, cellPy = 1, gridAspect = 16 / 9, gridK = 1;   // gridK: cell-space threshold scale, sqrt(N / MAX_CELLS) — 1 at rung 0 whatever the aspect, 160/192 and 128/192 at the coarser rungs (GDD-ONLINE 'scaled by W/192', made aspect-proof)
 function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, w | 0); c.height = Math.max(1, h | 0); return c; }
 let inkCv = null, inkCtx = null, inkImg = null, inkPx = null, bloomA = null, bloomB = null, bloomACtx = null, bloomBCtx = null, wetCv = null, wetCtx = null;
 let layerW = C.LAYER_W, layerH = 540, motesCv = null, motesCtx = null, fossilCv = null, fossilCtx = null, layerSx = 1, layerSy = 1;
@@ -332,7 +332,7 @@ function gridDims(rung, aspect) {          // square cells: W = floor(sqrt(cells
 function gridDimsValid(w, h) { return w >= 16 && h >= 16 && w <= C.GRID_MAX_SIDE && h <= C.GRID_MAX_SIDE && w * h <= C.MAX_CELLS; }
 function deriveGrid(rung, w, h) {          // explicit dims (online: the host's, so both peers run one grid whatever their windows; setRung: the nominal 16:9 rung) or, when absent, the local water aspect
   if (!gridDimsValid(w, h)) { gridDims(rung, WR.w / WR.h); w = GD.w; h = GD.h; }
-  GW = w; GH = h; N = GW * GH; gridAspect = GW / GH; G.rung = rung; gridGen++;
+  GW = w; GH = h; N = GW * GH; gridK = Math.sqrt(N / C.MAX_CELLS); gridAspect = GW / GH; G.rung = rung; gridGen++;
   cellPx = WR.w / GW; cellPy = WR.h / GH;
   inkCv = mkCanvas(GW, GH); inkCtx = inkCv.getContext('2d'); inkImg = inkCtx.createImageData(GW, GH); inkPx = new Uint32Array(inkImg.data.buffer);
   bloomA = mkCanvas(GW >> 1, GH >> 1); bloomACtx = bloomA.getContext('2d'); bloomB = mkCanvas(GW >> 2, GH >> 2); bloomBCtx = bloomB.getContext('2d');
@@ -435,7 +435,7 @@ function tickInput(p, x16, y16, f) {
   for (let n = 1; n < p.rn; n++) { k = (k - 1 + TICK_RING) % TICK_RING; const x0 = p.ring[k * 2], y0 = p.ring[k * 2 + 1], dx = x1 - x0, dy = y1 - y0; len += Math.sqrt(dx * dx + dy * dy); x1 = x0; y1 = y0; }
   p.speed = len / (TICK_RING * C.DT);
 }
-function stillCells() { return C.STILL_CELLS * GW / 192; }
+function stillCells() { return C.STILL_CELLS * gridK; }
 
 
 // ───────────────────────────── FLUID ─────────────────────────────
@@ -605,7 +605,7 @@ function sparksBurst(cx, cy, R) {
 }
 function sparksStep() { for (let i = 0; i < SPK.n; i++) { if (SPK.life[i] <= 0) continue; SPK.life[i] -= C.DT; SPK.vx[i] *= 0.9; SPK.vy[i] *= 0.9; SPK.x[i] += SPK.vx[i] * C.DT; SPK.y[i] += SPK.vy[i] * C.DT; } }
 function slotDown(p) { return p.down; }
-function radiusCells(holdT) { return Math.max(C.R_FLOOR_C * GW / 192, (C.R_MIN_C + C.R_RANGE_C * easeOutCubic(Math.min(holdT, C.R_GROW) / C.R_GROW)) * GW / 192); }
+function radiusCells(holdT) { return Math.max(C.R_FLOOR_C * gridK, (C.R_MIN_C + C.R_RANGE_C * easeOutCubic(Math.min(holdT, C.R_GROW) / C.R_GROW)) * gridK); }
 function remansoUpdate(p) {
   const dt = C.DT, down = p.down && p.present, sp = p.speed, stillV = stillCells();
   p.still = down && sp < stillV;
@@ -1399,7 +1399,7 @@ function directorStep(dt) {
   if (NET.mode !== 'solo') return;
   if (t >= DIR.nudgeNext) {
     const g = targetGlyph(); DIR.nudgeNext = t + C.NUDGE_REPEAT;
-    if (g && t - GL.lastChangeT >= C.NUDGE_T) { DIR.nudgeG = g; g.nudged = true; ghostRebuild(); DIR.nudgeUntil = t + C.NUDGE_DUR; WX.nudgeX = g.cxC; WX.nudgeY = g.cyC; WX.nudgeR = 2 * (C.R_MIN_C + C.R_RANGE_C) * GW / 192; WX.nudgeT = C.NUDGE_DUR; }
+    if (g && t - GL.lastChangeT >= C.NUDGE_T) { DIR.nudgeG = g; g.nudged = true; ghostRebuild(); DIR.nudgeUntil = t + C.NUDGE_DUR; WX.nudgeX = g.cxC; WX.nudgeY = g.cyC; WX.nudgeR = 2 * (C.R_MIN_C + C.R_RANGE_C) * gridK; WX.nudgeT = C.NUDGE_DUR; }
   }
   if (DIR.nudgeG && t >= DIR.nudgeUntil) { DIR.nudgeG.nudged = false; ghostRebuild(); DIR.nudgeG = null; }
   if (!DIR.demoActive) {
