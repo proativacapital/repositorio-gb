@@ -1588,11 +1588,15 @@ async function netManualOffer() {
   return packSdp(pc.localDescription.sdp);
 }
 async function netManualAnswer(offerStr) {
+  let sdp = ''; try { sdp = await unpackSdp(offerStr); } catch (e) { /* not a code */ }
+  if (!/^v=0/.test(sdp)) { lobbyStatus('convite inválido'); throw new Error('invalid'); }   // validated before anything changes: a bad paste leaves the game solo and the water listening to the hand
   netLeave(true); NET.role = 'guest'; NET.mode = 'guest'; NET.state = 'connecting'; NET.code = null; NET.id = clientId();
-  const sdp = await unpackSdp(offerStr); const pc = mkPC(); pc.ondatachannel = (e) => bindDC(e.channel);
-  await pc.setRemoteDescription({ type: 'offer', sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); await gather(pc);
-  setTimeout(() => { if (NET.state === 'connecting') netFail(); }, C.NET.CONNECT_TIMEOUT);
-  return packSdp(pc.localDescription.sdp);
+  try {
+    const pc = mkPC(); pc.ondatachannel = (e) => bindDC(e.channel);
+    await pc.setRemoteDescription({ type: 'offer', sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); await gather(pc);
+    setTimeout(() => { if (NET.state === 'connecting') netFail(); }, C.NET.CONNECT_TIMEOUT);
+    return packSdp(pc.localDescription.sdp);
+  } catch (e) { netFail(); throw e; }   // an offer the browser refuses restores solo
 }
 function netManualAccept(answerStr) {
   return new Promise(async (res, rej) => {
@@ -1762,7 +1766,7 @@ function lobbyAct(a) {
   else if (a === 'copyOffer') { const ta = el.querySelector('#taOffer'); if (ta) copy(ta.value); }
   else if (a === 'copyAnswer') { const ta = el.querySelector('#taAnswer'); if (ta) copy(ta.value); }
   else if (a === 'accept') { const ta = el.querySelector('#taAnswer'); if (ta) { lobbyStatus('conectando…'); netManualAccept(ta.value).catch(e => { if (!(e && e.message === 'invalid')) lobbyStatus('o mar não respondeu'); }); } }
-  else if (a === 'answer') { const ta = el.querySelector('#taOffer'); if (ta) { lobbyStatus('conectando…'); netManualAnswer(ta.value).then(s => { const tb = el.querySelector('#taAnswer'); if (tb) tb.value = s; }).catch(() => lobbyStatus('o mar não respondeu')); } }
+  else if (a === 'answer') { const ta = el.querySelector('#taOffer'); if (ta) { lobbyStatus('conectando…'); netManualAnswer(ta.value).then(s => { const tb = el.querySelector('#taAnswer'); if (tb) tb.value = s; }).catch(e => { if (!(e && e.message === 'invalid')) lobbyStatus('o mar não respondeu'); }); } }
 }
 function aDoisRect(out) { const w = TXT.size * 0.72 * 4.2 + 44; out.x = V.cssW - w - 12; out.y = 6; out.w = w + 4; out.h = 44; }   // the word + the two-dot link, right-aligned 18 px from the edge; a 44-px-tall hit area (touch)
 const adTmp = { x: 0, y: 0, w: 0, h: 0 };
