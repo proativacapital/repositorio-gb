@@ -1392,13 +1392,14 @@ function targetGlyph() { let best = null; for (const id of actGlyphs()) { const 
 function directorStep(dt) {
   const t = G.t; DIR.actT += dt; const idx = DIR.actIdx, a = DIR.act;
   if (DIR.flash > 0) DIR.flash = Math.max(0, DIR.flash - dt / 0.6); if (DIR.ringT >= 0) DIR.ringT += dt; if (DIR.skyDip > 0) DIR.skyDip -= dt;
-  // restart (R held 1 s anywhere; still in the sky band 2 s in the epilogue)
-  if (RAW.rDown) { RAW.rHold += dt; if (RAW.rHold >= C.RESTART_KEY_HOLD && !DIR.restarting) { DIR.restarting = true; DIR.restartT = 0; } }
+  // restart (R held 1 s anywhere; still in the sky band 2 s in the epilogue) — solo only: a restart is a local director input that never crosses the wire, so while two hands share one sea neither may restart it alone (GDD-ONLINE: only inputs are exchanged)
+  const online = NET.state === 'connected';
+  if (RAW.rDown && !online) { RAW.rHold += dt; if (RAW.rHold >= C.RESTART_KEY_HOLD && !DIR.restarting) { DIR.restarting = true; DIR.restartT = 0; } }
   if (DIR.restarting) { DIR.restartT += dt; DIR.fade = Math.min(1, DIR.restartT / C.RESTART_FADE); if (DIR.restartT >= C.RESTART_FADE) { resetAll(); return; } }
   else if (DIR.fade > 0) DIR.fade = Math.max(0, DIR.fade - dt);
   if (idx < 0) return;
   if (idx === 5) {
-    let held = false; for (let k = 0; k < 2; k++) { const r = RAW.p[k]; if (r.active && r.down && r.ny < 0) { r.stillT += dt; if (r.stillT >= C.EPI_RESTART_HOLD) held = true; } }
+    let held = false; if (!online) for (let k = 0; k < 2; k++) { const r = RAW.p[k]; if (r.active && r.down && r.ny < 0) { r.stillT += dt; if (r.stillT >= C.EPI_RESTART_HOLD) held = true; } }
     if (held && !DIR.restarting) { DIR.restarting = true; DIR.restartT = 0; }
     glyphsStep(dt); return;
   }
@@ -1659,6 +1660,7 @@ function restartOnline(seedN, rung, delay, gw, gh) {   // gw/gh: the host's grid
   NET.lT.fill(-1); NET.rT.fill(-1); NET.rHashT.fill(-1); HL.n = 0; HL.head = 0; NET.remoteLatest = -1; NET.stallMs = -1; NET.syncAt = -1; NET.syncApplied = true; NET.lastSyncAt = -1; NET.stalls = 0; NET.resyncs = 0;
   const host = NET.role === 'host'; P[0].local = host; P[1].local = !host; for (let k = 0; k < 2; k++) tickInput(P[k], NOPTR, NOPTR, 0);
   resetAll(); DIR.textOpen = true; DIR.fade = 0.6; textShow(C.TEXT_DUAS_PT, C.TEXT_DUAS_EN, 0.5, -0.12, false); NET.lastRemoteMs = nowMs();   // both hands already read the opening line: the co-op line plays whole
+  RAW.rDown = false; RAW.rHold = 0; RAW.p[0].stillT = 0; RAW.p[1].stillT = 0;   // a key or a sky-band hold carried through the handshake cannot arm a restart (keyup re-arms R)
 }
 function netSendInput(tick) {
   sampleRaw(0); const i = tick % RING_N;
