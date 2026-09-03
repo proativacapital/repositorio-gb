@@ -1596,8 +1596,11 @@ async function netManualAnswer(offerStr) {
 }
 function netManualAccept(answerStr) {
   return new Promise(async (res, rej) => {
-    try { if (!NET.pc) throw new Error('no offer'); const sdp = await unpackSdp(answerStr); NET.pending = { res, rej }; await NET.pc.setRemoteDescription({ type: 'answer', sdp }); setTimeout(() => { if (NET.state === 'connecting') { netFail(); rej(new Error('timeout')); } }, C.NET.CONNECT_TIMEOUT); }
-    catch (e) { netFail(); rej(e); }
+    if (!NET.pc) { netFail(); return rej(new Error('no offer')); }
+    let sdp = ''; try { sdp = await unpackSdp(answerStr); } catch (e) { /* not a code */ }
+    if (!/^v=0/.test(sdp)) { lobbyStatus('resposta inválida'); return rej(new Error('invalid')); }   // an unreadable paste leaves the invite alive: the friend's real answer can still be pasted
+    try { await NET.pc.setRemoteDescription({ type: 'answer', sdp }); } catch (e) { lobbyStatus('resposta inválida'); return rej(new Error('invalid')); }   // a failed setRemoteDescription is atomic: the offer stands
+    NET.pending = { res, rej }; setTimeout(() => { if (NET.state === 'connecting') { netFail(); rej(new Error('timeout')); } }, C.NET.CONNECT_TIMEOUT);
   });
 }
 function netFail() { if (NET.state === 'connected') return; lobbyStatus('o mar não respondeu'); lobbyShowManualLink(); if (NET.pending) { NET.pending.rej(new Error('connect failed')); NET.pending = null; } netTeardown(); NET.state = 'idle'; NET.mode = 'solo'; }
@@ -1758,7 +1761,7 @@ function lobbyAct(a) {
   else if (a === 'manual') { const host = NET.role !== 'guest'; lobbyView(host ? 'manualHost' : 'manualGuest'); if (host) netManualOffer().then(s => { const ta = el.querySelector('#taOffer'); if (ta) ta.value = s; }).catch(() => lobbyStatus('o mar não respondeu')); }
   else if (a === 'copyOffer') { const ta = el.querySelector('#taOffer'); if (ta) copy(ta.value); }
   else if (a === 'copyAnswer') { const ta = el.querySelector('#taAnswer'); if (ta) copy(ta.value); }
-  else if (a === 'accept') { const ta = el.querySelector('#taAnswer'); if (ta) { lobbyStatus('conectando…'); netManualAccept(ta.value).catch(() => lobbyStatus('o mar não respondeu')); } }
+  else if (a === 'accept') { const ta = el.querySelector('#taAnswer'); if (ta) { lobbyStatus('conectando…'); netManualAccept(ta.value).catch(e => { if (!(e && e.message === 'invalid')) lobbyStatus('o mar não respondeu'); }); } }
   else if (a === 'answer') { const ta = el.querySelector('#taOffer'); if (ta) { lobbyStatus('conectando…'); netManualAnswer(ta.value).then(s => { const tb = el.querySelector('#taAnswer'); if (tb) tb.value = s; }).catch(() => lobbyStatus('o mar não respondeu')); } }
 }
 function aDoisRect(out) { const w = TXT.size * 0.72 * 4.2 + 44; out.x = V.cssW - w - 12; out.y = 6; out.w = w + 4; out.h = 44; }   // the word + the two-dot link, right-aligned 18 px from the edge; a 44-px-tall hit area (touch)
