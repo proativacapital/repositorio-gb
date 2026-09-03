@@ -1569,7 +1569,10 @@ function netJoin(code) {
           await pc.setRemoteDescription({ type: 'offer', sdp: msg.sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); await gather(pc);
           m.send(NET.topic, JSON.stringify({ t: 'answer', id: NET.id, to: msg.id, sdp: pc.localDescription.sdp }));
           setTimeout(() => { if (NET.state === 'connecting') netFail(); }, C.NET.CONNECT_TIMEOUT);
-        } else if (msg.t === 'busy' && msg.to === NET.id) { lobbyStatus('esse mar já tem duas mãos'); }
+        } else if (msg.t === 'busy' && msg.to === NET.id && NET.state === 'signaling') {   // the sea is full: stop asking (the retry loop would have replaced this line with 'ninguém nesse mar' ten seconds later)
+          clearTimeout(NET.joinTimer); lobbyStatus('esse mar já tem duas mãos'); NET.state = 'idle'; NET.mode = 'solo'; m.close(); NET.mqtt = null;
+          if (NET.pending) { NET.pending.rej(new Error('busy')); NET.pending = null; }
+        }
       };
       join();
     } catch (e) { netFail(); rej(e); }
