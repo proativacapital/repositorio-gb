@@ -1811,7 +1811,10 @@ function lobbyAct(a) {
   else if (a === 'join') lobbyView('join');
   else if (a === 'enter') { const inp = el.querySelector('#lobbyInput'); if (inp) { if (inp.value.length === 6) netJoin(inp.value).catch(() => { }); else lobbyStatus('seis letras'); } }
   else if (a === 'copyCode') lobbyCopy(LOBBY.code, el.querySelector('#lobbyCode'));
-  else if (a === 'manual') { const host = NET.role !== 'guest'; lobbyView(host ? 'manualHost' : 'manualGuest'); if (host) netManualOffer().then(s => { const ta = el.querySelector('#taOffer'); if (ta) ta.value = s; }).catch(() => lobbyStatus('o mar não respondeu')); }
+  else if (a === 'manual') {
+    const host = NET.role !== 'guest'; lobbyView(host ? 'manualHost' : 'manualGuest');
+    if (host) { lobbyStatus('preparando o convite…'); netManualOffer().then(s => { const ta = el.querySelector('#taOffer'); if (ta) ta.value = s; if (LOBBY.view === 'manualHost') lobbyStatus('convite pronto'); }).catch(() => lobbyStatus('o mar não respondeu')); }   // ICE gathering takes up to GATHER_MS: say so instead of showing an empty box
+  }
   else if (a === 'copyOffer') { const ta = el.querySelector('#taOffer'); if (ta) lobbyCopy(ta.value, ta); }   // an empty invite (still gathering) copies nothing
   else if (a === 'copyAnswer') { const ta = el.querySelector('#taAnswer'); if (ta) lobbyCopy(ta.value, ta); }
   else if (a === 'accept') { const ta = el.querySelector('#taAnswer'); if (ta) { lobbyStatus('conectando…'); netManualAccept(ta.value).catch(e => { if (!(e && e.message === 'invalid')) lobbyStatus('o mar não respondeu'); }); } }
