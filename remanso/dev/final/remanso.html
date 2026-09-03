@@ -648,7 +648,7 @@ function remansoUpdate(p) {
   const R = radiusCells(p.holdT);
   if (p.open || wasOpen) p.R = R;
   if (p.open && !wasOpen) { p.openT = G.t; p.d = 0; p.note = -1; audioPadOpen(p); }
-  if (!p.open && wasOpen) { sparksBurst(WR.x + p.x * cellPx, WR.y + p.y * cellPy, p.R * cellPx); if (p.d >= C.ART.FOSSIL_MIN_D) fossilCircle(p.x, p.y, p.R); audioPadClose(p); p.holdT = 0; }   // the fossil (render-only) keeps only remansos that reached some depth: a flicker-open leaves no ring
+  if (!p.open && wasOpen) { sparksBurst(WR.x + p.x * cellPx, WR.y + p.y * cellPy, p.R * cellPx); if (p.d >= C.ART.FOSSIL_MIN_D) fossilCircle(p.x, p.y, p.R); audioPadClose(p); if (!RM.disabled) p.holdT = 0; }   // the fossil (render-only) keeps only remansos that reached some depth: a flicker-open leaves no ring. Epilogue (remanso disabled): holdT stays past 0.5 s until the finger lifts or moves, so the rim opens once and dissolves once (GDD 3.4) instead of re-opening every half second
   if (p.open) {
     // partner assist: another hand stirring within 2R of the centre (co-op synergy)
     let assist = false;
