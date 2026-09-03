@@ -14,6 +14,7 @@
 #lobby .code{font-size:46px;line-height:1.1;letter-spacing:.3em;text-indent:.15em;margin:8px 0 6px;color:#fff6e6;text-shadow:0 0 18px rgba(191,239,255,.25)}
 #lobby .verbs{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 #lobby .row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+#lobby button,#lobby a{user-select:none;-webkit-user-select:none}
 #lobby button{flex:1 1 auto;min-height:44px;padding:10px 18px;border:1px solid rgba(242,232,213,.3);border-radius:10px;cursor:pointer;background:rgba(255,255,255,.03);color:#f2e8d5;font:inherit;letter-spacing:.08em;transition:border-color .2s,background .2s}
 #lobby button:hover{border-color:rgba(242,232,213,.65);background:rgba(255,255,255,.07)}
 #lobby a{display:inline-block;min-height:44px;line-height:44px;padding:0 4px;cursor:pointer;opacity:.7;font-size:13px;letter-spacing:.16em;text-decoration:underline;text-decoration-color:rgba(242,232,213,.35);text-decoration-thickness:1px;text-underline-offset:4px;transition:opacity .2s}
@@ -1482,7 +1483,7 @@ function skipToPhase(name) {                 // harness: a clean slate at tick 0
 // Online two-player: MQTT-over-WebSocket signaling (hand-written), WebRTC DataChannel, deterministic lockstep.
 // Solo never touches the network: nothing here runs until netCreate/netJoin/netManual* is called.
 const RING_N = 1024;
-const NET = { mode: 'solo', state: 'idle', code: null, delay: 0, stalls: 0, resyncs: 0, rtt: 0, lastHash: 0, role: '', id: '', mqtt: null, pc: null, dc: null, seed: 0,
+const NET = { mode: 'solo', state: 'idle', gen: 0, code: null, delay: 0, stalls: 0, resyncs: 0, rtt: 0, lastHash: 0, role: '', id: '', mqtt: null, pc: null, dc: null, seed: 0,
   lIn: new Uint16Array(RING_N * 2), lF: new Uint8Array(RING_N), lT: new Int32Array(RING_N).fill(-1), rIn: new Uint16Array(RING_N * 2), rF: new Uint8Array(RING_N), rT: new Int32Array(RING_N).fill(-1),
   remoteLatest: -1, lastRemoteMs: 0, stallMs: -1, stallCounted: false, rHashT: new Int32Array(8).fill(-1), rHashV: new Uint32Array(8), rHashI: 0,
   syncAt: -1, syncSent: false, syncApplied: true, syncMeta: null, syncChunks: null, syncGot: 0, lastSyncAt: -1, pingTs: 0, rtts: [], pkt: new ArrayBuffer(10), joinTimer: 0, roomTimer: 0, keepTimer: 0, pending: null,
@@ -1551,37 +1552,45 @@ function netKeepalive() { if (NET.state === 'connected') dcSend({ t: 'k' }); }  
 function netCreate() {
   return new Promise(async (res, rej) => {
     try {
-      netLeave(true); NET.role = 'host'; NET.mode = 'host'; NET.state = 'signaling'; NET.code = roomCode(); NET.id = clientId(); NET.topic = 'remanso/1/' + NET.code; NET.roomMs = nowMs();
-      const m = await brokerConnect(); NET.mqtt = m; m.subscribe(NET.topic);
+      netLeave(true); const gen = NET.gen; NET.role = 'host'; NET.mode = 'host'; NET.state = 'signaling'; NET.code = roomCode(); NET.id = clientId(); NET.topic = 'remanso/1/' + NET.code; NET.roomMs = nowMs();
+      const m = await brokerConnect();
+      if (gen !== NET.gen || NET.state !== 'signaling') { m.close(); rej(new Error('cancelled')); return; }   // Escape / outside click / a newer attempt while the relay was answering: the socket closes, nothing subscribes, no zombie room
+      NET.mqtt = m; m.subscribe(NET.topic);
       m.onmessage = async (topic, payload) => {
+        if (m.closed || NET.mqtt !== m) return;
         let msg; try { msg = JSON.parse(payload); } catch (e) { return; } if (!msg || msg.id === NET.id) return;
         if (msg.t === 'join') {
           if (NET.pc) { if (msg.id !== NET.peerId) m.send(NET.topic, JSON.stringify({ t: 'busy', id: NET.id, to: msg.id })); return; }
           NET.peerId = msg.id; NET.state = 'connecting'; lobbyStatus('conectando…');
           const pc = mkPC(); bindDC(pc.createDataChannel('game', { ordered: true }));
           const o = await pc.createOffer(); await pc.setLocalDescription(o); await gather(pc);
+          if (NET.pc !== pc) return;   // torn down while gathering
           m.send(NET.topic, JSON.stringify({ t: 'offer', id: NET.id, to: msg.id, sdp: pc.localDescription.sdp }));
           setTimeout(() => { if (NET.state === 'connecting') netHostRetry(); }, C.NET.CONNECT_TIMEOUT);
         } else if (msg.t === 'answer' && msg.to === NET.id && NET.pc) { try { await NET.pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp }); } catch (e) { netFail(); } }
       };
       NET.roomTimer = setTimeout(() => { if (NET.state === 'signaling') { lobbyStatus('o mar adormeceu'); netLeave(true); } }, C.NET.ROOM_TIMEOUT);   // the panel stays so the line can be read (Escape closes it)
       res(NET.code);
-    } catch (e) { netFail(); rej(e); }
+    } catch (e) { if (gen === NET.gen) netFail(); rej(e); }   // a relay failure of an attempt already left alone must not tear down a newer one
   });
 }
 function netJoin(code) {
   return new Promise(async (res, rej) => {
     try {
       code = code.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6); if (code.length !== 6) throw new Error('code');
-      netLeave(true); NET.role = 'guest'; NET.mode = 'guest'; NET.state = 'signaling'; NET.code = code; NET.id = clientId(); NET.topic = 'remanso/1/' + code; NET.pending = { res, rej };
-      const m = await brokerConnect(); NET.mqtt = m; m.subscribe(NET.topic); lobbyStatus('procurando…');
-      let tries = 0; const join = () => { if (NET.state !== 'signaling') return; if (tries++ >= 5) { lobbyStatus('ninguém nesse mar'); NET.state = 'idle'; NET.mode = 'solo'; m.close(); NET.mqtt = null; if (NET.pending) { NET.pending.rej(new Error('no room')); NET.pending = null; } return; } m.send(NET.topic, JSON.stringify({ t: 'join', id: NET.id })); NET.joinTimer = setTimeout(join, 2000); };
+      netLeave(true); const gen = NET.gen; NET.role = 'guest'; NET.mode = 'guest'; NET.state = 'signaling'; NET.code = code; NET.id = clientId(); NET.topic = 'remanso/1/' + code; NET.pending = { res, rej };
+      const m = await brokerConnect();
+      if (gen !== NET.gen || NET.state !== 'signaling') { m.close(); rej(new Error('cancelled')); return; }
+      NET.mqtt = m; m.subscribe(NET.topic); lobbyStatus('procurando…');
+      let tries = 0; const join = () => { if (NET.mqtt !== m || NET.state !== 'signaling') return; if (tries++ >= 5) { lobbyStatus('ninguém nesse mar'); NET.state = 'idle'; NET.mode = 'solo'; m.close(); NET.mqtt = null; if (NET.pending) { NET.pending.rej(new Error('no room')); NET.pending = null; } return; } m.send(NET.topic, JSON.stringify({ t: 'join', id: NET.id })); NET.joinTimer = setTimeout(join, 2000); };
       m.onmessage = async (topic, payload) => {
+        if (m.closed || NET.mqtt !== m) return;
         let msg; try { msg = JSON.parse(payload); } catch (e) { return; } if (!msg || msg.id === NET.id) return;
         if (msg.t === 'offer' && msg.to === NET.id && !NET.pc) {
           clearTimeout(NET.joinTimer); NET.state = 'connecting'; lobbyStatus('conectando…'); NET.peerId = msg.id;
           const pc = mkPC(); pc.ondatachannel = (e) => bindDC(e.channel);
           await pc.setRemoteDescription({ type: 'offer', sdp: msg.sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); await gather(pc);
+          if (NET.pc !== pc) return;   // torn down while answering
           m.send(NET.topic, JSON.stringify({ t: 'answer', id: NET.id, to: msg.id, sdp: pc.localDescription.sdp }));
           setTimeout(() => { if (NET.state === 'connecting') netFail(); }, C.NET.CONNECT_TIMEOUT);
         } else if (msg.t === 'busy' && msg.to === NET.id && NET.state === 'signaling') {   // the sea is full: stop asking (the retry loop would have replaced this line with 'ninguém nesse mar' ten seconds later)
@@ -1590,7 +1599,7 @@ function netJoin(code) {
         }
       };
       join();
-    } catch (e) { netFail(); rej(e); }
+    } catch (e) { if (gen === NET.gen) netFail(); rej(e); }
   });
 }
 // --- manual handshake: RM1. + 'z' deflate-raw base64url | 'p' plain base64url ---
@@ -1609,23 +1618,26 @@ async function unpackSdp(str) {
 async function netManualOffer() {
   netLeave(true); NET.role = 'host'; NET.mode = 'host'; NET.state = 'connecting'; NET.code = null; NET.id = clientId();
   const pc = mkPC(); bindDC(pc.createDataChannel('game', { ordered: true })); const o = await pc.createOffer(); await pc.setLocalDescription(o); await gather(pc);
+  if (NET.pc !== pc) throw new Error('cancelled');   // the panel closed while gathering: no stale invite lands in a later view
   return packSdp(pc.localDescription.sdp);
 }
 async function netManualAnswer(offerStr) {
   let sdp = ''; try { sdp = await unpackSdp(offerStr); } catch (e) { /* not a code */ }
   if (!/^v=0/.test(sdp)) { lobbyStatus('convite inválido'); throw new Error('invalid'); }   // validated before anything changes: a bad paste leaves the game solo and the water listening to the hand
-  netLeave(true); NET.role = 'guest'; NET.mode = 'guest'; NET.state = 'connecting'; NET.code = null; NET.id = clientId();
+  netLeave(true); const gen = NET.gen; NET.role = 'guest'; NET.mode = 'guest'; NET.state = 'connecting'; NET.code = null; NET.id = clientId();
   try {
     const pc = mkPC(); pc.ondatachannel = (e) => bindDC(e.channel);
     await pc.setRemoteDescription({ type: 'offer', sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); await gather(pc);
+    if (NET.pc !== pc) throw new Error('cancelled');
     setTimeout(() => { if (NET.state === 'connecting') netFail(); }, C.NET.CONNECT_TIMEOUT);
     return packSdp(pc.localDescription.sdp);
-  } catch (e) { netFail(); throw e; }   // an offer the browser refuses restores solo
+  } catch (e) { if (gen === NET.gen) netFail(); throw e; }   // an offer the browser refuses restores solo; a cancelled attempt is already solo
 }
 function netManualAccept(answerStr) {
   return new Promise(async (res, rej) => {
     if (!NET.pc) { netFail(); return rej(new Error('no offer')); }
     let sdp = ''; try { sdp = await unpackSdp(answerStr); } catch (e) { /* not a code */ }
+    if (!NET.pc) return rej(new Error('cancelled'));
     if (!/^v=0/.test(sdp)) { lobbyStatus('resposta inválida'); return rej(new Error('invalid')); }   // an unreadable paste leaves the invite alive: the friend's real answer can still be pasted
     try { await NET.pc.setRemoteDescription({ type: 'answer', sdp }); } catch (e) { lobbyStatus('resposta inválida'); return rej(new Error('invalid')); }   // a failed setRemoteDescription is atomic: the offer stands
     NET.pending = { res, rej }; setTimeout(() => { if (NET.state === 'connecting') { netFail(); rej(new Error('timeout')); } }, C.NET.CONNECT_TIMEOUT);
@@ -1640,7 +1652,8 @@ function netHostRetry() {                 // the guest vanished during the hands
 }
 function netFail() { if (NET.state === 'connected') return; lobbyStatus('o mar não respondeu'); lobbyShowManualLink(); if (NET.pending) { NET.pending.rej(new Error('connect failed')); NET.pending = null; } netTeardown(); NET.state = 'idle'; NET.mode = 'solo'; }
 function netTeardown() {
-  clearTimeout(NET.joinTimer); clearTimeout(NET.roomTimer); clearInterval(NET.keepTimer); NET.keepTimer = 0;
+  NET.gen++; clearTimeout(NET.joinTimer); clearTimeout(NET.roomTimer); clearInterval(NET.keepTimer); NET.keepTimer = 0;   // gen: every continuation still awaiting the relay or ICE belongs to an older attempt from here on
+  if (NET.pending) { const pd = NET.pending; NET.pending = null; pd.rej(new Error('cancelled')); }
   if (NET.mqtt) { try { NET.mqtt.close(); } catch (e) { /* closed */ } NET.mqtt = null; }
   if (NET.dc) { NET.dc.onclose = null; NET.dc.onerror = null; try { NET.dc.close(); } catch (e) { /* closed */ } NET.dc = null; }
   if (NET.pc) { NET.pc.onconnectionstatechange = null; try { NET.pc.close(); } catch (e) { /* closed */ } NET.pc = null; }
@@ -1816,13 +1829,14 @@ function lobbyCopy(s, src) {               // clipboard with feedback and a fall
 }
 function lobbyAct(a) {
   const el = LOBBY.el;
-  if (a === 'create') { LOBBY.code = ''; lobbyView('create'); netCreate().then(code => { LOBBY.code = code; const c = el.querySelector('#lobbyCode'); if (c) c.textContent = code; }).catch(() => { }); }
+  const busy = NET.state === 'signaling' || NET.state === 'connecting';
+  if (a === 'create') { if (busy) return; LOBBY.code = ''; lobbyView('create'); netCreate().then(code => { LOBBY.code = code; const c = el.querySelector('#lobbyCode'); if (c) c.textContent = code; }).catch(() => { }); }
   else if (a === 'join') lobbyView('join');
-  else if (a === 'enter') { const inp = el.querySelector('#lobbyInput'); if (inp) { if (inp.value.length === 6) netJoin(inp.value).catch(() => { }); else lobbyStatus('seis letras'); } }
+  else if (a === 'enter') { const inp = el.querySelector('#lobbyInput'); if (inp) { if (inp.value.length !== 6) lobbyStatus('seis letras'); else if (!(busy && inp.value === NET.code)) netJoin(inp.value).catch(() => { }); } }   // a double click (same code, attempt in flight) is one join; a corrected code replaces the attempt
   else if (a === 'copyCode') lobbyCopy(LOBBY.code, el.querySelector('#lobbyCode'));
   else if (a === 'manual') {
     const host = NET.role !== 'guest'; lobbyView(host ? 'manualHost' : 'manualGuest');
-    if (host) { lobbyStatus('preparando o convite…'); netManualOffer().then(s => { const ta = el.querySelector('#taOffer'); if (ta) ta.value = s; if (LOBBY.view === 'manualHost') lobbyStatus('convite pronto'); }).catch(() => lobbyStatus('o mar não respondeu')); }   // ICE gathering takes up to GATHER_MS: say so instead of showing an empty box
+    if (host) { lobbyStatus('preparando o convite…'); netManualOffer().then(s => { const ta = el.querySelector('#taOffer'); if (ta) ta.value = s; if (LOBBY.view === 'manualHost') lobbyStatus('convite pronto'); }).catch(e => { if (!(e && e.message === 'cancelled')) lobbyStatus('o mar não respondeu'); }); }   // ICE gathering takes up to GATHER_MS: say so instead of showing an empty box
   }
   else if (a === 'copyOffer') { const ta = el.querySelector('#taOffer'); if (ta) lobbyCopy(ta.value, ta); }   // an empty invite (still gathering) copies nothing
   else if (a === 'copyAnswer') { const ta = el.querySelector('#taAnswer'); if (ta) lobbyCopy(ta.value, ta); }
