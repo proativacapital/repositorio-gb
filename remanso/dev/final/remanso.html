@@ -1212,11 +1212,12 @@ function render() {
     const q = P[k]; let x, y, down, still = 0;
     if (q.local) { const r = RAW.p[k]; if (!r.active || !(r.down || (r.type === 'mouse' && RAW.everMoved))) continue; x = r.cx; y = r.cy; down = r.down || (k === 0 && RAW.space); still = r.stillT; }
     else { if (!q.present) continue; x = WR.x + q.x * cellPx; y = WR.y + q.y * cellPy; down = q.down; }
-    const pi = q.player - 1, breath = Math.sin(Math.PI * t), r = lerp(C.CURSOR_R + breath * A.CURSOR_BREATH, C.CURSOR_STILL_R, q.s), spr = pi ? SPR.cursorB : SPR.cursorA, la = q.local ? 1 : A.CURSOR_REMOTE_A;   // breathes at 0.5 Hz, contracts to 4 px as the hand goes still
+    const pi = q.player - 1, breath = Math.sin(Math.PI * t), r = lerp(C.CURSOR_R + breath * A.CURSOR_BREATH, C.CURSOR_STILL_R, q.s), spr = pi ? SPR.cursorB : SPR.cursorA, la = q.local ? 1 - LOBBY.k : A.CURSOR_REMOTE_A;   // breathes at 0.5 Hz, contracts to 4 px as the hand goes still; the local ring fades under the open lobby (the panel's arrow is the cursor there)
+    if (la <= 0) continue;
     if (DIR.actIdx === 5 && q.local && y < WR.y) {     // epilogue: the restart lives in the sky — a small sun follows the hand there and swells while it holds still; a dark arc counts the hold
       const hk = down ? clamp(still / C.EPI_RESTART_HOLD, 0, 1) : 0; if (hk > epiK) epiK = hk;
-      ctx.globalCompositeOperation = 'source-over'; drawSprite(SPR.sun, x, y, A.SUN_HAND_R * (1 + 0.8 * hk), A.SUN_HAND_A + (down ? 0.2 + 0.25 * hk : 0));
-      if (down) { ctx.globalAlpha = 0.55; ctx.strokeStyle = C.TEXT_COL_DAWN; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, C.CURSOR_R + 8, -HALF_PI, -HALF_PI + TWO_PI * hk); ctx.stroke(); }
+      ctx.globalCompositeOperation = 'source-over'; drawSprite(SPR.sun, x, y, A.SUN_HAND_R * (1 + 0.8 * hk), (A.SUN_HAND_A + (down ? 0.2 + 0.25 * hk : 0)) * la);
+      if (down) { ctx.globalAlpha = 0.55 * la; ctx.strokeStyle = C.TEXT_COL_DAWN; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, C.CURSOR_R + 8, -HALF_PI, -HALF_PI + TWO_PI * hk); ctx.stroke(); }
       ctx.globalCompositeOperation = 'lighter';
     }
     drawSprite(spr, x, y, A.CURSOR_HALO_R + 2 * breath, A.CURSOR_HALO_A * la);
@@ -1784,10 +1785,10 @@ function lobbyStatus(s) { if (LOBBY.status) LOBBY.status.innerHTML = (s.endsWith
 function lobbyShowManualLink() { if (LOBBY.status && LOBBY.open) LOBBY.status.innerHTML += ' &nbsp;<a tabindex="0" role="button" data-act="manual">trocar código à mão</a>'; }
 function lobbyFade() { if (!LOBBY.open) return; const el = LOBBY.el; el.style.transition = 'opacity 0.6s'; el.style.opacity = '0'; setTimeout(() => { lobbyClose(); el.style.opacity = '1'; el.style.transition = ''; }, 650); }
 function lobbyOpen() {
-  lobbyBuild(); LOBBY.open = true; LOBBY.openMs = nowMs(); LOBBY.el.hidden = false; lobbyView('menu'); cv.style.cursor = 'auto';
+  lobbyBuild(); LOBBY.open = true; LOBBY.openMs = nowMs(); LOBBY.el.hidden = false; lobbyView('menu');   // the canvas keeps cursor:none (the panel has its own arrow): one cursor at a time
   setTimeout(() => { const el = LOBBY.el; if (LOBBY.open && !el.contains(document.activeElement)) { const f = el.querySelector('button,a[tabindex],input,textarea'); if (f) f.focus(); } }, 0);   // the opening pointerdown's default moves focus to the body afterwards: bring it back into the panel
 }
-function lobbyClose() { if (!LOBBY.open) return; LOBBY.open = false; LOBBY.el.hidden = true; cv.style.cursor = 'none'; if (NET.state === 'signaling' || NET.state === 'connecting') netLeave(true); }
+function lobbyClose() { if (!LOBBY.open) return; LOBBY.open = false; LOBBY.el.hidden = true; if (NET.state === 'signaling' || NET.state === 'connecting') netLeave(true); }
 function lobbyCopied() {                   // 'copiado' for a moment, then the status line it replaced comes back (the create view keeps its breathing 'esperando')
   const st = LOBBY.status; if (!st) return; if (st.textContent !== 'copiado') LOBBY.copyPrev = st.innerHTML; st.textContent = 'copiado';
   clearTimeout(LOBBY.copyTimer); LOBBY.copyTimer = setTimeout(() => { if (st.textContent === 'copiado') st.innerHTML = LOBBY.copyPrev; }, C.NET.COPIED_MS);
