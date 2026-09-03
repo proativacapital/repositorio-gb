@@ -1,5 +1,5 @@
 // net.js — two-browser online test for REMANSO. No internet needed: WebRTC over loopback + in-process mock MQTT broker.
-// Usage: node net.js <file.html> [--via mqtt|manual] [--minutes 4] [--perturb] [--disconnect] [--timescale 1] [--shots DIR]
+// Usage: node net.js <file.html> [--via mqtt|manual|manual-dom] [--minutes 4] [--perturb] [--disconnect] [--timescale 1] [--shots DIR]
 // Exit 0 when: connected within 10 s, zero errors on both pages, zero hash mismatches (except the injected one), and (if --perturb) resyncs===1 and re-convergence.
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs');
 const { start } = require('./mock-broker');
@@ -31,6 +31,13 @@ const say = (s) => process.stderr.write(s + '\n');
     if (via === 'mqtt') {
       code = await H.page.evaluate(() => window.__game.netCreate()); say('room ' + code);
       await Promise.race([G.page.evaluate(c => window.__game.netJoin(c), code), new Promise((_, rej) => setTimeout(() => rej(new Error('join timeout 15s')), 15000))]);
+    } else if (via === 'manual-dom') {   // the lobby path: the invite and the answer travel through the real textareas and buttons (the room-code sanitiser must never touch them)
+      await H.page.evaluate(() => { lobbyOpen(); lobbyAct('manual'); }); await H.page.waitForFunction(() => /pronto/.test(LOBBY.status.textContent), null, { timeout: 15000 });
+      const offer = await H.page.evaluate(() => document.getElementById('taOffer').value); say('offer chars ' + offer.length);
+      await G.page.evaluate(() => { lobbyOpen(); lobbyView('manualGuest'); }); await G.page.fill('#taOffer', offer); await G.page.click('#lobby button[data-act=answer]');
+      await G.page.waitForFunction(() => document.getElementById('taAnswer').value.length > 0, null, { timeout: 15000 });
+      const answer = await G.page.evaluate(() => document.getElementById('taAnswer').value); say('answer chars ' + answer.length);
+      await H.page.fill('#taAnswer', answer); await H.page.click('#lobby button[data-act=accept]');
     } else {
       const offer = await H.page.evaluate(() => window.__game.netManualOffer()); say('offer chars ' + offer.length);
       const answer = await G.page.evaluate(o => window.__game.netManualAnswer(o), offer); say('answer chars ' + answer.length);
