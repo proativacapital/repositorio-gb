@@ -62,26 +62,26 @@ const C = Object.freeze({
   RIM_SEGS: 24, RIM_BEADS: 12, R_EFF_K: 0.35, RIM_DASH_SPEED: 90, RIM_BEAD_R: 0.82, RIM_FLICKER: 0.7, RIM_BREAK: 0.95, SPARKS: 24,
   MOTES: 1500, MOTES_LOW: 900, MOTE_BACK: 1.5, MOTE_BACK_R: 0.9, MOTE_LIFE: 20, MIST: 400,
   COH_EVERY: 6, COH_STAMP_MIN: 0.6, SET_COH: 0.70, SET_HOLD: 1, ELIG_COH: 0.45, ELIG_T: 20, FADE_COH: 0.20, FADE_T: 6, RECOVER_COH: 0.35,
-  WISP_COH: 0.08, WISP_T: 12, RELIT_COH: 0.55, RELIT_T: 1, WISP_FLOOR: 0.7, WISP_SRC: 0.002, WISP_SIGMA: 3, LIFT_T: 3, DRAIN_T: 1.5, STAR_FLIGHTS: 200,
+  WISP_COH: 0.08, WISP_T: 12, RELIT_COH: 0.55, RELIT_T: 1, WISP_FLOOR: 0.7, WISP_SRC: 0.002, WISP_CAP: 0.3, WISP_SIGMA: 3, LIFT_T: 3, DRAIN_T: 1.5, STAR_FLIGHTS: 200,
   NUDGE_T: 60, NUDGE_REPEAT: 45, NUDGE_DUR: 8, NUDGE_GHOST: 2, NUDGE_WEATHER: 0.4, IDLE_T: 120, DEMO_T: 16, DEMO_REPEAT: 30, DEMO_HOLD: 2,
   WEATHER_RAMP: 10, SKY_FADE: 6, CAP_WARN: 15, CAP_SLACK: 0.4, CAP_PAUSE: 3, ACT_SETTLE_T: 25, ACT_EXIT_PAUSE: 4, G3_DELAY: 40,
   DAWN_T: 40, DAWN_REWIND: 3, DAWN_BLEND_END: 8, DAWN_FOSSIL_END: 30, DAWN_TEXT: 34, DAWN_STAR_FADE: 36,
   EPI_RESTART_HOLD: 2, RESTART_KEY_HOLD: 1, RESTART_FADE: 2,
   PIXEL_BUDGET: 2.6e6, SCALE_MIN: 0.75, SCALE_MAX: 1.5, DPR_CAP: 1.5, HORIZON: 0.25, HORIZON_PORTRAIT: 0.20,
-  LAYER_W: 960, LAYER_MAX_H: 1280, REFL_W: 256, REFL_H: 64, REFL_SLICES: 30, REFL_ALPHA: 0.65, REFL_DEPTH: 0.15,
+  LAYER_W: 960, LAYER_MAX_H: 1280, REFL_W: 256, REFL_H: 64, REFL_SLICES: 30, REFL_ALPHA: 0.55, REFL_BRIGHT_K: 0.85, REFL_DEPTH: 0.15,
   BLOOM_B: 0.45, BLOOM_A: 0.2, MOTE_FADE: 0.09, MOTE_FADE_8: 0.25, FOSSIL_ALPHA: 0.10, FOSSIL_DAWN: 0.9, GRAIN_ALPHA: 0.035,
   ART: {   // render-only look (art pass): nothing here is read by the sim
     NOISE_SEED: 0x2545f491, NOISE_P0: 64, NOISE_P1: 32, NOISE_BASE: 0.6, NOISE_AMP: 0.5, NOISE_DRIFT: 0.6, NOISE_FLOW: 0.6,
-    SHEEN_K: 2.0, SHEEN_INK: 0.5, SHEEN_BARE: 0.3, SHEEN_EDGE: 16, WET_K: 5, WET_A: 0.85, WET_COL: '#040616', WET_ALPHA: 0.42, INK_GAIN: 1.45, INK_SAT: 1.45, INK_SAT_GOLD: 1.9, INK_CHROMA: 0.4, INK_LIFT: 0.8,
+    SHEEN_K: 2.4, SHEEN_INK: 0.9, SHEEN_BARE: 0.12, SHEEN_EDGE: 16, WET_K: 5, WET_A: 0.85, WET_COL: '#040616', WET_ALPHA: 0.42, INK_GAIN: 1.45, INK_SAT: 1.45, INK_SAT_GOLD: 1.9, INK_CHROMA: 0.55, INK_LIFT: 0.35, INK_FLOOR: 0.02, INK_SNAP: 0.3, INK_SNAP_K: 0.75,
     MOTE_DRAW: 1100, MOTE_DRAW_LOW: 800, MOTE_SPEEDS: [0.8, 2, 4, 8], MOTE_BACK_SPLIT: 2.5, MOTE_SEG_MAX: 24, MOTE_SIZES: [1.0, 1.1, 1.25, 1.4, 1.55, 1.5, 2.2, 1.5], MOTE_DOT_SIZES: [0.6, 0.9, 1.2, 1.6], MOTE_DOT_A: 0.3,
     RIM_W: 2, RIM_HALO_W: 6, RIM_HALO_A: 0.22, RIM_GAP: 0.12, RIM_OUTER: 6, RIM_OUTER_A: 0.75, RIM_GLOW_A: 0.12, RIM_MAG_A: 0.16, RIM_MAG_R: 0.9, DIAL_W: 1.5, DIAL_A: 0.09,
     BEAD_LIT_R: 3.2, BEAD_DIM_R: 2.2, BEAD_LIT_A: 1.0, BEAD_DIM_A: 0.3, BEAD_GLOW_R: 10, BEAD_GLOW_A: 0.5, BEAD_BLOOM: 3, SPARK_R: 3.5,
-    STARS: 220, STAR_PHASES: 6, STAR_A: [0.16, 0.28, 0.42], STAR_SIZE: 1.6, STAR_TWINKLE: 0.2, HERO_STARS: 8, HERO_R: 3.5, HERO_A: 0.4,
-    HGLOW_A: 0.12, HGLOW_A_DAWN: 0.34, HGLOW_R: 0.62, HGLOW_BAND: 120, HGLOW_BAND_A: 0.18, HGLOW_BAND_A_DAWN: 0.22, NIGHT_ZENITH: [4, 3, 12], NIGHT_HZ_K: 1.2, NIGHT_HZ: [16, 22, 44], HORIZON_BAND: 5, HORIZON_A: 0.35, HORIZON_LIFT: [10, 12, 26], SUN_PATH_W: 0.2, SUN_PATH_H: 0.3, SUN_A: 0.26, SUN_NIGHT: 0.22, SUN_HAND_R: 26, SUN_HAND_A: 0.55, EPI_LIGHT_A: 0.45,
+    STARS: 220, STAR_PHASES: 6, STAR_A: [0.22, 0.36, 0.5], STAR_SIZE: 2.6, STAR_TWINKLE: 0.2, HERO_STARS: 8, HERO_R: 3.5, HERO_A: 0.4,
+    HGLOW_A: 0.16, HGLOW_A_DAWN: 0.34, HGLOW_R: 0.62, HGLOW_BAND: 120, HGLOW_BAND_A: 0.18, HGLOW_BAND_A_DAWN: 0.22, NIGHT_ZENITH: [6, 6, 20], NIGHT_HZ_K: 1.2, NIGHT_HZ: [22, 30, 62], HORIZON_BAND: 9, HORIZON_A: 0.2, HORIZON_LIFT: [10, 12, 26], SUN_PATH_W: 0.2, SUN_PATH_H: 0.3, SUN_A: 0.26, SUN_NIGHT: 0.22, SUN_HAND_R: 26, SUN_HAND_A: 0.55, EPI_LIGHT_A: 0.45,
     CONST_K: 0.10, CONST_LINE_A: 0.18, CONST_STAR_R: 6, CONST_HALO_R: 18, CONST_HALO_A: 0.35,
     DAWN_SKY_TOP: '#1b1f5c', DAWN_ROSE: '#b84a78', DAWN_HORIZON: '#ffe6b4', DAWN_TOP_MIX: 0.85, DAWN_ROSE_MIX: 0.55, DAWN_ROSE_MORNING: 0.25, DAWN_HORIZON_MIX: 0.7, MORNING_TOP: '#5a74b8', MORNING_TOP_MIX: 0.75,
-    DAWN_FIRST: '#c8607a', DAWN_FIRST_T: 9, DAWN_GOLD_T: 20, DAWN_GOLD_FADE: 15, DAWN_WATER_T: 26, DAWN_WATER_DUR: 12, PREDAWN_OUT: 3,
-    FOSSIL_STROKE_A: 0.1, FOSSIL_STROKE_W: 3.5, FOSSIL_RING_A: 0.2, FOSSIL_RING_W: 4.5, FOSSIL_DISC_A: 0.015, FOSSIL_MIN_D: 0.35, FOSSIL_LO_A: 0.5, FOSSIL_LO2_A: 0.8,
+    DAWN_FIRST: '#c8607a', DAWN_FIRST_T: 9, DAWN_GOLD_T: 20, DAWN_GOLD_FADE: 15, DAWN_WATER_T: 12, DAWN_WATER_DUR: 18, PREDAWN_OUT: 3,
+    FOSSIL_STROKE_A: 0.2, FOSSIL_STROKE_W: 5, FOSSIL_RING_A: 0.35, FOSSIL_RING_W: 7, FOSSIL_DISC_A: 0.02, FOSSIL_MIN_D: 0.35, FOSSIL_LO_A: 0.3, FOSSIL_LO2_A: 1.0,
     CURSOR_HALO_R: 15, CURSOR_HALO_A: 0.16, CURSOR_BREATH: 1, CURSOR_FILL_K: 1.9, CURSOR_FILL_A: 0.9, CURSOR_REMOTE_A: 1, ADOIS_LS: 0.14, ADOIS_DOT_R: 2.8, ADOIS_LINE: 18, ADOIS_GLOW_R: 7, ADOIS_A_MIN: 0.35, ADOIS_A_MAX: 0.6, ADOIS_LUM_DARK: 0.5, ADOIS_LUM_LIFT0: 0.1, ADOIS_LUM_LIFT1: 0.4, HAIRLINE: 1.5 },
   VIGNETTE_IN: 0.55, VIGNETTE_A: 0.55, CURSOR_R: 7, CURSOR_STILL_R: 4, CURSOR_A: 0.5,
   CAL_FRAME0: 10, CAL_FRAME1: 70, CAL_P75_MS: 5.5, CAL_MAX_DROPS: 2,
@@ -104,7 +104,7 @@ const C = Object.freeze({
     { id: 'G6', name: 'A Figura', act: 3, slot: 0, cx: 0.50, cy: 0.52, E: 0.62, kind: 'figure' }],
   COL: [[1.00, 0.70, 0.42], [1.00, 0.44, 0.57], [1.00, 0.91, 0.69]], GREY: [0.42, 0.45, 0.50],
   RECALL_COL: [0.45, 0.55, 0.60], CALM_COL: [0.02, 0.027, 0.04], GHOST_COL: [0.55, 0.65, 0.80], GHOST_K: 0.12,
-  WATER_TOP: '#050814', WATER_BOT: '#0b1330', EPI_TOP: '#1a2a4a', EPI_BOT: '#2a4a6a',
+  WATER_TOP: '#050814', WATER_BOT: '#0b1330', EPI_TOP: '#142a4e', EPI_BOT: '#22567c',
   RIM_TEAL: [0x7f, 0xe3, 0xff], RIM_AMBER: [0xff, 0xb3, 0x47], STAR_COL: '#ffe9b0', DIM_COL: '#9aa6c0', TEXT_COL: '#f2e8d5', TEXT_COL_DAWN: '#4a3424',
   MOTE_COL: '#cfd8e3', MOTE_BACK_COL: '#bfe9ff', MIST_COL: '#9aa3b0', FOSSIL_COL: '#ffd88c',
   TEXT_OPEN_PT: 'O que a água leva, a mão parada lembra.', TEXT_OPEN_EN: 'What the water takes, the still hand remembers.',
@@ -199,7 +199,7 @@ for (let i = 0; i <= 32; i++) {
 }
 const PLAYER_TINT = ['#bfefff', '#ffc0d0'], PLAYER_DASH = ['rgba(180,235,255,0.6)', 'rgba(255,180,200,0.6)'];
 // motes: 5 speed buckets (warm white in calm water → cyan-white in fast water), backward slow (dim cyan) / backward fast (bright cyan: visibly counter-flowing), mist (grey)
-const MOTE_STR = ['rgba(232,226,214,0.12)', 'rgba(228,226,220,0.20)', 'rgba(214,230,240,0.34)', 'rgba(196,236,255,0.50)', 'rgba(186,240,255,0.66)', 'rgba(191,233,255,0.55)', 'rgba(191,233,255,1)', 'rgba(154,163,176,0.32)'];
+const MOTE_STR = ['rgba(232,226,214,0.12)', 'rgba(228,226,220,0.18)', 'rgba(214,230,240,0.28)', 'rgba(196,236,255,0.36)', 'rgba(186,240,255,0.42)', 'rgba(191,233,255,0.6)', 'rgba(191,233,255,1)', 'rgba(154,163,176,0.32)'];
 const nowMs = () => performance.now();
 
 // ───────────────────────────── CANVAS ─────────────────────────────
@@ -294,7 +294,7 @@ function reflStrip(y0, hex, mode) {                  // one mirrored-sky strip w
   else if (mode === 2) { k0 = hexRGB(hex); k1 = mixRGB(hex, A.DAWN_SKY_TOP, 0.45); }
   else { k0 = nightHorizon(hex); k1 = hexRGB(hex); }
   for (let i = 0; i <= 12; i++) {
-    const t = i / 12, f = 1 - t, a = C.REFL_ALPHA * f * f * f; let ca, cb, u;
+    const t = i / 12, f = 1 - t, a = C.REFL_ALPHA * ((mode === 1 || mode === 3) ? C.REFL_BRIGHT_K : 1) * f * f * f; let ca, cb, u;
     if (!k2) { ca = k0; cb = k1; u = t; } else if (t < 0.4) { ca = k0; cb = k1; u = t / 0.4; } else { ca = k1; cb = k2; u = (t - 0.4) / 0.6; }
     rg.addColorStop(t, 'rgba(' + (lerp(ca[0], cb[0], u) | 0) + ',' + (lerp(ca[1], cb[1], u) | 0) + ',' + (lerp(ca[2], cb[2], u) | 0) + ',' + a.toFixed(4) + ')');
   }
@@ -835,11 +835,15 @@ function glyphUpdate(g, dt, sampled) {
   if (st === 'STAMPING') { glyphStampStep(g); return; }
   if (st === 'LIFTING') {
     g.liftT += dt; const dye = dyeOf(g.liftCh);
-    if (g.liftT <= C.DRAIN_T) { const f = 1 - 0.12 * easeInQuad(g.liftT / C.DRAIN_T); for (let y = g.by0; y <= g.by1; y++) for (let x = g.bx0; x <= g.bx1; x++) dye[x + y * GW] *= f; }
+    if (g.liftT <= C.DRAIN_T) {
+      const f = 1 - 0.12 * easeInQuad(g.liftT / C.DRAIN_T);
+      if (g.liftCh !== 2) { for (let i = 0; i < N; i++) dye[i] *= f; }   // a colour channel holds only this glyph's ink (each act's glyphs own distinct slots), so the whole channel drains: ink that drifted past the bbox before the lift no longer stays in the water in the glyph's colour through the next act and the Dawn tableau (or turns grey with a later loss in the slot)
+      else { for (let y = g.by0; y <= g.by1; y++) for (let x = g.bx0; x <= g.bx1; x++) dye[x + y * GW] *= f; }   // the wisp channel also carries the permanent wisps of earlier acts: bbox only
+    }
     if (g.liftT >= C.LIFT_T) { glyphSetState(g, g.bright < 1 ? 'DIM' : 'STAR'); if (g.bright < 1) GL.sky.dim++; else GL.sky.stars++; audioPartialAdd(g, g.bright < 1 ? 'dim' : 'star'); }
     return;
   }
-  if (st === 'PERMANENT') { splatAdd(dW, g.cxC, g.cyC, C.WISP_SIGMA, C.WISP_SRC); return; }
+  if (st === 'PERMANENT') { if (DIR.actIdx !== 5 && dW[(g.cxC | 0) + (g.cyC | 0) * GW] < C.WISP_CAP) splatAdd(dW, g.cxC, g.cyC, C.WISP_SIGMA, C.WISP_SRC); return; }   // a permanent wisp breathes grey up to a plateau (a faint mist, never a solid disc) and rests in the sunlit epilogue
   if (!(st === 'LIVE' || st === 'FADING' || st === 'WISP')) return;
   if (sampled) { g.coh = glyphCoherence(g, st === 'WISP' ? dW : dyeOf(g.slot)); g.cohN = g.coh / g.cohStamp; }
   const cn = g.cohN;
@@ -1052,14 +1056,14 @@ function renderText() {
 }
 let colA = C.COL[0], colB = C.COL[1];
 const curlS = new Float32Array(C.MAX_CELLS), curlT = new Float32Array(C.MAX_CELLS), colW = new Float32Array(1024), rowW = new Float32Array(1024);   // render-only: smoothed curl, sheen wall fade
-function curlSmooth() {                  // render-only: binomial [1 4 6 4 1]/16 in x then in y over the sim's curl → curlS. The kernel is zero at Nyquist and 6 % at period 3,
-  const W = GW, H = GH, c = curl, ct = curlT, cs = curlS, n = N;   // so the odd-even checkerboard and the grid-scale spots of the confinement vanish: the sheen reads as filaments; faded out at the walls
+function curlSmooth() {                  // render-only: binomial [1 2 1]/4 in x then in y over the sim's curl → curlS. The kernel is zero at Nyquist (no odd-even checkerboard)
+  const W = GW, H = GH, c = curl, ct = curlT, cs = curlS, n = N;   // and still passes half of period 4, so shear layers keep their thin filaments; faded out at the walls
   for (let y = 0; y < H; y++) {
     const row = y * W; ct[row] = 0; ct[row + 1] = 0; ct[row + W - 2] = 0; ct[row + W - 1] = 0;
-    for (let x = 2; x < W - 2; x++) { const i = row + x; ct[i] = 0.0625 * (c[i - 2] + c[i + 2]) + 0.25 * (c[i - 1] + c[i + 1]) + 0.375 * c[i]; }
+    for (let x = 2; x < W - 2; x++) { const i = row + x; ct[i] = 0.25 * (c[i - 1] + c[i + 1]) + 0.5 * c[i]; }
   }
   for (let x = 0; x < W; x++) { cs[x] = 0; cs[W + x] = 0; cs[n - 2 * W + x] = 0; cs[n - W + x] = 0; }
-  for (let y = 2; y < H - 2; y++) { const row = y * W, ey = rowW[y], W2 = 2 * W; for (let x = 0; x < W; x++) { const i = row + x; cs[i] = (0.0625 * (ct[i - W2] + ct[i + W2]) + 0.25 * (ct[i - W] + ct[i + W]) + 0.375 * ct[i]) * ey * colW[x]; } }
+  for (let y = 2; y < H - 2; y++) { const row = y * W, ey = rowW[y]; for (let x = 0; x < W; x++) { const i = row + x; cs[i] = (0.25 * (ct[i - W] + ct[i + W]) + 0.5 * ct[i]) * ey * colW[x]; } }
 }
 function deepen(c, k) { const v = 1 - (1 - c) * k; return v < 0 ? 0 : v; }   // push a slot colour away from white before the knee: the screen bloom lifts the minor channels back onto the slot colour
 function toneMap() {
@@ -1070,19 +1074,25 @@ function toneMap() {
   const gk = C.GHOST_K * (0.85 + 0.15 * Math.sin(2 * Math.PI * 0.2 * G.t)) * DIR.inkK, gR = gk * C.GHOST_COL[0], gG = gk * C.GHOST_COL[1], gB = gk * C.GHOST_COL[2];
   const cR = C.CALM_COL[0], cG = C.CALM_COL[1], cB = C.CALM_COL[2], rR = C.RECALL_COL[0], rG = C.RECALL_COL[1], rB = C.RECALL_COL[2], ik = DIR.inkK, kf = KNEEF;
   const nz = NZ.tile, nsx = NZ.sx, nsy = NZ.sy, nox = NZ.ox, noy = NZ.oy, nb = A.NOISE_BASE, na = A.NOISE_AMP, cs = curlS;
-  const shK = A.SHEEN_K, shInk = A.SHEEN_INK, shBare = A.SHEEN_BARE, wetK = A.WET_K, wetA = A.WET_A, chroma = A.INK_CHROMA, liftK = A.INK_LIFT, lift1 = 1 + liftK, W = GW, H = GH;
+  const shK = A.SHEEN_K, shInk = A.SHEEN_INK, shBare = A.SHEEN_BARE, wetK = A.WET_K, wetA = A.WET_A, chroma = A.INK_CHROMA, liftK = A.INK_LIFT, lift1 = 1 + liftK, snap = A.INK_SNAP, snapK = A.INK_SNAP_K, floor = A.INK_FLOOR, W = GW, H = GH;
   for (let y = 0; y < H; y++) {
     const row = y * W, nrow = (((y * nsy + noy) | 0) & 255) << 8;
     for (let x = 0; x < W; x++) {
       const i = row + x, a0 = d0[i] * ik, b0 = d1[i] * ik, g0 = dW[i] * ik, ink0 = a0 + b0 + g0, lf = lift1 / (1 + liftK * ink0);   // thin ink is lifted (x2 as it thins, x1 at full density): a faint trace glows as ember instead of sinking into brown
-      const a = a0 * lf, b = b0 * lf, g = g0 * lf, ink = ink0 * lf, r = recall[i], c = cs[i], sp = speed[i];
+      let a = a0 * lf, b = b0 * lf, g = g0 * lf; const r = recall[i], c = cs[i], sp = speed[i];
+      if (ink0 < snap) {                                                   // dilute ink takes the hue of its dominant slot (amber, rose or grey) and fades out softly: fog glows in one colour, never as a tan wash
+        const f = (1 - ink0 / snap) * snapK, fl = ink0 / (ink0 + floor);
+        if (a >= b && a >= g) { a += (b + g) * f; b *= 1 - f; g *= 1 - f; } else if (b >= a && b >= g) { b += (a + g) * f; a *= 1 - f; g *= 1 - f; } else { g += (a + b) * f; a *= 1 - f; b *= 1 - f; }
+        a *= fl; b *= fl; g *= fl;
+      }
+      const ink = a + b + g;
       let calm = 1 - sp / 6; if (calm < 0) calm = 0; const gh = ghost[i] * calm;
       let wet = ink * wetK; if (wet > 1) wet = 1;                     // the wet mask: the calm lift dips under the ink, and it is the alpha the wet-edge halo is cut from
       const cw = calm * (nb + na * nz[nrow + (((x * nsx + nox) | 0) & 255)]) * (1 - wetA * wet);   // still water lifted by the slow noise field
       let R = ar * a + br * b + wr * g + cR * cw + rR * r + gh * gR;
       let Gc = ag * a + bg * b + wg * g + cG * cw + rG * r + gh * gG;
       let B = ab * a + bb * b + wb * g + cB * cw + rB * r + gh * gB;
-      let sh = c < 0 ? -c * shK : c * shK; sh = sh / (1 + sh) * ((ink < 1 ? ink : 1) * shInk + shBare * (0.35 + 0.65 * calm));   // iridescence, soft-saturating in |curl|: filaments in eddies (slow water), a tint (never a replacement) over ink, muted in fast shear layers; sign flips inside a remanso
+      let sh = c * shK; sh = sh * sh; sh = sh / (1 + sh) * ((ink < 1 ? ink : 1) * shInk + shBare * (0.35 + 0.65 * calm));   // iridescence with a quadratic knee in |curl|: grid-scale vortical noise stays dark, coherent eddies and shear layers glow as filaments; a tint over ink (never a replacement); sign flips inside a remanso
       if (c > 0) { Gc += 0.6 * sh; B += sh; } else { R += sh; Gc += 0.3 * sh; B += 0.7 * sh; }
       let m = R > Gc ? R : Gc; if (B > m) m = B;
       if (m <= 0) { px[i] = 0; continue; }
@@ -1162,9 +1172,8 @@ function renderStars(k) {                // static seeded star field, slow twink
     ctx.fillStyle = STAR_STR[c]; const base = A.STAR_A[c] * k;
     for (let p = 0; p < np; p++) {
       const b = c * np + p, i0 = SK.off[b], i1 = SK.off[b + 1]; if (i1 <= i0) continue;
-      ctx.globalAlpha = base * (0.72 + 0.28 * Math.sin(w + p * 1.05)); ctx.beginPath();
-      for (let i = i0; i < i1; i++) ctx.rect(SK.x[i] * W - hs, SK.y[i] * Hs - hs, sz, sz);
-      ctx.fill();
+      ctx.globalAlpha = base * (0.72 + 0.28 * Math.sin(w + p * 1.05)); const sr = sz * (0.7 + 0.3 * c), sd = 2 * sr;   // soft sprites (a radial falloff), never square dots; the brighter class is a little larger
+      for (let i = i0; i < i1; i++) ctx.drawImage(SPR.star, SK.x[i] * W - sr, SK.y[i] * Hs - sr, sd, sd);
     }
   }
   const h0 = SK.off[2 * np];
@@ -1193,6 +1202,7 @@ function render() {
   if (wmix < 1) { ctx.fillStyle = GRAD.water; ctx.fillRect(0, WR.y, W, WR.h); }
   if (wmix > 0) { ctx.globalAlpha = wmix; ctx.fillStyle = GRAD.water2; ctx.fillRect(0, WR.y, W, WR.h); ctx.globalAlpha = 1; }
   const rh = WR.h * C.REFL_DEPTH, sl = rh / C.REFL_SLICES, srcH = C.REFL_H / C.REFL_SLICES, rk = kf < 1 ? kf : 1;   // mirrored sky in 30 wobbling slices: a near-mirror at the horizon (grazing angle), gone by mid-band; the depth fade lives in the strip's alpha, so the slices blend into one smooth band; both strips during a sky crossfade
+  ctx.globalCompositeOperation = 'lighter';       // the mirrored sky is added as light: gold on dark water stays gold, it never greys the water
   for (let k = 0; k < C.REFL_SLICES; k++) {
     const ox = 3 * Math.sin(1.3 * t + 0.4 * k) - 3, y0 = Math.round(k * sl), y1 = Math.round((k + 1) * sl);
     if (rk < 1) { ctx.globalAlpha = 1 - rk; ctx.drawImage(reflCv, 0, k * srcH, C.REFL_W, srcH, ox, WR.y + y0, W + 6, y1 - y0); }
@@ -1241,7 +1251,7 @@ function render() {
   }
   for (let i = 0; i < FL.n; i++) { if (!FL.on[i] || FL.t[i] < 0) continue; const k = easeInOutCubic(FL.t[i] / FL.dur[i]), mk = 1 - k; const x = mk * mk * FL.x0[i] + 2 * mk * k * FL.cx[i] + k * k * FL.x1[i], y = mk * mk * FL.y0[i] + 2 * mk * k * FL.cy[i] + k * k * FL.y1[i]; drawSprite(SPR.spark, x, y, 4, 0.9 * (1 - k * 0.5)); }
   // 11 hand, demo, sparks, pointer halo + breathing ring (P1 teal-white, P2 rose)
-  for (let k = 0; k < GL.n; k++) { const g = GL.list[k]; if (g.state !== 'STAMPING') continue; const jx = Math.sin(G.frame * 12.9898) * 3, jy = Math.cos(G.frame * 7.233) * 3; drawSprite(SPR.hand, WR.x + g.handX * cellPx + jx, WR.y + g.handY * cellPy + jy, 32, 0.9); }
+  for (let k = 0; k < GL.n; k++) { const g = GL.list[k]; if (g.state !== 'STAMPING') continue; const jx = Math.sin(G.frame * 12.9898) * 3, jy = Math.cos(G.frame * 7.233) * 3; drawSprite(SPR.hand, WR.x + g.handX * cellPx + jx, WR.y + g.handY * cellPy + jy, 26, 0.65); }
   for (let i = 0; i < SPK.n; i++) if (SPK.life[i] > 0) drawSprite(SPR.spark, SPK.x[i], SPK.y[i], A.SPARK_R * (0.6 + SPK.life[i]), SPK.life[i] * 2);
   let epiK = 0;
   for (let k = 0; k < 2; k++) {
