@@ -816,8 +816,10 @@ function glyphUpdate(g, dt, sampled) {
   } else if (st === 'FADING') {
     g.fadingT += dt; g.fade = 0.6 * easeOutQuad(g.fadingT / C.WISP_T);
     if ((G.steps & 15) === 0) ghostRebuild();
+    if (!g.eligible && (cn < C.ELIG_COH || t - g.tStamp >= C.ELIG_T)) g.eligible = true;
+    if (g.eligible && cn >= C.SET_COH) { g.setT += dt; if (g.setT >= C.SET_HOLD) { g.liftCh = g.slot; glyphLift(g, false); return; } } else g.setT = 0;   // SET stays reachable while the ink cools under the cap warning (GDD 3.3: the machine finishes)
     if (cn >= C.RECOVER_COH && !DIR.capWarn) { glyphSetState(g, 'LIVE'); g.fadeT = 0; }
-    else { if (cn < C.WISP_COH || DIR.capWarn) g.wispT += dt; else g.wispT = 0; if (g.wispT >= C.WISP_T) glyphToWisp(g, false); }
+    else { if (cn < C.WISP_COH || (DIR.capWarn && cn < C.RECOVER_COH)) g.wispT += dt; else g.wispT = 0; if (g.wispT >= C.WISP_T) glyphToWisp(g, false); }   // under the warning a well-held glyph is not wisped early
   } else if (st === 'WISP') {
     if (cn >= C.RELIT_COH) { g.relitT += dt; if (g.relitT >= C.RELIT_T) { g.liftCh = 2; glyphLift(g, true); } } else g.relitT = 0;
   }
