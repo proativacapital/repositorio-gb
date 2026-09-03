@@ -41,7 +41,7 @@
 // ───────────────────────────── CONST ─────────────────────────────
 const C = Object.freeze({
   DT: 1 / 60, MAX_STEPS: 2, MAX_STEPS_FAST: 6, ACC_CLAMP: 0.05,
-  MAX_CELLS: 20736, RUNG_CELLS: [20736, 14400, 9216],
+  MAX_CELLS: 20736, RUNG_CELLS: [20736, 14400, 9216], GRID_MAX_SIDE: 1023,
   VMAX: 40, V_RES: 12, K_TIDE: 1.5, EPS_CONFINE: 6.0, GS_SWEEPS: 10, GS_SWEEPS_LOW: 7,
   DISS_INK: 0.9995, DISS_WISP: 0.9998, VEL_DAMP: 0.998, WALL_DAMP: 0.97, WALL_BAND: 3,
   VORTEX_RC: 10, VORTEX_W1: 2 * Math.PI / 47, VORTEX_W2: 2 * Math.PI / 31, VORTEX_AX: 0.36, VORTEX_AY: 0.32,
@@ -321,10 +321,12 @@ function applyResize() {
 }
 let gridDirty = false;
 function deriveGrid(rung) {
-  const aspect = WR.w / WR.h, cells = C.RUNG_CELLS[rung];
+  const aspect = WR.w / WR.h, cells = C.RUNG_CELLS[rung], lim = C.GRID_MAX_SIDE;
   let w = Math.floor(Math.sqrt(cells * aspect)); let h = Math.floor(w / aspect);
-  if (w * h > C.MAX_CELLS) { w--; h = Math.floor(w / aspect); }
-  GW = Math.max(16, w); GH = Math.max(16, h); N = GW * GH; gridAspect = aspect; G.rung = rung; gridGen++;
+  if (w > lim) { w = lim; h = Math.floor(cells / w); } else if (h > lim) { h = lim; w = Math.floor(cells / h); }   // no side beyond the per-row / per-column scratch
+  if (w < 16) w = 16; if (h < 16) h = 16;
+  while (w * h > C.MAX_CELLS) { if (w > h) w--; else h--; }
+  GW = w; GH = h; N = GW * GH; gridAspect = aspect; G.rung = rung; gridGen++;
   cellPx = WR.w / GW; cellPy = WR.h / GH;
   inkCv = mkCanvas(GW, GH); inkCtx = inkCv.getContext('2d'); inkImg = inkCtx.createImageData(GW, GH); inkPx = new Uint32Array(inkImg.data.buffer);
   bloomA = mkCanvas(GW >> 1, GH >> 1); bloomACtx = bloomA.getContext('2d'); bloomB = mkCanvas(GW >> 2, GH >> 2); bloomBCtx = bloomB.getContext('2d');
@@ -437,7 +439,7 @@ let d0 = new Float32Array(MAXC), d1 = new Float32Array(MAXC), dW = new Float32Ar
 let t0 = new Float32Array(MAXC), t1 = new Float32Array(MAXC), tW = new Float32Array(MAXC);
 const p = new Float32Array(MAXC), div = new Float32Array(MAXC), curl = new Float32Array(MAXC), speed = new Float32Array(MAXC), recall = new Float32Array(MAXC);
 const uT = new Float32Array(MAXC), vT = new Float32Array(MAXC), ghost = new Float32Array(MAXC);
-const colS = new Float32Array(256), rowC = new Float32Array(256), rowTide = new Float32Array(256);
+const colS = new Float32Array(1024), rowC = new Float32Array(1024), rowTide = new Float32Array(1024);   // per-column / per-row weather scratch, sized for GRID_MAX_SIDE (a 21:9 window once reached 257 columns)
 const FS = { nanWarned: false, ke: 0, gs: C.GS_SWEEPS, splatBudget: 0 };
 function fieldsClear() {
   u.fill(0); v.fill(0); u0.fill(0); v0.fill(0); d0.fill(0); d1.fill(0); dW.fill(0); t0.fill(0); t1.fill(0); tW.fill(0);
@@ -525,8 +527,8 @@ function passProject() {
   for (let x = 0; x < W; x++) { v[x] = 0; u[x] = u[x + W]; v[lastRow + x] = 0; u[lastRow + x] = u[prevRow + x]; }
 }
 function nanSentinel() {
-  const c = (GW >> 1) + (GH >> 1) * GW;
-  if (!isFinite(u[c]) || !isFinite(v[c]) || !isFinite(d0[c])) {
+  const c = (GW >> 1) + (GH >> 1) * GW, e = GW - 2 + (GH >> 1) * GW;   // the centre and a right-edge cell (a column-wise fault shows at the edge first)
+  if (!isFinite(u[c]) || !isFinite(v[c]) || !isFinite(d0[c]) || !isFinite(u[e]) || !isFinite(v[e]) || !isFinite(d0[e])) {
     u.fill(0); v.fill(0); u0.fill(0); v0.fill(0); p.fill(0); div.fill(0);
     for (let i = 0; i < N; i++) { if (!isFinite(d0[i])) d0[i] = 0; if (!isFinite(d1[i])) d1[i] = 0; if (!isFinite(dW[i])) dW[i] = 0; }
     if (!FS.nanWarned) { FS.nanWarned = true; console.warn('REMANSO: non-finite value in the fluid; fields zeroed'); }
