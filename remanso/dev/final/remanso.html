@@ -1507,9 +1507,14 @@ function mqttConnect(url) {
   });
   return api;
 }
+function brokerOverride(hash) {           // #broker=ws://127.0.0.1:PORT (or localhost) is accepted for the test harness only — a real URL parse, so a host that merely begins with localhost / 127.0.0.1, or a user:password@ prefix, is refused
+  const m = /broker=([^&\s]+)/.exec(hash || ''); if (!m) return null; let u = null;
+  try { u = new URL(decodeURIComponent(m[1])); } catch (e) { return null; }
+  return u.protocol === 'ws:' && (u.hostname === 'localhost' || u.hostname === '127.0.0.1') && !u.username && !u.password ? u.href : null;
+}
 async function brokerConnect() {
-  const ov = /broker=(ws:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?[^&\s]*)/.exec(location.hash || '');
-  const list = ov ? [ov[1]] : C.NET.BROKERS; let err = null;
+  const ov = brokerOverride(location.hash);
+  const list = ov ? [ov] : C.NET.BROKERS; let err = null;
   for (const url of list) { try { const m = await mqttConnect(url).ready; return m; } catch (e) { err = e; } }
   throw err || new Error('no broker');
 }
