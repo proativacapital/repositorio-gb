@@ -1549,7 +1549,7 @@ function netCreate() {
           setTimeout(() => { if (NET.state === 'connecting') netFail(); }, C.NET.CONNECT_TIMEOUT);
         } else if (msg.t === 'answer' && msg.to === NET.id && NET.pc) { try { await NET.pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp }); } catch (e) { netFail(); } }
       };
-      NET.roomTimer = setTimeout(() => { if (NET.state === 'signaling') { lobbyStatus('o mar adormeceu'); netLeave(); } }, C.NET.ROOM_TIMEOUT);
+      NET.roomTimer = setTimeout(() => { if (NET.state === 'signaling') { lobbyStatus('o mar adormeceu'); netLeave(true); } }, C.NET.ROOM_TIMEOUT);   // the panel stays so the line can be read (Escape closes it)
       res(NET.code);
     } catch (e) { netFail(); rej(e); }
   });
