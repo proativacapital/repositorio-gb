@@ -1443,19 +1443,22 @@ function dawnStep(dt) {
   DIR.starK = T < C.DAWN_STAR_FADE ? 1 : 1 - clamp((T - C.DAWN_STAR_FADE) / (C.DAWN_T - C.DAWN_STAR_FADE), 0, 1);
   if (T >= C.DAWN_T) enterAct(5);
 }
+function slotsReset() {
+  for (let k = 0; k < NSLOT; k++) { const q = P[k]; q.s = 0; q.d = 0; q.holdT = 0; q.open = false; q.still = false; q.assist = false; q.R = 0; q.Reff = 0; q.rn = 0; q.rh = 0; q.hasSeg = false; q.speed = 0; q.strainAvg = 0; q.openT = 0; q.plinkT = 0; q.tickT = 0; q.note = -1; q.strain.fill(0); q.flick.fill(0); }
+  P[2].down = false; P[2].present = false;
+}
+function dirReset() { DIR.restarting = false; DIR.restartT = 0; DIR.flash = 0; DIR.ringT = -1; DIR.skyDip = 0; DIR.demoActive = false; DIR.demoT = 0; DIR.nudgeG = null; DIR.nudgeUntil = 0; DIR.epiHold = 0; DIR.textDawn = false; DIR.mistDone = false; DIR.dawnAudio = false; TXT.pt = ''; }
 function resetAll() {
   fieldsClear(); histReset(); glyphsResetAll(); fossilClear(); audioPartialsClear(); motesRespawnAll();
-  SPK.life.fill(0); FL.on.fill(0); for (let k = 0; k < NSLOT; k++) { const q = P[k]; q.s = 0; q.d = 0; q.holdT = 0; q.open = false; q.still = false; q.assist = false; q.R = 0; q.Reff = 0; q.rn = 0; q.rh = 0; q.hasSeg = false; q.speed = 0; q.strainAvg = 0; q.openT = 0; q.strain.fill(0); q.flick.fill(0); } P[2].down = false; P[2].present = false;
-  weatherInit();
-  DIR.restarting = false; DIR.restartT = 0; DIR.fade = 1; DIR.flash = 0; DIR.ringT = -1; DIR.skyDip = 0; DIR.demoActive = false; DIR.demoT = 0; DIR.nudgeG = null; DIR.nudgeUntil = 0; DIR.epiHold = 0; DIR.textDawn = false; DIR.mistDone = false; DIR.dawnAudio = false; RAW.rHold = 0; TXT.pt = '';
+  SPK.life.fill(0); FL.on.fill(0); slotsReset(); weatherInit(); dirReset(); DIR.fade = 1; RAW.rHold = 0;
   waterFrom = 0; waterTo = 0; waterT0 = -1e9; waterDur = C.SKY_FADE; skyTo = '#02030a'; skyFrom = '#02030a'; skyInvTo = 0; skyInvFrom = 0; skyT0 = -1e9; rebuildGradients();
   enterAct(0);
 }
-function skipToPhase(name) {
+function skipToPhase(name) {                 // harness: a clean slate at tick 0 (two pages set up at different frames must then run identical ticks); resolved glyphs keep their place in the sky
   const idx = PHASES.indexOf(name); if (idx < 0) return;
-  for (const id of actGlyphs()) { const g = glyphById(id); if (g && !resolvedState(g.state)) { g.state = 'IDLE'; g.settleable = false; g.everStamped = false; } }
-  ghostRebuild(); P[2].down = false; P[2].present = false; DIR.demoActive = false; DIR.restarting = false; DIR.fade = 0; DIR.nudgeG = null; TXT.pt = '';
-  if (idx === 4 || idx === 5) { for (let k = 0; k < GL.n; k++) { const g = GL.list[k]; if (g.state === 'WISP') glyphPermanent(g); } }
+  for (let k = 0; k < GL.n; k++) { const g = GL.list[k]; if (g.state === 'WISP' && (idx === 4 || idx === 5)) glyphPermanent(g); else if (!resolvedState(g.state)) glyphInit(g); }
+  G.steps = 0; G.t = 0; LP.acc = 0; HL.n = 0; HL.head = 0; Q.gsLow = false; FS.gs = C.GS_SWEEPS; DIR.rungPending = false;
+  fieldsClear(); histReset(); SPK.life.fill(0); FL.on.fill(0); slotsReset(); weatherInit(); dirReset(); DIR.fade = 0; motesRespawnAll(); ghostRebuild();
   enterAct(idx);
 }
 

@@ -25,7 +25,7 @@ window.__game = {
   },
   flowAt(x, y) { return { u, v, speed }; },   // local water velocity at a CSS-px point, in CSS px/s (0 outside water)
   setTimeScale(k),        // 1 = normal; bots may use up to 3; sim must stay stable (more fixed steps per frame, capped sanely)
-  skipToPhase(name),      // 'act0'..'act3','dawn','epilogue' — jumps the director, resetting act state cleanly
+  skipToPhase(name),      // 'act0'..'act3','dawn','epilogue' — a clean slate at TICK 0: fields, history, slots, weather and director timers reset, the tick counter and hash log restarted (resolved glyphs keep their place in the sky); call it LAST in a setup (setRung -> setSeed -> scriptInput -> skipToPhase) so two pages set up at different frames run identical ticks
   setSeed(n),             // reseed the PRNG (weather/noise/IR); Math.random must never be used by the game
   setQuality(q),          // force a quality ladder step (or 'auto')
   setRung(r),             // SOLO only: force grid rung 0|1|2 at its NOMINAL 16:9 dims (192x108 / 160x90 / 128x72) whatever the window — clears the fields, history count = 0, re-derives the grid and the stamped masks; the calibrator and the ladder then leave the rung alone (det.js calls setRung(0) on both pages, so two windows of different shape run one sim)
